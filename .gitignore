@@ -1,6 +1,5 @@
-# Environment
+# Env
 .env
-.sesskey
 
 # Python
 *.egg-info/
@@ -11,9 +10,6 @@
 .venv/
 __pycache__/
 htmlcov/
-
-# Static
-static/dist/
 
 # Terraform
 .terraform/

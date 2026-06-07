@@ -1,0 +1,34 @@
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    # Build
+    tailwind-build:
+      glob: "*.{py,html,css}"
+      run: just css && git add static/dist/styles.css
+    # Format
+    ruff-format:
+      glob: "*.py"
+      run: uv run ruff format --force-exclude {staged_files}
+      stage_fixed: true
+    terraform-format:
+      glob: "*.tf"
+      run: terraform fmt -check -diff {staged_files}
+    # Lint
+    ruff-lint:
+      glob: "*.py"
+      run: uv run ruff check --fix --force-exclude {staged_files}
+      stage_fixed: true
+    # Check
+    ty-check:
+      glob: "*.py"
+      run: uv run ty check
+    uv-check:
+      glob: "{pyproject.toml,uv.lock}"
+      run: uv lock --check
+pre-push:
+  commands:
+    # Test
+    pytest:
+      run: uv run pytest

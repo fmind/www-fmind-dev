@@ -1,0 +1,139 @@
+# https://packaging.python.org/en/latest/specifications/pyproject-toml/
+
+[project]
+name = "www-fmind-dev"
+version = "0.1.0"
+description = "Portfolio Website of Médéric HURIER (Fmind)."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+  "fastapi>=0.136.3",
+  "granian>=2.7.5",
+  "httpx>=0.28.1",
+  "pydantic-settings>=2.14.1",
+  "pydantic>=2.13.4",
+  "python-fasthtml>=0.14.2",
+  "structlog>=26.1.0",
+]
+
+[dependency-groups]
+dev = [
+  "coverage>=7.14.1",
+  "lefthook>=2.1.9",
+  "pillow>=12.2.0",
+  "pytailwindcss-extra>=0.2.1",
+  "pytest-asyncio>=1.4.0",
+  "pytest-cov>=7.1.0",
+  "pytest>=9.0.3",
+  "ruff>=0.15.16",
+  "rust-just>=1.51.0",
+  "ty>=0.0.44",
+]
+
+[build-system]
+requires = ["uv-build"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+fix = true
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "double"
+
+[tool.ruff.lint]
+select = [
+  "A", # flake8-builtins
+  "ARG", # flake8-unused-arguments (clean signatures)
+  "ASYNC", # flake8-async
+  "B", # flake8-bugbear (highly reliable common bug & design detector)
+  "C4", # flake8-comprehensions
+  "E", # pycodestyle errors
+  "F", # pyflakes
+  "FA", # flake8-future-annotations
+  "I", # isort (import sorting)
+  "ISC", # flake8-implicit-str-concat
+  "LOG", # flake8-logging
+  "N", # pep8-naming (consistent naming conventions)
+  "PIE", # flake8-pie
+  "PTH", # flake8-use-pathlib (modern Path object usage)
+  "Q", # flake8-quotes
+  "RET", # flake8-return
+  "RSE", # flake8-raise
+  "PERF", # Perflint (performance anti-patterns)
+  "PGH", # pygrep-hooks (enforces specific noqas/hooks)
+  "PT", # flake8-pytest-style
+  "RUF", # ruff-specific rules
+  "S", # flake8-bandit (security checks)
+  "SIM", # flake8-simplify
+  "SLF", # flake8-self
+  "T10", # flake8-debugger
+  "T20", # flake8-print (prevent print statements in library code)
+  "TCH", # flake8-type-checking
+  "TID", # flake8-tidy-imports
+  "UP", # pyupgrade (modern Python syntax upgrades)
+  "W", # pycodestyle warnings
+]
+ignore = [
+  "F403", # star imports allowed
+  "F405", # star import name undefined checks allowed
+  "E501", # line length allowed for HTML tags
+  "ASYNC240", # pathlib.Path methods in async functions allowed (e.g. local file checks in health check)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+  "S101", # assert
+  "T201", # print statement allowed in tests
+]
+"scripts/**" = [
+  "T201", # print statement allowed in scripts
+]
+"conftest.py" = [
+  "S105", # fake secrets intentional in fixtures
+]
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.rules]
+unresolved-attribute = "ignore" # tolerate optional deps / dynamic attrs
+unresolved-import = "ignore"
+invalid-argument-type = "ignore" # tolerate dynamic unpacking of HTML attributes
+invalid-type-form = "ignore" # tolerate FastHTML factory functions in annotations
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+exclude = [
+  "**/__pycache__",
+  ".venv",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+xfail_strict = true
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+  "ignore::starlette.exceptions.StarletteDeprecationWarning",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = [
+  "tests/*",
+  "scripts/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+skip_empty = true

@@ -28,13 +28,23 @@ resource "google_cloud_run_v2_service" "web" {
         startup_cpu_boost = true
       }
 
+      env {
+        name = "SESSION_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.session_secret.secret_id
+            version = "latest"
+          }
+        }
+      }
+
       startup_probe {
         initial_delay_seconds = 0
         timeout_seconds       = 3
         period_seconds        = 5
         failure_threshold     = 3
         http_get {
-          path = "/healthz"
+          path = "/health"
         }
       }
 
@@ -53,6 +63,7 @@ resource "google_cloud_run_v2_service" "web" {
     time_sleep.wait_for_apis,
     google_project_iam_member.log_writer,
     google_project_iam_member.trace_agent,
+    google_secret_manager_secret_iam_member.session_secret_accessor,
   ]
 }
 

@@ -6,11 +6,6 @@ resource "google_project_service" "artifactregistry" {
   disable_on_destroy = false
 }
 
-resource "google_project_service" "cloudbuild" {
-  project            = var.project_id
-  service            = "cloudbuild.googleapis.com"
-  disable_on_destroy = false
-}
 
 resource "google_project_service" "cloudtrace" {
   project            = var.project_id
@@ -21,6 +16,12 @@ resource "google_project_service" "cloudtrace" {
 resource "google_project_service" "iam" {
   project            = var.project_id
   service            = "iam.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "iamcredentials" {
+  project            = var.project_id
+  service            = "iamcredentials.googleapis.com"
   disable_on_destroy = false
 }
 
@@ -42,17 +43,24 @@ resource "google_project_service" "run" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "secretmanager" {
+  project            = var.project_id
+  service            = "secretmanager.googleapis.com"
+  disable_on_destroy = false
+}
+
 # Wait for APIs to propagate
 resource "time_sleep" "wait_for_apis" {
   create_duration = "30s"
 
   depends_on = [
     google_project_service.artifactregistry,
-    google_project_service.cloudbuild,
     google_project_service.cloudtrace,
     google_project_service.iam,
+    google_project_service.iamcredentials,
     google_project_service.logging,
     google_project_service.monitoring,
     google_project_service.run,
+    google_project_service.secretmanager,
   ]
 }

@@ -1,4 +1,10 @@
 # Infrastructure variables defining default settings and parameters
+#
+variable "github_repository" {
+  description = "The GitHub repository in the format owner/repo"
+  type        = string
+  default     = "fmind/www-fmind-dev"
+}
 
 variable "image_uri" {
   description = "The Docker image URI to deploy. Defaults to a hello-world image if not provided initially."
@@ -35,3 +41,4 @@ variable "service_name" {
   type        = string
   default     = "www-fmind-dev"
 }
+
