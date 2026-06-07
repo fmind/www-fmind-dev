@@ -44,5 +44,5 @@ USER app
 # Expose default port
 EXPOSE 8080
 
-# Execute command using granian, dynamically binding to the PORT environment variable
+# Execute command using granian
 CMD ["/bin/sh", "-c", "exec granian --interface asgi --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --runtime-threads 4 app.main:app"]
