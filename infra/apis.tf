@@ -1,0 +1,58 @@
+# Google Cloud service APIs activation and dependencies
+
+resource "google_project_service" "artifactregistry" {
+  project            = var.project_id
+  service            = "artifactregistry.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "cloudbuild" {
+  project            = var.project_id
+  service            = "cloudbuild.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "cloudtrace" {
+  project            = var.project_id
+  service            = "cloudtrace.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "iam" {
+  project            = var.project_id
+  service            = "iam.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "logging" {
+  project            = var.project_id
+  service            = "logging.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "monitoring" {
+  project            = var.project_id
+  service            = "monitoring.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "run" {
+  project            = var.project_id
+  service            = "run.googleapis.com"
+  disable_on_destroy = false
+}
+
+# Wait for APIs to propagate
+resource "time_sleep" "wait_for_apis" {
+  create_duration = "30s"
+
+  depends_on = [
+    google_project_service.artifactregistry,
+    google_project_service.cloudbuild,
+    google_project_service.cloudtrace,
+    google_project_service.iam,
+    google_project_service.logging,
+    google_project_service.monitoring,
+    google_project_service.run,
+  ]
+}

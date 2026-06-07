@@ -1,0 +1,19 @@
+# Environment
+.env
+.sesskey
+
+# Python
+*.egg-info/
+*.py[cod]
+.coverage
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+htmlcov/
+
+# Static
+static/dist/
+
+# Terraform
+.terraform/
