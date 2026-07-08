@@ -1,0 +1,144 @@
+[env]
+APP_NAME = "www-fmind-dev"
+
+[settings.task]
+run_auto_install = false # fail fast in hooks/CI on a missing tool
+
+[tools]
+dprint = "latest"
+gitleaks = "latest"
+# Pinned to 1.26.5+: closes a crypto/tls stdlib advisory present in 1.26.4 (govulncheck).
+go = "1.26.5"
+golangci-lint = "latest"
+gotestsum = "latest"
+lefthook = "latest"
+# Tailwind v4 standalone CLI WITH DaisyUI v5 bundled (no Node.js). The github:
+# backend extracts bin/tailwindcss-extra from the signed release bottle.
+"github:dobicinaitis/tailwind-cli-extra" = "latest"
+
+[tasks.all]
+alias = "a"
+description = "Format, check, test, and build the project"
+run = ["mise run format", "mise run check", "mise run test", "mise run build"]
+
+[tasks.build]
+alias = "b"
+description = "Compile the production binary"
+depends = ["build:go"]
+
+[tasks."build:go"]
+description = "Compile the production Go binary"
+depends = ["build:templ", "build:css"]
+sources = ["go.mod", "go.sum", "**/*.go"]
+outputs = ["bin/{{env.APP_NAME}}"]
+run = "go build -o bin/$APP_NAME ./cmd/$APP_NAME"
+
+[tasks."build:templ"]
+description = "Generate Go code from Templ templates"
+sources = ["**/*.templ"]
+outputs = ["**/*_templ.go"]
+run = "go tool templ generate"
+
+[tasks."build:css"]
+description = "Compile and minify Tailwind CSS (DaisyUI bundled)"
+sources = ["static/css/input.css", "templates/**/*.templ", "**/*.go"]
+outputs = ["static/dist/styles.css"]
+run = "tailwindcss-extra -i static/css/input.css -o static/dist/styles.css --minify"
+
+[tasks."build:image"]
+description = "Build the production OCI image (Docker, hardened runner stage)"
+run = "docker build --target runner -t $APP_NAME:local ."
+
+[tasks.check]
+alias = "c"
+description = "Run all static checks in parallel"
+depends = ["check:lint", "check:vuln", "check:format", "check:leaks"]
+
+[tasks."check:lint"]
+alias = "cl"
+description = "Lint Go sources (golangci-lint)"
+depends = ["build:templ"]
+run = "golangci-lint run ./..."
+
+[tasks."check:vuln"]
+alias = "cv"
+description = "Scan Go code for known vulnerabilities (govulncheck)"
+run = "go tool govulncheck ./..."
+
+[tasks."check:format"]
+alias = "cf"
+description = "Check config/markup formatting (dprint)"
+run = "dprint check"
+
+[tasks."check:leaks"]
+alias = "cs"
+description = "Audit git history for leaked secrets (gitleaks)"
+run = "gitleaks git --log-opts=\"--max-count=100\" --verbose"
+
+[tasks.test]
+alias = "t"
+description = "Run the test suite (gotestsum)"
+depends = ["build:templ"]
+run = "gotestsum --format pkgname -- -race -coverprofile=coverage.out ./..."
+
+[tasks."test:watch"]
+alias = "tw"
+description = "Run the test suite in watch mode"
+depends = ["build:templ"]
+run = "gotestsum --watch --format pkgname -- -race -coverprofile=coverage.out ./..."
+
+[tasks.coverage]
+alias = "v"
+description = "Show test coverage in the terminal"
+depends = ["test"]
+run = "go tool cover -func=coverage.out"
+
+[tasks.format]
+alias = "f"
+description = "Format all sources and documents"
+depends = ["format:go", "format:templ", "format:dprint"]
+
+[tasks."format:go"]
+description = "Format Go sources and imports (goimports + gofumpt)"
+run = ["go tool goimports -w .", "go tool gofumpt -w ."]
+
+[tasks."format:templ"]
+description = "Format Templ templates"
+run = "go tool templ fmt ."
+
+[tasks."format:dprint"]
+description = "Format JSON, Markdown, TOML, YAML with dprint"
+run = "dprint fmt"
+
+[tasks.install]
+alias = "i"
+description = "Install dependencies and vendor static assets"
+depends = ["install:go", "install:vendor"]
+
+[tasks."install:go"]
+description = "Tidy Go modules and download dependencies"
+depends = ["build:templ"]
+run = "go mod tidy"
+
+[tasks."install:vendor"]
+description = "Download and self-host vendored JS assets (htmx, alpine)"
+depends = ["install:go"]
+run = "go run scripts/vendor.go"
+
+[tasks.clean]
+alias = "n"
+description = "Remove build artifacts and coverage files"
+run = "rm -rf bin/ tmp/ coverage.out static/dist/styles.css"
+
+[tasks.watch]
+alias = "w"
+description = "Run the dev server with live reload (Go + CSS)"
+depends = ["watch:css", "watch:air"]
+
+[tasks."watch:air"]
+hide = true
+run = "go tool air"
+
+[tasks."watch:css"]
+hide = true
+run = "tailwindcss-extra -i static/css/input.css -o static/dist/styles.css --watch"

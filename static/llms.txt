@@ -1,0 +1,57 @@
+# www.fmind.dev
+
+> Freelance AI/ML Architect & Engineer specialized in AI Agents and MLOps.
+
+## AI Agent Access
+
+- **MCP server** (Model Context Protocol, Streamable HTTP): `https://www.fmind.dev/mcp` — read-only tools `get_profile`, `list_experience`, `list_certifications`, `list_publications`, `list_projects`, `get_services`, and a `portfolio://profile.json` resource. Add it as a custom connector in Claude or ChatGPT.
+- **JSON snapshot**: `https://www.fmind.dev/api/profile` — the full portfolio (profile, experience, certifications, publications, projects, services) as a single JSON document.
+
+## Bio
+
+Médéric Hurier (Fmind) is a Freelance AI/ML Architect & Engineer with a PhD in AI and Computer Security from the University of Luxembourg. He specializes in designing autonomous agentic workflows and production-ready MLOps environments, transforming AI/ML initiatives into structured, secure, and scalable architectures for enterprise production.
+
+## Services
+
+- **Freelancing**: Available for consulting, designing, and building enterprise-scale AI Agents and MLOps platforms.
+- **Mentoring**: Paid 1-hour sessions for architecture reviews, career mentoring, upskilling, and project brainstorming.
+
+## Top Open Source Projects
+
+- **mlops-python-package**: A flexible, robust, and productive Python package template to kickstart MLOps initiatives.
+- **cookiecutter-mlops-package**: A Cookiecutter template for building and deploying Python packages and Docker images for MLOps.
+- **MLOps Coding Course**: A comprehensive course teaching software engineering best practices applied to data science and MLOps.
+
+## Content & Media
+
+- **Bleeding Agent**: A technical podcast/series diving deep into AI Agents and autonomous systems.
+- **AI Agents in a Nut$HELL**: High-signal, bite-sized explanations of AI Agent architectures.
+- **MLOps Coding Course (YouTube)**: Video lectures bridging software engineering and machine learning.
+
+## Key Certifications
+
+- **Google Cloud**: Professional Cloud Architect & Professional ML Engineer
+- **Databricks**: Machine Learning Associate
+- **Microsoft Azure**: Data Scientist Associate
+- **Neo4j**: Graph Data Science
+
+## Experience Highlights
+
+- **Decathlon**: AI/ML Architect - Designed enterprise-scale Agent and MLOps platforms.
+- **European Commission**: AI/ML Engineer - Contributed to the Arachne fraud detection system.
+- **ArcelorMittal**: Data Scientist - Built steel price recommendation models.
+- **BNP Paribas**: Project Manager - Managed transformer-based NLP application development.
+- **Google**: Research Partner - Collaborated with the Android Security team on malware detection.
+- **SFEIR**: Data Engineer - Cloud data engineering and technical consulting on GCP.
+- **University of Luxembourg**: Researcher & Teacher - Taught Big Data, AI/ML, and security.
+- **Clearstream**: Security Engineer - Selected and deployed scalable SIEM solutions.
+
+## Links
+
+- [Website](https://www.fmind.dev)
+- [LinkedIn](https://www.linkedin.com/in/fmind-dev/)
+- [Twitter (X)](https://x.com/fmind_dev)
+- [Medium](https://fmind.medium.com/)
+- [GitHub](https://github.com/fmind)
+- [YouTube](https://www.youtube.com/@fmind-dev)
+

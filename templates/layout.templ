@@ -1,0 +1,227 @@
+package templates
+
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
+var NAV_LINKS = []map[string]string{
+	{"href": "#about", "label": "About"},
+	{"href": "#work-experience", "label": "Work Experience"},
+	{"href": "#certifications", "label": "Certifications"},
+	{"href": "#publications", "label": "Publications"},
+	{"href": "#projects", "label": "Projects"},
+	{"href": "#services", "label": "Services"},
+}
+
+templ NavigationBar() {
+	<nav
+		class="navbar bg-base-100/90 backdrop-blur-md border-b border-base-200"
+		x-data="{
+		theme: document.documentElement.getAttribute('data-theme') || 'light',
+		toggleTheme() {
+			this.theme = this.theme === 'light' ? 'dark' : 'light';
+			if (window.setTheme) {
+				window.setTheme(this.theme === 'dark');
+			} else {
+				localStorage.theme = this.theme;
+				document.documentElement.classList.toggle('dark', this.theme === 'dark');
+				document.documentElement.setAttribute('data-theme', this.theme);
+				document.querySelectorAll('meta[name=&quot;theme-color&quot;]').forEach(m =>
+					m.setAttribute('content', this.theme === 'dark' ? '#1d232a' : '#ffffff')
+				);
+			}
+		}
+	}"
+	>
+		<div class="container mx-auto flex px-4">
+			<!-- Start section (Mobile menu toggle + brand) -->
+			<div class="flex-1 flex items-center gap-4">
+				<!-- Alpine wrapper for mobile menu state -->
+				<div class="lg:hidden relative" x-data="{ open: false }">
+					<button class="btn btn-ghost btn-circle" aria-label="Menu" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-haspopup="true">
+						@Icon("menu", "h-5 w-5")
+					</button>
+					<ul class="menu menu-sm absolute left-0 mt-3 z-[50] p-2 shadow bg-base-100 rounded-box w-52 border border-base-200" x-show="open" @click.outside="open = false" x-cloak>
+						for _, link := range NAV_LINKS {
+							<li>
+								<a class="font-medium hover:text-primary py-2" href={ templ.SafeURL(link["href"]) } @click="open = false">{ link["label"] }</a>
+							</li>
+						}
+					</ul>
+				</div>
+				<a class="btn btn-ghost text-xl md:text-2xl font-bold font-heading text-primary normal-case gap-3 sm:gap-4 px-2" href="#">
+					<img class="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover" src={ StaticURL("static/img/logo.webp") } alt="www.fmind.dev logo" width="48" height="48" decoding="async"/>
+					<span class="hidden sm:inline">www.fmind.dev</span>
+				</a>
+				<ul class="menu menu-horizontal px-1 hidden lg:flex gap-1">
+					for _, link := range NAV_LINKS {
+						<li>
+							<a class="relative font-medium hover:text-primary transition-colors duration-300 after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left py-2 px-3" href={ templ.SafeURL(link["href"]) }>
+								{ link["label"] }
+							</a>
+						</li>
+					}
+				</ul>
+			</div>
+			<!-- End section (Social icons + theme toggle) -->
+			<div class="flex-none flex items-center gap-2 md:gap-4">
+				<div class="flex gap-1 md:gap-3">
+					for _, social := range METADATA.Socials {
+						<a class="btn btn-ghost btn-circle btn-sm md:btn-md hover:bg-transparent hover:text-accent transition-colors" href={ templ.SafeURL(social.URL) } target="_blank" rel="noopener noreferrer" aria-label={ social.Name }>
+							@Icon(social.Icon, "h-5 w-5 md:h-6 md:w-6")
+						</a>
+					}
+				</div>
+				<div class="border-l border-base-content/20 h-6 md:h-8 mx-1 md:mx-2"></div>
+				<!-- Theme toggle button utilizing Alpine reactive state -->
+				<button class="btn btn-ghost btn-circle btn-sm md:btn-md bg-base-200/60 border border-base-content/10" aria-label="Toggle Dark Mode" @click="toggleTheme()">
+					<!-- Moon icon (shows in light theme) -->
+					<span x-show="theme === 'light'" x-cloak>
+						@Icon("moon", "h-5 w-5 md:h-6 md:w-6")
+					</span>
+					<!-- Sun icon (shows in dark theme) -->
+					<span x-show="theme === 'dark'" x-cloak>
+						@Icon("sun", "h-5 w-5 md:h-6 md:w-6")
+					</span>
+				</button>
+			</div>
+		</div>
+	</nav>
+}
+
+templ PageFooter() {
+	<footer class="footer footer-center p-8 bg-slate-950 text-slate-400 border-t border-slate-900">
+		<aside class="space-y-2">
+			<p class="font-heading font-semibold text-lg md:text-xl italic text-slate-100">
+				Industrialize Intelligence with Craft and Passion.
+			</p>
+			<p class="text-sm">
+				© { fmt.Sprintf("%d", time.Now().Year()) } { METADATA.Name } ({ METADATA.AlternateName }). All rights reserved.
+			</p>
+		</aside>
+	</footer>
+}
+
+templ Layout(body templ.Component, analyticsID string) {
+	<!DOCTYPE html>
+	<html lang="en" class="scroll-smooth">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ METADATA.Title }</title>
+			<link rel="canonical" href={ METADATA.SiteURL + "/" }/>
+			<meta name="theme-color" content="#ffffff"/>
+			<meta name="author" content={ METADATA.Name + " (" + METADATA.AlternateName + ")" }/>
+			<meta name="description" content={ METADATA.Description }/>
+			<meta name="keywords" content={ strings.Join(METADATA.Keywords, ", ") }/>
+			<meta name="robots" content="index, follow"/>
+			for _, s := range METADATA.Socials {
+				<link rel="me" href={ s.URL }/>
+			}
+			<meta property="og:type" content="website"/>
+			<meta property="og:url" content={ METADATA.SiteURL + "/" }/>
+			<meta property="og:title" content={ METADATA.Title }/>
+			<meta property="og:site_name" content={ strings.Replace(METADATA.SiteURL, "https://", "", 1) }/>
+			<meta property="og:description" content={ METADATA.Description }/>
+			<meta property="og:image" content={ METADATA.SiteURL + "/static/img/og-image.jpg" }/>
+			<meta property="og:image:width" content="1200"/>
+			<meta property="og:image:height" content="630"/>
+			<meta property="og:image:alt" content={ METADATA.SiteURL + " — AI/ML Architect & Engineer Banner" }/>
+			<meta property="og:locale" content="en_US"/>
+			<meta name="twitter:card" content="summary_large_image"/>
+			<meta name="twitter:site" content={ METADATA.TwitterHandle }/>
+			<meta name="twitter:creator" content={ METADATA.TwitterHandle }/>
+			<meta name="twitter:title" content={ METADATA.Title }/>
+			<meta name="twitter:description" content={ METADATA.Description }/>
+			<meta name="twitter:image" content={ METADATA.SiteURL + "/static/img/og-image.jpg" }/>
+			<meta name="twitter:image:alt" content={ METADATA.SiteURL + " — AI/ML Architect & Engineer banner" }/>
+			<script nonce={ templ.GetNonce(ctx) }>
+				(function () {
+				  function setTheme(isDark) {
+				    localStorage.theme = isDark ? 'dark' : 'light';
+				    document.documentElement.classList.toggle('dark', isDark);
+				    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+				    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+				      meta.setAttribute('content', isDark ? '#1d232a' : '#ffffff');
+				    });
+				  }
+				  var isDark =
+				    localStorage.theme === 'dark' ||
+				    (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+				  setTheme(isDark);
+				  window.setTheme = setTheme;
+				})();
+			</script>
+			<!-- Font & image preloads. The font hrefs must match the unversioned @font-face
+			     URLs in the stylesheet exactly, otherwise the browser downloads each font twice. -->
+			<link rel="preload" href="/static/fonts/Outfit-Variable.woff2" crossorigin="anonymous" as="font" type="font/woff2"/>
+			<link rel="preload" href="/static/fonts/Inter-Variable.woff2" crossorigin="anonymous" as="font" type="font/woff2"/>
+			<link rel="preload" href={ StaticURL("static/img/avatar-192.webp") } imagesrcset={ fmt.Sprintf("%s 192w, %s 280w, %s 384w", StaticURL("static/img/avatar-192.webp"), StaticURL("static/img/avatar-280.webp"), StaticURL("static/img/avatar.webp")) } imagesizes="(max-width: 768px) 160px, 192px" fetchpriority="high" as="image"/>
+			<link rel="icon" type="image/x-icon" href={ StaticURL("static/favicon.ico") }/>
+			<link rel="apple-touch-icon" sizes="180x180" href={ StaticURL("static/img/favicons/apple-touch-icon.png") }/>
+			<link rel="icon" type="image/png" sizes="32x32" href={ StaticURL("static/img/favicons/favicon-32x32.png") }/>
+			<link rel="icon" type="image/png" sizes="16x16" href={ StaticURL("static/img/favicons/favicon-16x16.png") }/>
+			<link rel="manifest" href={ StaticURL("static/site.webmanifest") }/>
+			<!-- Local CSS & JS. The stylesheet is inlined to avoid a render-blocking request
+			     (falls back to an external link if the build output is unavailable). Alpine.js
+			     powers the theme toggle and mobile menu; it is deferred so it never blocks first
+			     paint. HTMX is vendored (GOTH stack) but not loaded — the page is fully
+			     server-rendered with no hypermedia calls. -->
+			if InlineStyles != "" {
+				@templ.Raw("<style>" + InlineStyles + "</style>")
+			} else {
+				<link rel="stylesheet" href={ StaticURL("static/dist/styles.css") }/>
+			}
+			<script src={ StaticURL("static/vendor/alpine.min.js") } defer></script>
+			@templ.Raw("<script type=\"application/ld+json\">" + GetPersonSchema() + "</script>")
+			@templ.Raw("<script type=\"application/ld+json\">" + GetWebsiteSchema() + "</script>")
+			if analyticsID != "" {
+				// templ does NOT interpolate { analyticsID } inside a raw <script>, so pass it via
+				// a <meta> tag (read below). Keeps the inline script static + nonce-authorized.
+				<meta name="ga-id" content={ analyticsID }/>
+				<script nonce={ templ.GetNonce(ctx) }>
+					window.dataLayer = window.dataLayer || [];
+					function gtag() { dataLayer.push(arguments); }
+					(function () {
+					  var loaded = false;
+					  var meta = document.querySelector('meta[name="ga-id"]');
+					  var gaId = meta ? meta.content : '';
+					  if (!gaId) return;
+					  function loadGA() {
+					    if (loaded) return;
+					    loaded = true;
+					    var s = document.createElement('script');
+					    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
+					    s.async = true;
+					    document.head.appendChild(s);
+					    gtag('js', new Date());
+					    gtag('config', gaId);
+					  }
+					  var events = ['scroll', 'click', 'keydown', 'touchstart'];
+					  events.forEach(function (e) {
+					    addEventListener(e, loadGA, { once: true, passive: true });
+					  });
+					})();
+				</script>
+			}
+		</head>
+		<body class="min-h-screen bg-base-100 text-base-content font-body antialiased transition-colors duration-300">
+			<!-- Skip to content link for accessibility -->
+			<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-primary-content px-4 py-2 rounded-md z-[100]">
+				Skip to content
+			</a>
+			<!-- Header / Navbar -->
+			<header class="sticky top-0 z-40">
+				@NavigationBar()
+			</header>
+			<!-- Main content area -->
+			<main class="min-h-screen" id="main-content">
+				@body
+			</main>
+			<!-- Footer -->
+			@PageFooter()
+		</body>
+	</html>
+}

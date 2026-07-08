@@ -1,0 +1,16 @@
+# Git hooks that delegate to the mise task vocabulary, so hooks and CI stay in
+# sync (see .github/workflows/deploy.yml). Install once with `lefthook install`.
+
+pre-commit:
+  parallel: false
+  commands:
+    format:
+      run: mise run format
+      stage_fixed: true
+    check:
+      run: mise run check
+
+pre-push:
+  commands:
+    test:
+      run: mise run test

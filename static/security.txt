@@ -1,0 +1,8 @@
+# Security contact information for www.fmind.dev (Médéric Hurier)
+# Spec: https://tools.ietf.org/html/rfc9116
+
+Contact: mailto:contact@fmind.dev
+Expires: 2027-06-07T12:00:00.000Z
+Preferred-Languages: en,fr
+Canonical: https://www.fmind.dev/.well-known/security.txt
+Canonical: https://www.fmind.dev/security.txt

@@ -1,0 +1,124 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light, dark;
+  /* Generate only the components this site actually uses — DaisyUI ships all
+     ~50 otherwise, bloating the render-blocking stylesheet. */
+  include: button, card, navbar, menu, hero, avatar, badge, footer, typography;
+}
+
+/* Scan only the templates — every Tailwind/DaisyUI class lives in .templ files.
+   Scanning .go files would generate false-positive utilities from English words
+   in comments and strings, bloating the stylesheet. */
+@source "../../templates/**/*.templ";
+
+/* Service badge color classes are built dynamically (fmt.Sprintf on BadgeType in
+   GetServices), so the static scanner can't see them. Safelist the status
+   variants so they are always emitted. */
+@source inline("badge-{warning,info,success,error} text-{warning,info,success,error}-content");
+
+@plugin 'daisyui/theme' {
+  name: 'light';
+  --color-primary: oklch(0.55 0.22 263.6);
+  --color-accent: oklch(0.55 0.22 263.6);
+}
+
+@plugin 'daisyui/theme' {
+  name: 'dark';
+  --color-primary: oklch(0.648 0.205 263.6);
+  --color-accent: oklch(0.648 0.205 263.6);
+}
+
+@theme {
+  --color-brand: #646cff;
+  --color-glass-bg: rgba(15, 23, 42, 0.65);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius-glass: 24px;
+
+  --animate-gradient-x: gradient-x 15s ease infinite;
+
+  @keyframes gradient-x {
+    0%,
+    100% {
+      background-size: 200% 200%;
+      background-position: left center;
+    }
+    50% {
+      background-size: 200% 200%;
+      background-position: right center;
+    }
+  }
+}
+
+/* Custom utility for premium glassmorphic cards */
+@utility glassmorphism {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-glass);
+  border-radius: var(--radius-glass);
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/static/fonts/Inter-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('/static/fonts/Outfit-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/static/fonts/JetBrainsMono-Variable.woff2') format('woff2');
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+/* Prevent Alpine.js Flash of Unstyled Content (FOUC) */
+[x-cloak] {
+  display: none !important;
+}
+
+/* Skip rendering the below-the-fold sections until they are scrolled near the
+   viewport. This cuts the initial style/layout work on the main thread, which is
+   what gates the hero's Largest Contentful Paint. contain-intrinsic-size reserves
+   a placeholder height so nothing shifts (CLS stays ~0). */
+#about,
+#work-experience,
+#certifications,
+#publications,
+#projects,
+#services {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1200px;
+}
+
+/* Respect users who prefer reduced motion: disable smooth scroll, the hero
+   gradient animation, hover lifts, and all transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

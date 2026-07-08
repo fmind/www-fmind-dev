@@ -1,0 +1,22 @@
+# Keep the build context to source only (the Dockerfile re-generates templ + tailwind).
+.git
+.gitignore
+.dockerignore
+bin/
+tmp/
+.env
+.env.*
+coverage.out
+*.md
+infra/
+.github/
+lefthook.yml
+.golangci*.yml
+.vale.ini
+mise.toml
+dprint.json
+# .air.toml is kept: the dev-runner stage runs `air`, which needs it to build ./cmd/www-fmind-dev.
+scripts/
+# Generated in-build:
+static/dist/
+*_templ.go
