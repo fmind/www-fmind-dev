@@ -72,17 +72,20 @@ func NewAppHandler(logger *slog.Logger, cfg config.Config) http.Handler {
 	// Machine-readable surfaces for AI agents: a single JSON document and a
 	// read-only MCP server (Streamable HTTP) over the same portfolio data.
 	mux.HandleFunc("GET /api/profile", serveProfile)
-	mcpHandler := newMCPHandler()
+	// 1 MiB is ample for any JSON-RPC call to this read-only server; larger
+	// bodies fail fast instead of being buffered whole into memory.
+	mcpHandler := MaxBody(1 << 20)(newMCPHandler())
 	mux.Handle("/mcp", mcpHandler)
 	mux.Handle("/mcp/", mcpHandler)
 
 	// Home page.
-	mux.Handle("GET /{$}", templ.Handler(templates.Layout(templates.Home(), analyticsID)))
+	mux.Handle("GET /{$}", templ.Handler(templates.Layout(templates.Home(), analyticsID, false)))
 
-	// Catch-all: render the 404 page for anything unmatched.
+	// Catch-all: render the 404 page for anything unmatched. It is served noindex
+	// (and without the homepage canonical) so crawlers never index an error page.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		_ = templates.Layout(templates.NotFound(), analyticsID).Render(r.Context(), w)
+		_ = templates.Layout(templates.NotFound(), analyticsID, true).Render(r.Context(), w)
 	})
 
 	// Compress text responses (HTML, CSS, JS, JSON). gzhttp skips already-compressed

@@ -16,7 +16,6 @@ lefthook.yml
 mise.toml
 dprint.json
 # .air.toml is kept: the dev-runner stage runs `air`, which needs it to build ./cmd/www-fmind-dev.
-scripts/
 # Generated in-build:
 static/dist/
 *_templ.go

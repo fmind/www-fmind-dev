@@ -135,7 +135,7 @@ func TestSecurityHeaders(t *testing.T) {
 func TestStaticAssetImmutableCache(t *testing.T) {
 	srv := newServer(t)
 
-	status, hdr, _ := get(t, srv.URL+"/static/vendor/htmx.min.js?v=abcdef01")
+	status, hdr, _ := get(t, srv.URL+"/static/img/avatar-192.webp?v=abcdef01")
 	if status != http.StatusOK {
 		t.Fatalf("status = %d, want 200", status)
 	}
@@ -168,5 +168,40 @@ func TestMCPEndpoint(t *testing.T) {
 	}
 	if !strings.Contains(string(body), `"jsonrpc"`) || !strings.Contains(string(body), site.ServiceName) {
 		t.Errorf("unexpected MCP initialize response: %s", body)
+	}
+}
+
+// TestMaxBodyCapsRequestBody proves the /mcp guard: an oversized body trips the
+// MaxBytesReader mid-read (so memory stays bounded and the handler errors),
+// while a request within the limit passes through untouched.
+func TestMaxBodyCapsRequestBody(t *testing.T) {
+	const limit = 1 << 10 // 1 KiB
+
+	handler := site.MaxBody(limit)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			http.Error(w, "too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	over, err := http.Post(srv.URL, "text/plain", strings.NewReader(strings.Repeat("a", 4*limit)))
+	if err != nil {
+		t.Fatalf("post oversized body: %v", err)
+	}
+	_ = over.Body.Close()
+	if over.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Errorf("oversized body status = %d, want 413", over.StatusCode)
+	}
+
+	under, err := http.Post(srv.URL, "text/plain", strings.NewReader("small body"))
+	if err != nil {
+		t.Fatalf("post small body: %v", err)
+	}
+	_ = under.Body.Close()
+	if under.StatusCode != http.StatusOK {
+		t.Errorf("small body status = %d, want 200", under.StatusCode)
 	}
 }

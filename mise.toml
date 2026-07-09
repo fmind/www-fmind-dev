@@ -100,7 +100,7 @@ depends = ["format:go", "format:templ", "format:dprint"]
 
 [tasks."format:go"]
 description = "Format Go sources and imports (goimports + gofumpt)"
-run = ["go tool goimports -w .", "go tool gofumpt -w ."]
+run = ["go tool goimports -local github.com/fmind/www-fmind-dev -w .", "go tool gofumpt -w ."]
 
 [tasks."format:templ"]
 description = "Format Templ templates"
@@ -112,18 +112,13 @@ run = "dprint fmt"
 
 [tasks.install]
 alias = "i"
-description = "Install dependencies and vendor static assets"
-depends = ["install:go", "install:vendor"]
+description = "Tidy Go modules and download dependencies"
+depends = ["install:go"]
 
 [tasks."install:go"]
 description = "Tidy Go modules and download dependencies"
 depends = ["build:templ"]
 run = "go mod tidy"
-
-[tasks."install:vendor"]
-description = "Download and self-host vendored JS assets (htmx, alpine)"
-depends = ["install:go"]
-run = "go run scripts/vendor.go"
 
 [tasks.clean]
 alias = "n"

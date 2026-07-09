@@ -16,37 +16,19 @@ var NAV_LINKS = []map[string]string{
 }
 
 templ NavigationBar() {
-	<nav
-		class="navbar bg-base-100/90 backdrop-blur-md border-b border-base-200"
-		x-data="{
-		theme: document.documentElement.getAttribute('data-theme') || 'light',
-		toggleTheme() {
-			this.theme = this.theme === 'light' ? 'dark' : 'light';
-			if (window.setTheme) {
-				window.setTheme(this.theme === 'dark');
-			} else {
-				localStorage.theme = this.theme;
-				document.documentElement.classList.toggle('dark', this.theme === 'dark');
-				document.documentElement.setAttribute('data-theme', this.theme);
-				document.querySelectorAll('meta[name=&quot;theme-color&quot;]').forEach(m =>
-					m.setAttribute('content', this.theme === 'dark' ? '#1d232a' : '#ffffff')
-				);
-			}
-		}
-	}"
-	>
+	<nav class="navbar bg-base-100/90 backdrop-blur-md border-b border-base-200">
 		<div class="container mx-auto flex px-4">
 			<!-- Start section (Mobile menu toggle + brand) -->
 			<div class="flex-1 flex items-center gap-4">
-				<!-- Alpine wrapper for mobile menu state -->
-				<div class="lg:hidden relative" x-data="{ open: false }">
-					<button class="btn btn-ghost btn-circle" aria-label="Menu" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-haspopup="true">
+				<!-- Mobile menu: toggled by the vanilla script at the end of <body>. -->
+				<div class="lg:hidden relative">
+					<button id="menu-toggle" class="btn btn-ghost btn-circle" aria-label="Menu" aria-controls="mobile-menu" aria-expanded="false" aria-haspopup="true">
 						@Icon("menu", "h-5 w-5")
 					</button>
-					<ul class="menu menu-sm absolute left-0 mt-3 z-[50] p-2 shadow bg-base-100 rounded-box w-52 border border-base-200" x-show="open" @click.outside="open = false" x-cloak>
+					<ul id="mobile-menu" class="menu menu-sm absolute left-0 mt-3 z-[50] p-2 shadow bg-base-100 rounded-box w-52 border border-base-200 hidden">
 						for _, link := range NAV_LINKS {
 							<li>
-								<a class="font-medium hover:text-primary py-2" href={ templ.SafeURL(link["href"]) } @click="open = false">{ link["label"] }</a>
+								<a class="font-medium hover:text-primary py-2" href={ templ.SafeURL(link["href"]) }>{ link["label"] }</a>
 							</li>
 						}
 					</ul>
@@ -75,14 +57,13 @@ templ NavigationBar() {
 					}
 				</div>
 				<div class="border-l border-base-content/20 h-6 md:h-8 mx-1 md:mx-2"></div>
-				<!-- Theme toggle button utilizing Alpine reactive state -->
-				<button class="btn btn-ghost btn-circle btn-sm md:btn-md bg-base-200/60 border border-base-content/10" aria-label="Toggle Dark Mode" @click="toggleTheme()">
-					<!-- Moon icon (shows in light theme) -->
-					<span x-show="theme === 'light'" x-cloak>
+				<!-- Theme toggle: which icon shows is driven purely by CSS keyed on the
+				     <html data-theme> the head script sets before first paint (no FOUC). -->
+				<button id="theme-toggle" class="btn btn-ghost btn-circle btn-sm md:btn-md bg-base-200/60 border border-base-content/10" aria-label="Toggle dark mode">
+					<span class="theme-icon-moon">
 						@Icon("moon", "h-5 w-5 md:h-6 md:w-6")
 					</span>
-					<!-- Sun icon (shows in dark theme) -->
-					<span x-show="theme === 'dark'" x-cloak>
+					<span class="theme-icon-sun">
 						@Icon("sun", "h-5 w-5 md:h-6 md:w-6")
 					</span>
 				</button>
@@ -104,19 +85,25 @@ templ PageFooter() {
 	</footer>
 }
 
-templ Layout(body templ.Component, analyticsID string) {
+templ Layout(body templ.Component, analyticsID string, noindex bool) {
 	<!DOCTYPE html>
 	<html lang="en" class="scroll-smooth">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ METADATA.Title }</title>
-			<link rel="canonical" href={ METADATA.SiteURL + "/" }/>
+			if !noindex {
+				<link rel="canonical" href={ METADATA.SiteURL + "/" }/>
+			}
 			<meta name="theme-color" content="#ffffff"/>
 			<meta name="author" content={ METADATA.Name + " (" + METADATA.AlternateName + ")" }/>
 			<meta name="description" content={ METADATA.Description }/>
 			<meta name="keywords" content={ strings.Join(METADATA.Keywords, ", ") }/>
-			<meta name="robots" content="index, follow"/>
+			if noindex {
+				<meta name="robots" content="noindex, follow"/>
+			} else {
+				<meta name="robots" content="index, follow"/>
+			}
 			for _, s := range METADATA.Socials {
 				<link rel="me" href={ s.URL }/>
 			}
@@ -164,17 +151,16 @@ templ Layout(body templ.Component, analyticsID string) {
 			<link rel="icon" type="image/png" sizes="32x32" href={ StaticURL("static/img/favicons/favicon-32x32.png") }/>
 			<link rel="icon" type="image/png" sizes="16x16" href={ StaticURL("static/img/favicons/favicon-16x16.png") }/>
 			<link rel="manifest" href={ StaticURL("static/site.webmanifest") }/>
-			<!-- Local CSS & JS. The stylesheet is inlined to avoid a render-blocking request
-			     (falls back to an external link if the build output is unavailable). Alpine.js
-			     powers the theme toggle and mobile menu; it is deferred so it never blocks first
-			     paint. HTMX is vendored (GOTH stack) but not loaded — the page is fully
-			     server-rendered with no hypermedia calls. -->
+			<!-- The stylesheet is inlined to avoid a render-blocking request (falls back
+			     to an external link if the build output is unavailable). The only scripts
+			     are two tiny nonce-authorized inline snippets: the theme initializer above
+			     (pre-paint, no FOUC) and the theme/menu handlers at the end of <body>. No
+			     framework, no external JS — the page is fully server-rendered. -->
 			if InlineStyles != "" {
 				@templ.Raw("<style>" + InlineStyles + "</style>")
 			} else {
 				<link rel="stylesheet" href={ StaticURL("static/dist/styles.css") }/>
 			}
-			<script src={ StaticURL("static/vendor/alpine.min.js") } defer></script>
 			@templ.Raw("<script type=\"application/ld+json\">" + GetPersonSchema() + "</script>")
 			@templ.Raw("<script type=\"application/ld+json\">" + GetWebsiteSchema() + "</script>")
 			if analyticsID != "" {
@@ -222,6 +208,37 @@ templ Layout(body templ.Component, analyticsID string) {
 			</main>
 			<!-- Footer -->
 			@PageFooter()
+			<!-- Interactivity: theme toggle + mobile menu. ~30 lines of vanilla JS,
+			     authorized by the CSP nonce, replacing a client-side framework. -->
+			<script nonce={ templ.GetNonce(ctx) }>
+				(function () {
+				  var toggle = document.getElementById('theme-toggle');
+				  if (toggle) {
+				    toggle.addEventListener('click', function () {
+				      var isDark = document.documentElement.getAttribute('data-theme') !== 'dark';
+				      window.setTheme(isDark);
+				    });
+				  }
+				  var menuBtn = document.getElementById('menu-toggle');
+				  var menu = document.getElementById('mobile-menu');
+				  if (menuBtn && menu) {
+				    var setOpen = function (open) {
+				      menu.classList.toggle('hidden', !open);
+				      menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+				    };
+				    menuBtn.addEventListener('click', function (e) {
+				      e.stopPropagation();
+				      setOpen(menu.classList.contains('hidden'));
+				    });
+				    document.addEventListener('click', function (e) {
+				      if (!menu.contains(e.target) && !menuBtn.contains(e.target)) setOpen(false);
+				    });
+				    menu.querySelectorAll('a').forEach(function (a) {
+				      a.addEventListener('click', function () { setOpen(false); });
+				    });
+				  }
+				})();
+			</script>
 		</body>
 	</html>
 }

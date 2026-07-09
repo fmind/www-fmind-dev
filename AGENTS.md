@@ -1,12 +1,12 @@
 # AGENTS.md — www-fmind-dev
 
-Go 1.26 GOTH web app (Go + Templ + HTMX + Alpine.js + Tailwind/DaisyUI). Self-contained: one static binary with `//go:embed`ed assets, no database, no Node.js.
+Go 1.26 server-rendered web app (Go + Templ + Tailwind/DaisyUI + ~30 lines of vanilla JS for the theme toggle and mobile menu). Self-contained: one static binary with `//go:embed`ed assets, no client framework, no database, no Node.js.
 
 ## Commands (mise)
 
 The canonical vocabulary lives in `mise.toml` and is reused by the repo's lefthook hooks and CI. Run from this directory.
 
-- `mise install` — tidy modules, vendor htmx/alpine (`scripts/vendor.go`).
+- `mise install` — tidy Go modules and download dependencies.
 - `mise run watch` — live-reload dev server (air + Tailwind watch).
 - `mise run format` — goimports, gofumpt, `templ fmt`, dprint.
 - `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks.
@@ -20,11 +20,11 @@ Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, tailwindc
 - `cmd/www-fmind-dev/main.go` — entry point: config load, OTel + slog setup, HTTP server lifecycle.
 - `config/config.go` — typed, env-parsed configuration (`caarlos0/env`); `Environment` enum, `Load`, `NewHandler`.
 - `server.go` — `NewAppHandler`: routing, `//go:embed static`, content-hash cache busting, inlined CSS, well-known files, `/api/profile`, `/mcp`.
-- `middleware.go` — `Chain`, request logger, canonical-host redirect, CSP-nonce security headers, static cache, gzip.
+- `middleware.go` — `Chain`, request logger, canonical-host redirect, CSP-nonce security headers, static cache, gzip, and `MaxBody` (request-body cap for `/mcp`).
 - `mcp.go` — read-only Model Context Protocol server (Streamable HTTP) over the portfolio data.
 - `telemetry.go` — `SetupOTel` + `OtelHandler` (slog trace correlation).
 - `templates/` — Templ components (`layout`, `home`, `icons`, `notfound`), the portfolio data (`data.go`), and asset/schema helpers (`helpers.go`). Generated `*_templ.go` is committed.
-- `static/` — embedded assets: `css/input.css` (Tailwind source) → `dist/styles.css` (built, gitignored), `vendor/` (htmx, alpine), `fonts/` (subset woff2), `img/`, and SEO/well-known files.
+- `static/` — embedded assets: `css/input.css` (Tailwind source) → `dist/styles.css` (built, gitignored), `fonts/` (subset woff2), `img/`, and SEO/well-known files.
 - `Dockerfile` — multi-stage, multi-arch, distroless-nonroot runtime.
 - `infra/` — Terraform for Cloud Run: service, Artifact Registry, keyless GitHub Actions CI (Workload Identity Federation), and error alerting.
 - `.github/workflows/deploy.yml` — CI/CD: verify (`mise run check` + `test`) → build/push image → deploy to Cloud Run.

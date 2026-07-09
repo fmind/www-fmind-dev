@@ -55,6 +55,9 @@ func main() {
 		IdleTimeout:       120 * time.Second,
 	}
 
+	// Closed once the shutdown goroutine has finished draining, so the main
+	// goroutine can block on it before exiting.
+	idleClosed := make(chan struct{})
 	go func() {
 		<-ctx.Done()
 		logger.Info("shutdown signal received")
@@ -66,6 +69,7 @@ func main() {
 			logger.Error("graceful shutdown failed", "error", err)
 			_ = server.Close()
 		}
+		close(idleClosed)
 	}()
 
 	logger.Info("server listening", "addr", server.Addr, "env", cfg.Environment)
@@ -73,5 +77,9 @@ func main() {
 		logger.Error("server error", "error", err)
 		os.Exit(1)
 	}
+	// ListenAndServe returns the instant Shutdown closes the listener, but the
+	// drain runs on in the goroutine; wait for it so in-flight requests finish
+	// (and the deferred OTel flush runs) before the process exits.
+	<-idleClosed
 	logger.Info("graceful shutdown complete")
 }

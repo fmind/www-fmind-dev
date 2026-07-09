@@ -52,7 +52,10 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
     "attribute.repository" = "assertion.repository"
   }
 
-  attribute_condition = "assertion.repository_owner == 'fmind'"
+  # Mint tokens only for this exact repository (not just any repo in the org), so
+  # the pool itself is the first least-privilege gate — not only the downstream
+  # principalSet impersonation binding below. assertion.repository is "owner/repo".
+  attribute_condition = "assertion.repository == '${var.github_repository}'"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"

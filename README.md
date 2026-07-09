@@ -1,11 +1,12 @@
 # www-fmind-dev
 
-The portfolio website of Médéric Hurier (Fmind), freelance AI/ML Architect & Engineer. Built with the **GOTH** stack — **G**o, **T**empl, **H**TMX, and Alpine.js — styled with **Tailwind CSS v4** + **DaisyUI v5**, and served as a single, self-contained static binary with embedded assets. No Node.js, no database.
+The portfolio website of Médéric Hurier (Fmind), freelance AI/ML Architect & Engineer. Built with **Go** + **[Templ](https://templ.guide)** (fully server-rendered), styled with **Tailwind CSS v4** + **DaisyUI v5**, with ~30 lines of vanilla JavaScript for the theme toggle and mobile menu — served as a single, self-contained static binary with embedded assets. No client framework, no Node.js, no database.
 
 ## Highlights
 
 - **Server-rendered** with [Templ](https://templ.guide); the whole page and its assets ship inside one Go binary (`//go:embed`).
-- **Fast**: inlined critical CSS, gzip compression, content-hashed immutable caching, self-hosted subset fonts, and `content-visibility` for below-the-fold sections. Scores **100** on Lighthouse Performance, Accessibility, Best Practices, and SEO.
+- **Fast**: inlined critical CSS, gzip compression, content-hashed immutable caching, self-hosted subset fonts, and `content-visibility` for below-the-fold sections. Lighthouse scores **100 / 100 / 100 / 100** (Performance, Accessibility, Best Practices, SEO) on desktop and **99 / 100 / 100 / 100** on throttled mobile.
+- **Hardened**: a strict, per-request-nonce CSP (no `unsafe-inline`/`unsafe-eval` for scripts), the full suite of security headers, and a request-body cap on the public `/mcp` endpoint.
 - **Agent-ready**: a read-only [Model Context Protocol](https://modelcontextprotocol.io) server at `/mcp` (Streamable HTTP) plus a JSON snapshot at `/api/profile` and a curated `/llms.txt`, so AI assistants (Claude, ChatGPT) can query the portfolio directly.
 - **Observability**: OpenTelemetry tracing (opt-in via `OTEL_EXPORTER_OTLP_ENDPOINT`) with `trace_id`/`span_id` correlated into structured logs.
 
@@ -17,7 +18,7 @@ The portfolio website of Médéric Hurier (Fmind), freelance AI/ML Architect & E
 ## Local Development
 
 ```bash
-mise install        # install the toolchain and vendor htmx/alpine
+mise install        # install the toolchain and tidy Go modules
 mise run watch      # compile Tailwind + templates and run the live-reload server
 ```
 
@@ -29,7 +30,7 @@ All tasks are defined in `mise.toml` and reused by the git hooks and CI:
 
 | Task               | Description                                                             |
 | ------------------ | ----------------------------------------------------------------------- |
-| `mise run install` | Tidy modules and vendor the client-side JS assets                       |
+| `mise run install` | Tidy Go modules and download dependencies                               |
 | `mise run watch`   | Live-reload dev server (Go + Tailwind)                                  |
 | `mise run format`  | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint) |
 | `mise run check`   | Lint, vulnerability scan, format check, secret scan                     |

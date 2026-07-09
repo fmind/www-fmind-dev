@@ -127,10 +127,10 @@ func SecurityHeaders(env config.Environment, analytics bool) Middleware {
 			_, _ = rand.Read(nonceBytes[:])
 			nonce := base64.StdEncoding.EncodeToString(nonceBytes[:])
 
-			// Alpine.js v3 compiles x-data/@click expressions via the Function
-			// constructor (eval semantics, not inline-script semantics), so
-			// 'unsafe-eval' is required while 'unsafe-inline' is safely dropped.
-			scriptSrc := "'self' 'nonce-" + nonce + "' 'unsafe-eval'"
+			// Our only scripts are the inline theme + menu snippets, each authorized
+			// by this per-request nonce, so neither 'unsafe-inline' nor 'unsafe-eval'
+			// is needed — the strongest practical script-src.
+			scriptSrc := "'self' 'nonce-" + nonce + "'"
 			connectSrc := "'self'"
 			imgSrc := "'self' data:"
 			if analytics && env == config.Production {
@@ -166,6 +166,18 @@ func SecurityHeaders(env config.Environment, analytics bool) Middleware {
 			}
 
 			next.ServeHTTP(w, r.WithContext(templ.WithNonce(r.Context(), nonce)))
+		})
+	}
+}
+
+// MaxBody caps the request body size, turning an oversized payload into a fast
+// failure instead of an unbounded in-memory read. It guards the public,
+// unauthenticated /mcp endpoint, whose SDK reads the whole body with io.ReadAll.
+func MaxBody(n int64) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, n)
+			next.ServeHTTP(w, r)
 		})
 	}
 }
