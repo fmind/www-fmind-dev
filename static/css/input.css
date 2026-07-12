@@ -1,0 +1,100 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light, dark;
+  include: button, card, navbar, menu, hero, avatar, badge, footer, typography;
+}
+
+@source "../../templates/**/*.templ";
+
+@source inline("badge-{warning,info,success,error} text-{warning,info,success,error}-content");
+
+@plugin 'daisyui/theme' {
+  name: 'light';
+  --color-primary: oklch(0.55 0.22 263.6);
+  --color-primary-content: oklch(0.98 0.01 263.6);
+  --color-accent: oklch(0.55 0.22 263.6);
+}
+
+@plugin 'daisyui/theme' {
+  name: 'dark';
+  --color-primary: oklch(0.648 0.205 263.6);
+  --color-primary-content: oklch(0.18 0.03 263.6);
+  --color-accent: oklch(0.648 0.205 263.6);
+}
+
+@theme {
+  --color-brand: #646cff;
+  --color-glass-bg: rgba(15, 23, 42, 0.65);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --radius-glass: 24px;
+}
+
+/* Custom utility for premium glassmorphic cards */
+@utility glassmorphism {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-glass);
+  border-radius: var(--radius-glass);
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/static/fonts/Inter-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('/static/fonts/Outfit-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+.theme-icon-moon {
+  display: inline-flex;
+}
+
+.theme-icon-sun {
+  display: none;
+}
+
+[data-theme='dark'] .theme-icon-moon {
+  display: none;
+}
+
+[data-theme='dark'] .theme-icon-sun {
+  display: inline-flex;
+}
+
+#about,
+#work-experience,
+#certifications,
+#publications,
+#projects,
+#services {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1200px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,9 @@
+*.tfstate
+*.tfstate.*
+*.tfvars
+.env
+bin/
+coverage.out
+infra/.terraform/
+static/dist/styles.css
+tmp/

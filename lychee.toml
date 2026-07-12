@@ -1,0 +1,34 @@
+# Treat anti-bot responses as success: some hosts block automated checkers but
+# serve the pages fine to real browsers — Medium → 429, Udemy → 403, and
+# LinkedIn → 999 (its non-standard bot-block code).
+accept = ["200..=299", "403", "429", "999"]
+
+max_retries = 2
+retry_wait_time = 2
+timeout = 20
+
+# A browser-like UA so fewer hosts reject the checker outright.
+user_agent = "Mozilla/5.0 (compatible; lychee link-checker; +https://www.fmind.dev)"
+
+# The site's own apex/www origin is validated by the live deployment, not from
+# CI (it isn't reachable before deploy). Subdomains like mlops-coding-course
+# stay in scope. mailto/relative links carry no external-reachability signal.
+exclude = ["^https?://(www\\.)?fmind\\.dev"]
+exclude_all_private = true
+
+# Exclude directories and generated/dependency files from being checked.
+exclude_path = [
+  "Dockerfile",
+  "\\.git/",
+  "\\.ini$",
+  "\\.json$",
+  "\\.toml$",
+  "\\.yml$",
+  "_templ\\.go$",
+  "bin/",
+  "go\\.(mod|sum)$",
+  "infra/",
+  "static/css/",
+  "static/dist/",
+  "tmp/",
+]
