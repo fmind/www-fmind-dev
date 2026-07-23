@@ -13,7 +13,7 @@ tool (
 require (
 	github.com/a-h/templ v0.3.1020
 	github.com/caarlos0/env/v11 v11.4.1
-	github.com/klauspost/compress v1.19.0
+	github.com/klauspost/compress v1.19.1
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/yuin/goldmark v1.8.4
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
