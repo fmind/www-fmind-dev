@@ -51,9 +51,9 @@ As my career progressed, I ventured into functional-oriented languages such as C
 ### Cons:
 
 1. [**Learning Curve**](https://www.infoworld.com/article/2843393/functional-programming-tradeoffs-efficiency-learning-curve.html): Functional programming can be challenging for developers who are more accustomed to imperative and object-oriented paradigms. The shift in mindset and understanding of concepts like higher-order functions and recursion may take time.
-2. [**Performance Overhead**](https://saturncloud.io/blog/why-is-this-simple-haskell-algorithm-so-slow/): Some functional programming constructs, such as creating many intermediate data structures during computation, may introduce performance overhead compared to optimized imperative implementations.
+2. [**Performance Overhead**](https://stackoverflow.com/questions/8659345/why-is-this-simple-haskell-algorithm-so-slow): Some functional programming constructs, such as creating many intermediate data structures during computation, may introduce performance overhead compared to optimized imperative implementations.
 
-The diagram below exemplifies an MLOps application adhering to a functional programming style. The program layout is more straightforward due to a clear separation between data structures and operations. However, this style requires functional programming constructs such as [ad-hoc polymorphism](https://wiki.haskell.org/Polymorphism#Ad-hoc_polymorphism) to support the addition of both new types and functions in a robust manner.
+The diagram below exemplifies an MLOps application adhering to a functional programming style. The program layout is more straightforward due to a clear separation between data structures and operations. However, this style requires functional programming constructs such as [ad-hoc polymorphism](https://www.haskell.org/tutorial/classes.html) to support the addition of both new types and functions in a robust manner.
 
 ![Simplified MLOps application implemented with the Functional Programming Style](/static/img/articles/finding-harmony-in-mlops-balancing-functional-and-object-oriented-approaches/03.webp)
 
