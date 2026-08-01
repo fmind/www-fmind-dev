@@ -15,6 +15,7 @@ gotestsum = "latest"
 hadolint = "latest"
 lefthook = "latest"
 lychee = "latest"
+terraform = "1.15.8"
 
 [tasks.all]
 alias = "a"
@@ -63,6 +64,7 @@ depends = [
   "check:format",
   "check:leaks",
   "check:dockerfile",
+  "check:terraform",
 ]
 
 [tasks."check:dockerfile"]
@@ -91,6 +93,14 @@ description = "Lint Go sources (golangci-lint)"
 depends = ["build:templ"]
 run = "golangci-lint run ./..."
 
+[tasks."check:terraform"]
+description = "Validate Terraform configuration"
+run = [
+  "terraform -chdir=infra fmt -check -recursive",
+  "terraform -chdir=infra init -backend=false -input=false -lockfile=readonly",
+  "terraform -chdir=infra validate",
+]
+
 [tasks."check:vuln"]
 alias = "cv"
 description = "Scan Go code for known vulnerabilities (govulncheck)"
@@ -110,7 +120,7 @@ run = "go tool cover -func=coverage.out"
 [tasks.format]
 alias = "f"
 description = "Format all sources and documents"
-depends = ["format:go", "format:templ", "format:dprint"]
+depends = ["format:go", "format:templ", "format:dprint", "format:terraform"]
 
 [tasks."format:dprint"]
 description = "Format JSON, Markdown, TOML, YAML with dprint"
@@ -126,6 +136,10 @@ run = [
 [tasks."format:templ"]
 description = "Format Templ templates"
 run = "go tool templ fmt ."
+
+[tasks."format:terraform"]
+description = "Format Terraform configuration"
+run = "terraform -chdir=infra fmt -recursive"
 
 [tasks.install]
 alias = "i"

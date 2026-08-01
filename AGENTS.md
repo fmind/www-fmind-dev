@@ -9,7 +9,7 @@ The canonical vocabulary lives in `mise.toml` and is reused by the repo's leftho
 - `mise install` — tidy Go modules and download dependencies.
 - `mise run watch` — live-reload dev server (air + Tailwind watch).
 - `mise run format` — goimports, gofumpt, `templ fmt`, dprint.
-- `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint.
+- `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, and Terraform validation.
 - `mise run check:links` — lychee reachability check for external content links (network-dependent; runs as its own CI step, not in the offline `check`/pre-commit).
 - `mise run test` — gotestsum with race + coverage.
 - `mise run build` — generate templates, compile CSS, build `bin/www-fmind-dev`.

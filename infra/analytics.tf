@@ -10,6 +10,16 @@ locals {
   ])
 }
 
+# Some Google APIs do not provision their managed service identity when the API
+# is enabled. Create it explicitly so the first sink apply can grant access.
+resource "google_project_service_identity" "logging" {
+  provider = google-beta
+  project  = var.project_id
+  service  = google_project_service.logging.service
+
+  depends_on = [time_sleep.wait_for_apis]
+}
+
 resource "google_bigquery_dataset" "analytics" {
   project                         = var.project_id
   dataset_id                      = "website_analytics"
@@ -43,7 +53,7 @@ resource "google_logging_project_sink" "analytics" {
     use_partitioned_tables = true
   }
 
-  depends_on = [time_sleep.wait_for_apis]
+  depends_on = [google_project_service_identity.logging]
 }
 
 resource "google_bigquery_dataset_iam_member" "analytics_writer" {
