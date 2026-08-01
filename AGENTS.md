@@ -25,28 +25,31 @@ Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint,
 - `.gitignore` — Specifies file paths that Git should not track.
 - `.golangci.yml` — Configuration for the golangci-lint Go static analysis tool.
 - `AGENTS.md` — AI assistant instructions, tooling setup, commands, conventions, and layout.
+- `articles.go` — Strict embedded Markdown parsing, validation, rendering, and immutable article collection.
 - `Dockerfile` — Multi-stage recipe for building a secure, distroless application container.
 - `LICENSE` — Software license file governing distribution and reuse rights (MIT).
 - `README.md` — Human-readable documentation covering project setup, run instructions, and usage.
 - `bin/` — Output directory for compiled application binaries (ignored by Git).
 - `cmd/` — Entry point directories containing main packages for compiled binaries.
 - `config/` — Configuration structures and environment variables parser packages.
+- `content/` — Embedded Markdown article sources with strict TOML frontmatter.
 - `coverage.out` — Generated Go unit test code coverage analysis profiles.
 - `dprint.json` — Configuration for the dprint code formatting tool.
 - `go.mod` — Go module dependencies definition and tool directive manifest.
 - `go.sum` — Checksums file for verifying the integrity of Go module dependencies.
-- `infra/` — Terraform scripts for provisioning GCP infrastructure like Cloud Run and registries.
+- `infra/` — Terraform for Cloud Run, registries, monitoring, identity, and cookieless BigQuery analytics routing.
 - `lefthook.yml` — Configuration for Lefthook Git pre-commit and pre-push hooks.
 - `lychee.toml` — Configuration settings for the Lychee hyperlink checker tool.
 - `mcp.go` — Go implementation of the Model Context Protocol (MCP) server handler.
 - `mcp_test.go` — Test suites for validating Model Context Protocol (MCP) endpoint behavior.
 - `middleware.go` — Custom HTTP middlewares covering logging, security headers, compression, and sizing.
 - `mise.toml` — Developer tooling, tasks, environment variables, and alias definitions.
+- `publications.go` — Generated Atom, sitemap, llms.txt, and article-index discovery surfaces.
 - `server.go` — HTTP router initialization, routing rules, static asset serving, and metadata files.
 - `server_test.go` — Integration and request handling tests for HTTP endpoints and middlewares.
-- `static/` — Embedded static assets containing web fonts, images, and compiled styles.
+- `static/` — Embedded static assets containing web fonts, article images, and compiled styles.
 - `telemetry.go` — OpenTelemetry trace exporter initialization and structured logging correlation.
-- `templates/` — Portfolio data definition, data models, layout files, and Templ UI components.
+- `templates/` — Portfolio/article data models, layouts, structured metadata, and Templ UI components.
 - `tmp/` — Temporary workspace directory for test logs and compiler outputs.
 
 ## Conventions
@@ -55,5 +58,6 @@ Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint,
 - No hardcoded operational values — parse them into `config.Config` at the boundary; fail fast.
 - All Tailwind/DaisyUI classes live in `.templ` files (the `@source` scan and DaisyUI `include:` list depend on this — no classes in Go strings).
 - Every static asset is self-hosted; never reference a CDN at runtime.
+- The validated article collection is the only publication source for HTML, Atom, sitemap, llms.txt, JSON, and MCP surfaces; production discovery never includes drafts.
 - Definition of done: `mise run format` clean, `mise run check` no findings, `mise run test` green, new behavior covered by a test.
 - Conventional Commits; no attribution.

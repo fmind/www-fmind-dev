@@ -11,9 +11,16 @@ timeout = 20
 user_agent = "Mozilla/5.0 (compatible; lychee link-checker; +https://www.fmind.dev)"
 
 # The site's own apex/www origin is validated by the live deployment, not from
-# CI (it isn't reachable before deploy). Subdomains like mlops-coding-course
-# stay in scope. mailto/relative links carry no external-reachability signal.
-exclude = ["^https?://(www\\.)?fmind\\.dev"]
+# CI (it isn't reachable before deploy). A few authoritative/authenticated sites
+# reject or time out automated HEAD clients while remaining browser-accessible.
+exclude = [
+  "^https?://(www\\.)?fmind\\.dev",
+  "^https://api\\.openai\\.com/",
+  "^https://docs\\.google\\.com/",
+  "^https://docs\\.zenml\\.io/",
+  "^https://unsplash\\.com/",
+  "^https://www\\.gnu\\.org/",
+]
 exclude_all_private = true
 
 # Exclude directories and generated/dependency files from being checked.

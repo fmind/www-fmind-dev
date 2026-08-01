@@ -293,7 +293,7 @@ templ CertificationsSection() {
 	</section>
 }
 
-templ PublicationsSection() {
+templ PublicationsSection(articles []Article) {
 	<section class="py-16 md:py-24 bg-base-200 px-4" id="publications">
 		<div class="container mx-auto">
 			<!-- Section Header -->
@@ -384,41 +384,38 @@ templ PublicationsSection() {
 						</div>
 					</div>
 				</div>
-				<!-- Right Column: Curated Posts -->
+				<!-- Right Column: Latest Articles -->
 				<div class="lg:col-span-5 space-y-6">
 					<h3 class="text-2xl font-bold text-base-content flex items-center gap-2">
 						<span class="w-2 h-8 bg-primary rounded-full"></span>
-						Featured Posts
+						Latest Articles
 					</h3>
 					<div class="card bg-base-100 shadow-xl border border-base-300 overflow-hidden">
 						<div class="card-body p-2 divide-y divide-base-200">
-							for _, post := range POSTS {
-								<a
-									class="flex items-start gap-3 p-4 hover:bg-base-200 transition-colors duration-200 group"
-									href={ templ.SafeURL(post.URL) }
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									<div class="mt-0.5 shrink-0 text-accent">
-										@Icon("medium", "w-5 h-5")
-									</div>
-									<span class="text-sm font-semibold text-base-content/85 group-hover:text-primary transition-colors leading-snug select-text">
-										{ post.Title }
-									</span>
-									@Icon("external_link", "w-4 h-4 shrink-0 text-accent opacity-0 group-hover:opacity-100 transition-opacity ml-auto")
-								</a>
+							for i, article := range articles {
+								if i < 8 {
+									<a
+										class="flex items-start gap-3 p-4 hover:bg-base-200 transition-colors duration-200 group"
+										href={ templ.SafeURL("/articles/" + article.Slug + "/") }
+									>
+										<div class="mt-0.5 shrink-0 text-accent">
+											@Icon("article", "w-5 h-5")
+										</div>
+										<span class="text-sm font-semibold text-base-content/85 group-hover:text-primary transition-colors leading-snug select-text">
+											{ article.Title }
+										</span>
+										<span class="text-xs text-base-content/50 whitespace-nowrap">{ article.Date.Format("2006") }</span>
+									</a>
+								}
 							}
 						</div>
 					</div>
 					<a
 						class="btn btn-outline btn-primary btn-md w-full shadow-md rounded-xl hover:scale-[1.01] transition-transform font-bold"
-						href="https://fmind.medium.com/"
-						target="_blank"
-						rel="noopener noreferrer"
+						href="/articles/"
 					>
-						@Icon("medium", "w-5 h-5 mr-2")
-						More publications on Medium
-						@Icon("external_link", "w-4 h-4 ml-1.5")
+						@Icon("article", "w-5 h-5 mr-2")
+						Browse all articles
 					</a>
 				</div>
 			</div>
@@ -606,13 +603,13 @@ templ ServicesSection() {
 	</section>
 }
 
-templ Home() {
+templ Home(articles []Article) {
 	<div>
 		@HeroSection()
 		@AboutSection()
 		@WorkExperienceSection()
 		@CertificationsSection()
-		@PublicationsSection()
+		@PublicationsSection(articles)
 		@ProjectsSection()
 		@ServicesSection()
 	</div>

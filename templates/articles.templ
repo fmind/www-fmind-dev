@@ -1,0 +1,90 @@
+package templates
+
+import (
+	"fmt"
+	"net/url"
+)
+
+templ ArticleCard(article Article) {
+	<article class="card bg-base-100 border border-base-300 shadow-lg hover:shadow-xl transition-shadow overflow-hidden h-full">
+		<a href={ templ.SafeURL("/articles/" + article.Slug + "/") } class="block">
+			<img class="w-full aspect-[16/9] object-cover" src={ templ.SafeURL(article.ImagePath()) } alt={ article.ImageAlt } loading="lazy" decoding="async"/>
+		</a>
+		<div class="card-body p-5 sm:p-6">
+			<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-base-content/65">
+				<time datetime={ article.Date.Format("2006-01-02") }>{ article.Date.Format("Jan 2, 2006") }</time>
+				<span aria-hidden="true">·</span>
+				<span>{ fmt.Sprintf("%d min read", article.ReadingMinutes) }</span>
+			</div>
+			<h2 class="card-title font-heading text-xl leading-snug mt-2">
+				<a class="hover:text-primary transition-colors" href={ templ.SafeURL("/articles/" + article.Slug + "/") }>{ article.Title }</a>
+			</h2>
+			<p class="text-base-content/75 leading-relaxed mt-2">{ article.Description }</p>
+			if len(article.Tags) > 0 {
+				<ul class="flex flex-wrap gap-2 mt-3" aria-label="Article tags">
+					for _, tag := range article.Tags {
+						<li><span class="badge badge-outline border-base-content/25">{ tag }</span></li>
+					}
+				</ul>
+			}
+		</div>
+	</article>
+}
+
+templ ArticleIndex(years []ArticleYear, tags []string, activeTag string) {
+	<section class="bg-base-200 min-h-screen px-4 py-14 md:py-20">
+		<div class="container mx-auto max-w-6xl">
+			<header class="text-center max-w-3xl mx-auto mb-10 md:mb-14">
+				<p class="text-sm uppercase tracking-[0.2em] text-primary font-semibold mb-3">Writing</p>
+				<h1 class="text-4xl md:text-6xl font-heading font-black text-balance">Articles</h1>
+				<p class="text-lg text-base-content/70 leading-relaxed mt-5">Pragmatic field notes on AI agents, MLOps, cloud architecture, and engineering systems.</p>
+			</header>
+			<nav class="flex flex-wrap justify-center gap-2 mb-12" aria-label="Filter articles by tag">
+				<a class={ "btn btn-sm rounded-full", templ.KV("btn-primary", activeTag == ""), templ.KV("btn-ghost border border-base-300", activeTag != "") } href="/articles/">All</a>
+				for _, tag := range tags {
+					<a class={ "btn btn-sm rounded-full", templ.KV("btn-primary", activeTag == tag), templ.KV("btn-ghost border border-base-300", activeTag != tag) } href={ templ.SafeURL("/articles/?tag=" + url.QueryEscape(tag)) }>{ tag }</a>
+				}
+			</nav>
+			if len(years) == 0 {
+				<div class="alert max-w-2xl mx-auto"><span>No articles match this tag.</span></div>
+			}
+			<div class="space-y-16">
+				for _, group := range years {
+					<section aria-labelledby={ fmt.Sprintf("year-%d", group.Year) }>
+						<h2 id={ fmt.Sprintf("year-%d", group.Year) } class="text-3xl font-heading font-bold mb-6 border-b border-base-300 pb-3">{ fmt.Sprintf("%d", group.Year) }</h2>
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+							for _, article := range group.Articles {
+								@ArticleCard(article)
+							}
+						</div>
+					</section>
+				}
+			</div>
+		</div>
+	</section>
+}
+
+templ ArticlePage(article Article) {
+	<article class="bg-base-100 min-h-screen px-4 py-12 md:py-20">
+		<header class="max-w-4xl mx-auto text-center mb-10 md:mb-14">
+			<a class="link link-primary font-semibold" href="/articles/">← All articles</a>
+			<h1 class="font-heading text-4xl md:text-6xl font-black leading-tight text-balance mt-6">{ article.Title }</h1>
+			<p class="text-xl text-base-content/70 leading-relaxed mt-6 text-balance">{ article.Description }</p>
+			<div class="flex flex-wrap justify-center items-center gap-x-3 gap-y-2 text-sm text-base-content/65 mt-6">
+				<time datetime={ article.Date.Format("2006-01-02") }>{ article.Date.Format("January 2, 2006") }</time>
+				<span aria-hidden="true">·</span>
+				<span>{ fmt.Sprintf("%d min read", article.ReadingMinutes) }</span>
+			</div>
+			if len(article.Tags) > 0 {
+				<ul class="flex flex-wrap justify-center gap-2 mt-5" aria-label="Article tags">
+					for _, tag := range article.Tags {
+						<li><a class="badge badge-outline border-base-content/25 hover:border-primary hover:text-primary" href={ templ.SafeURL("/articles/?tag=" + url.QueryEscape(tag)) }>{ tag }</a></li>
+					}
+				</ul>
+			}
+		</header>
+		<div class="prose prose-lg md:prose-xl mx-auto max-w-4xl text-base-content prose-headings:font-heading prose-headings:scroll-mt-24 prose-a:text-primary prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-code:before:content-none prose-code:after:content-none [&_figure]:my-10 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-base-content/60">
+			@templ.Raw(article.HTML)
+		</div>
+	</article>
+}

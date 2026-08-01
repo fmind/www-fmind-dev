@@ -11,6 +11,7 @@ var NAV_LINKS = []map[string]string{
 	{"href": "/#work-experience", "label": "Work Experience"},
 	{"href": "/#certifications", "label": "Certifications"},
 	{"href": "/#publications", "label": "Publications"},
+	{"href": "/articles/", "label": "Articles"},
 	{"href": "/#projects", "label": "Projects"},
 	{"href": "/#services", "label": "Services"},
 }
@@ -92,6 +93,8 @@ templ PageFooter() {
 				</nav>
 				<div class="border-l border-slate-700 h-4 sm:h-5 shrink-0" aria-hidden="true"></div>
 				<span class="whitespace-nowrap">
+					<a class="link hover:text-white" href="/articles/">Articles</a>
+					<span aria-hidden="true">· </span>
 					<a class="link hover:text-white" href="/llms.txt">For AI agents</a>
 					<span aria-hidden="true">· </span>
 					<a class="link hover:text-white" href="/api/profile">JSON profile</a>
@@ -104,22 +107,23 @@ templ PageFooter() {
 	</footer>
 }
 
-templ Layout(body templ.Component, noindex bool) {
+templ Layout(body templ.Component, page PageMetadata) {
 	<!DOCTYPE html>
 	<html lang="en" class="scroll-smooth">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<title>{ METADATA.Title }</title>
-			if !noindex {
-				<link rel="canonical" href={ METADATA.SiteURL + "/" }/>
+			<title>{ page.Title }</title>
+			if !page.NoIndex {
+				<link rel="canonical" href={ page.Canonical }/>
 				<link rel="alternate" type="application/json" href="/api/profile" title="Machine-readable portfolio"/>
 				<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-ready portfolio summary"/>
+				<link rel="alternate" type="application/atom+xml" href="/articles/feed.xml" title="Fmind articles"/>
 			}
 			<meta name="theme-color" content="#ffffff"/>
 			<meta name="author" content={ METADATA.Name + " (" + METADATA.AlternateName + ")" }/>
-			<meta name="description" content={ METADATA.Description }/>
-			if noindex {
+			<meta name="description" content={ page.Description }/>
+			if page.NoIndex {
 				<meta name="robots" content="noindex, follow"/>
 			} else {
 				<meta name="robots" content="index, follow"/>
@@ -127,24 +131,21 @@ templ Layout(body templ.Component, noindex bool) {
 			for _, s := range METADATA.Socials {
 				<link rel="me" href={ s.URL }/>
 			}
-			<meta property="og:type" content="website"/>
-			<meta property="og:url" content={ METADATA.SiteURL + "/" }/>
-			<meta property="og:title" content={ METADATA.Title }/>
+			<meta property="og:type" content={ page.Kind }/>
+			<meta property="og:url" content={ page.Canonical }/>
+			<meta property="og:title" content={ page.Title }/>
 			<meta property="og:site_name" content={ strings.Replace(METADATA.SiteURL, "https://", "", 1) }/>
-			<meta property="og:description" content={ METADATA.Description }/>
-			<meta property="og:image" content={ METADATA.SiteURL + "/static/img/og-image.jpg" }/>
-			<meta property="og:image:width" content="1200"/>
-			<meta property="og:image:height" content="630"/>
-			<meta property="og:image:type" content="image/jpeg"/>
-			<meta property="og:image:alt" content={ METADATA.Name + " — " + METADATA.JobTitle }/>
+			<meta property="og:description" content={ page.Description }/>
+			<meta property="og:image" content={ page.ImageURL }/>
+			<meta property="og:image:alt" content={ page.ImageAlt }/>
 			<meta property="og:locale" content="en_US"/>
 			<meta name="twitter:card" content="summary_large_image"/>
 			<meta name="twitter:site" content={ METADATA.TwitterHandle }/>
 			<meta name="twitter:creator" content={ METADATA.TwitterHandle }/>
-			<meta name="twitter:title" content={ METADATA.Title }/>
-			<meta name="twitter:description" content={ METADATA.Description }/>
-			<meta name="twitter:image" content={ METADATA.SiteURL + "/static/img/og-image.jpg" }/>
-			<meta name="twitter:image:alt" content={ METADATA.Name + " — " + METADATA.JobTitle }/>
+			<meta name="twitter:title" content={ page.Title }/>
+			<meta name="twitter:description" content={ page.Description }/>
+			<meta name="twitter:image" content={ page.ImageURL }/>
+			<meta name="twitter:image:alt" content={ page.ImageAlt }/>
 			<script nonce={ templ.GetNonce(ctx) }>
 				(function () {
 				  function setTheme(isDark) {
@@ -166,7 +167,9 @@ templ Layout(body templ.Component, noindex bool) {
 			     URLs in the stylesheet exactly, otherwise the browser downloads each font twice. -->
 			<link rel="preload" href="/static/fonts/Outfit-Variable.woff2" crossorigin="anonymous" as="font" type="font/woff2"/>
 			<link rel="preload" href="/static/fonts/Inter-Variable.woff2" crossorigin="anonymous" as="font" type="font/woff2"/>
-			<link rel="preload" href={ StaticURL("static/img/avatar-192.webp") } imagesrcset={ fmt.Sprintf("%s 192w, %s 280w, %s 384w", StaticURL("static/img/avatar-192.webp"), StaticURL("static/img/avatar-280.webp"), StaticURL("static/img/avatar.webp")) } imagesizes="(max-width: 639px) 128px, (max-width: 768px) 160px, 192px" fetchpriority="high" as="image"/>
+			if page.IsHome {
+				<link rel="preload" href={ StaticURL("static/img/avatar-192.webp") } imagesrcset={ fmt.Sprintf("%s 192w, %s 280w, %s 384w", StaticURL("static/img/avatar-192.webp"), StaticURL("static/img/avatar-280.webp"), StaticURL("static/img/avatar.webp")) } imagesizes="(max-width: 639px) 128px, (max-width: 768px) 160px, 192px" fetchpriority="high" as="image"/>
+			}
 			<link rel="icon" type="image/x-icon" href={ StaticURL("static/favicon.ico") }/>
 			<link rel="apple-touch-icon" sizes="180x180" href={ StaticURL("static/img/favicons/apple-touch-icon.png") }/>
 			<link rel="icon" type="image/png" sizes="32x32" href={ StaticURL("static/img/favicons/favicon-32x32.png") }/>
@@ -182,7 +185,7 @@ templ Layout(body templ.Component, noindex bool) {
 			} else {
 				<link rel="stylesheet" href={ StaticURL("static/dist/styles.css") }/>
 			}
-			@templ.Raw("<script type=\"application/ld+json\">" + GetStructuredData() + "</script>")
+			@templ.Raw("<script type=\"application/ld+json\">" + GetStructuredData(page.Article) + "</script>")
 		</head>
 		<body class="min-h-screen bg-base-100 text-base-content font-body antialiased transition-colors duration-300">
 			<!-- Skip to content link for accessibility -->

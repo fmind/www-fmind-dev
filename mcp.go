@@ -30,14 +30,14 @@ type Portfolio struct {
 	Specializations []templates.CertificationEntry `json:"specializations"`
 	Thesis          templates.Thesis               `json:"thesis"`
 	Papers          []templates.ResearchPaper      `json:"papers"`
-	Posts           []templates.CuratedPost        `json:"posts"`
+	Articles        []templates.ArticleSummary     `json:"articles"`
 	OpenSource      []templates.Project            `json:"open_source"`
 	YouTubeSeries   []templates.Playlist           `json:"youtube_series"`
 	Services        []templates.Service            `json:"services"`
 }
 
 // snapshot assembles the current portfolio from the templates data package.
-func snapshot() Portfolio {
+func snapshot(articles []templates.ArticleSummary) Portfolio {
 	return Portfolio{
 		Metadata:        templates.METADATA,
 		Biography:       templates.BIOGRAPHY,
@@ -48,7 +48,7 @@ func snapshot() Portfolio {
 		Specializations: templates.SPECIALIZATIONS,
 		Thesis:          templates.THESIS,
 		Papers:          templates.PAPERS,
-		Posts:           templates.POSTS,
+		Articles:        articles,
 		OpenSource:      templates.OPEN_SOURCE,
 		YouTubeSeries:   templates.YOUTUBE_SERIES,
 		Services:        templates.GetServices(),
@@ -73,9 +73,9 @@ type certificationsResult struct {
 }
 
 type publicationsResult struct {
-	Thesis templates.Thesis          `json:"thesis"`
-	Papers []templates.ResearchPaper `json:"papers"`
-	Posts  []templates.CuratedPost   `json:"posts"`
+	Thesis   templates.Thesis           `json:"thesis"`
+	Papers   []templates.ResearchPaper  `json:"papers"`
+	Articles []templates.ArticleSummary `json:"articles"`
 }
 
 type projectsResult struct {
@@ -100,7 +100,7 @@ var portfolioIcons = []mcp.Icon{{
 
 // newMCPServer builds the read-only MCP server exposing the portfolio as agent
 // tools plus a single JSON resource. All handlers are pure reads of static data.
-func newMCPServer() *mcp.Server {
+func newMCPServer(articles []templates.ArticleSummary) *mcp.Server {
 	server := mcp.NewServer(
 		&mcp.Implementation{
 			Name:       "www-fmind-dev",
@@ -156,10 +156,10 @@ func newMCPServer() *mcp.Server {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_publications",
 		Title:       "List publications",
-		Description: "List academic and written publications: the PhD thesis, peer-reviewed papers, and curated blog posts.",
+		Description: "List academic and written publications: the PhD thesis, peer-reviewed papers, and hosted articles.",
 		Annotations: readOnly,
 	}, func(context.Context, *mcp.CallToolRequest, noArgs) (*mcp.CallToolResult, publicationsResult, error) {
-		return nil, publicationsResult{Thesis: templates.THESIS, Papers: templates.PAPERS, Posts: templates.POSTS}, nil
+		return nil, publicationsResult{Thesis: templates.THESIS, Papers: templates.PAPERS, Articles: articles}, nil
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -190,7 +190,7 @@ func newMCPServer() *mcp.Server {
 		if req.Params.URI != mcpProfileURI {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
-		data, err := json.Marshal(snapshot())
+		data, err := json.Marshal(snapshot(articles))
 		if err != nil {
 			return nil, fmt.Errorf("marshaling portfolio: %w", err)
 		}
@@ -206,8 +206,8 @@ func newMCPServer() *mcp.Server {
 // transport as a plain http.Handler, mounted by the router at /mcp. JSONResponse
 // keeps responses as application/json (no SSE), which is simplest behind the
 // Gateway proxy for a read-only, horizontally-scaled service.
-func newMCPHandler() http.Handler {
-	server := newMCPServer()
+func newMCPHandler(articles []templates.ArticleSummary) http.Handler {
+	server := newMCPServer(articles)
 	handler := mcp.NewStreamableHTTPHandler(
 		func(*http.Request) *mcp.Server { return server },
 		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},

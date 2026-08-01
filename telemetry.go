@@ -60,6 +60,12 @@ type OtelHandler struct {
 
 // Handle adds tracing context to the slog.Record if a recording span is active.
 func (h *OtelHandler) Handle(ctx context.Context, r slog.Record) error {
+	// Analytics is intentionally aggregate-only. A trace or span identifier can
+	// correlate one pageview with other request activity, so never attach either
+	// identifier to the dedicated analytics record.
+	if r.Message == analyticsLogName {
+		return h.Handler.Handle(ctx, r)
+	}
 	if span := trace.SpanFromContext(ctx); span.IsRecording() {
 		sCtx := span.SpanContext()
 		if sCtx.HasTraceID() {

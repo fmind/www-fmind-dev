@@ -50,6 +50,36 @@ func TestMCPEndpoint(t *testing.T) {
 	if sessionID := resp.Header.Get("Mcp-Session-Id"); sessionID != "" {
 		t.Errorf("stateless MCP session ID = %q, want empty", sessionID)
 	}
+
+	publicationsBody := `{"jsonrpc":"2.0","id":2,"method":"tools/call",` +
+		`"params":{"name":"list_publications","arguments":{}}}`
+	publicationsReq, err := http.NewRequest(http.MethodPost, srv.URL+"/mcp", strings.NewReader(publicationsBody))
+	if err != nil {
+		t.Fatalf("new publications request: %v", err)
+	}
+	publicationsReq.Header.Set("Content-Type", "application/json")
+	publicationsReq.Header.Set("Accept", "application/json, text/event-stream")
+	publicationsResp, err := http.DefaultClient.Do(publicationsReq)
+	if err != nil {
+		t.Fatalf("call list_publications: %v", err)
+	}
+	defer closeBody(t, publicationsResp.Body)
+	publications, err := io.ReadAll(publicationsResp.Body)
+	if err != nil {
+		t.Fatalf("read publications response: %v", err)
+	}
+	if publicationsResp.StatusCode != http.StatusOK {
+		t.Fatalf("list_publications status = %d; body=%s", publicationsResp.StatusCode, publications)
+	}
+	for _, want := range []string{
+		`"articles"`,
+		`MCP 2026–07–28: Stateless core, enterprise authorization, and SDK betas`,
+		`https://www.fmind.dev/articles/mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas/`,
+	} {
+		if !strings.Contains(string(publications), want) {
+			t.Errorf("list_publications response missing %q: %s", want, publications)
+		}
+	}
 }
 
 func TestMCPRejectsCrossOriginBrowserPost(t *testing.T) {

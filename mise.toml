@@ -5,7 +5,8 @@ APP_NAME = "www-fmind-dev"
 run_auto_install = false
 
 [tools]
-"github:dobicinaitis/tailwind-cli-extra" = "latest"
+# Pin the CSS generator so local and CI binaries embed byte-identical styles.
+"github:dobicinaitis/tailwind-cli-extra" = "2.10.5"
 dprint = "latest"
 gitleaks = "latest"
 go = "1.26.5"
@@ -45,13 +46,12 @@ run = "docker build --target runner -t $APP_NAME:local ."
 description = "Generate Go code from Templ templates"
 sources = ["**/*.templ"]
 outputs = ["**/*_templ.go"]
-# templ emits ungrouped imports; run the same goimports+gofumpt pass as
-# `format:go` so generated files are byte-stable no matter the task order
-# (otherwise a fresh `mise run all` regenerates them and dirties the tree).
+# Templ emits ungrouped imports; pass concrete generated files to the same
+# formatters as the hook so clean installs and staged-file checks are byte-stable.
 run = [
   "go tool templ generate",
-  "go tool goimports -local github.com/fmind/www-fmind-dev -w templates",
-  "go tool gofumpt -w templates",
+  "go tool goimports -local github.com/fmind/www-fmind-dev -w templates/*_templ.go",
+  "go tool gofumpt -w templates/*_templ.go",
 ]
 
 [tasks.check]
@@ -83,7 +83,7 @@ run = "gitleaks git --log-opts=\"--max-count=100\" --verbose"
 [tasks."check:links"]
 alias = "ck"
 description = "Check external content links are reachable"
-run = "lychee ."
+run = "lychee --root-dir \"$PWD\" ."
 
 [tasks."check:lint"]
 alias = "cl"
