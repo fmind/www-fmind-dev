@@ -5,7 +5,8 @@ APP_NAME = "www-fmind-dev"
 run_auto_install = false
 
 [tools]
-"github:dobicinaitis/tailwind-cli-extra" = "latest"
+# Pin the CSS generator so local and CI binaries embed byte-identical styles.
+"github:dobicinaitis/tailwind-cli-extra" = "2.10.5"
 dprint = "latest"
 gitleaks = "latest"
 go = "1.26.5"
