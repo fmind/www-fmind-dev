@@ -11,33 +11,56 @@ import (
 	"github.com/fmind/www-fmind-dev/templates"
 )
 
+// The Medium import is frozen, so its size and shape are asserted exactly. Articles
+// published natively from the Publications repository are additive: they carry no
+// Medium canonical and ship a cover the template renders rather than the body, so
+// the archive invariants below are scoped to the imported subset.
+const (
+	mediumArchiveArticles = 57
+	mediumArchiveImages   = 295
+)
+
 func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 	collection, err := loadArticles()
 	if err != nil {
 		t.Fatalf("load articles: %v", err)
 	}
-	if len(collection.all) != 57 {
-		t.Fatalf("articles = %d, want 57", len(collection.all))
-	}
-	if collection.all[0].Slug != "mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas" {
-		t.Errorf("newest article = %q", collection.all[0].Slug)
-	}
-	imagePattern := regexp.MustCompile(`\]\((/static/img/articles/[^)[:space:]]+)`)
-	imageReferences := make(map[string]bool)
-	canonicals := make(map[string]bool, len(collection.all))
+
+	archive := make([]templates.Article, 0, len(collection.all))
 	for _, article := range collection.all {
-		if !strings.HasPrefix(article.Canonical, "https://medium.com/@fmind/") && !strings.HasPrefix(article.Canonical, "https://fmind.medium.com/") {
-			t.Errorf("%s canonical = %q, want Medium", article.Slug, article.Canonical)
+		if isMediumCanonical(article.Canonical) {
+			archive = append(archive, article)
 		}
+	}
+	if len(archive) != mediumArchiveArticles {
+		t.Fatalf("imported archive articles = %d, want %d", len(archive), mediumArchiveArticles)
+	}
+	if archive[0].Slug != "mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas" {
+		t.Errorf("newest archive article = %q", archive[0].Slug)
+	}
+
+	imagePattern := regexp.MustCompile(`\]\((/static/img/articles/[^)[:space:]]+)`)
+	archiveImages := make(map[string]bool)
+	archiveSlugs := make(map[string]bool, len(archive))
+	canonicals := make(map[string]bool, len(archive))
+	for _, article := range archive {
+		archiveSlugs[article.Slug] = true
 		if canonicals[article.Canonical] {
 			t.Errorf("%s duplicates canonical %q", article.Slug, article.Canonical)
 		}
 		canonicals[article.Canonical] = true
-		if article.Draft {
-			t.Errorf("historical import %s is unexpectedly a draft", article.Slug)
-		}
 		if strings.Contains(article.Markdown, "medium.com/max/") || strings.Contains(article.Markdown, "cdn-images-") {
 			t.Errorf("%s still references a Medium image CDN", article.Slug)
+		}
+		for _, match := range imagePattern.FindAllStringSubmatch(article.Markdown, -1) {
+			archiveImages[strings.TrimPrefix(match[1], "/")] = true
+		}
+	}
+
+	// Rendering and draft state hold for every article, imported or native.
+	for _, article := range collection.all {
+		if article.Draft {
+			t.Errorf("published article %s is unexpectedly a draft", article.Slug)
 		}
 		if strings.TrimSpace(article.HTML) == "" || article.ReadingMinutes < 1 {
 			t.Errorf("%s did not render usable content", article.Slug)
@@ -45,33 +68,49 @@ func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 		if strings.Contains(article.HTML, "<script") || strings.Contains(article.HTML, "<style") {
 			t.Errorf("%s rendered raw HTML", article.Slug)
 		}
-		for _, match := range imagePattern.FindAllStringSubmatch(article.Markdown, -1) {
-			imageReferences[strings.TrimPrefix(match[1], "/")] = true
+		if !isMediumCanonical(article.Canonical) && article.Canonical != "" {
+			t.Errorf("%s canonical = %q, want a Medium URL or empty for a native article", article.Slug, article.Canonical)
 		}
 	}
-	if len(imageReferences) != 295 {
-		t.Errorf("unique local image references = %d, want 295", len(imageReferences))
+
+	if len(archiveImages) != mediumArchiveImages {
+		t.Errorf("unique archive image references = %d, want %d", len(archiveImages), mediumArchiveImages)
 	}
-	for image := range imageReferences {
+	for image := range archiveImages {
 		if _, err := fs.Stat(staticFS, image); err != nil {
 			t.Errorf("image reference %q: %v", image, err)
 		}
 	}
-	imageFiles := 0
-	if err := fs.WalkDir(staticFS, "static/img/articles", func(_ string, entry fs.DirEntry, err error) error {
+	archiveFiles := 0
+	if err := fs.WalkDir(staticFS, "static/img/articles", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !entry.IsDir() {
-			imageFiles++
+		if !entry.IsDir() && archiveSlugs[articleImageSlug(path)] {
+			archiveFiles++
 		}
 		return nil
 	}); err != nil {
 		t.Fatalf("walk article images: %v", err)
 	}
-	if imageFiles != len(imageReferences) {
-		t.Errorf("article image files = %d, references = %d", imageFiles, len(imageReferences))
+	if archiveFiles != len(archiveImages) {
+		t.Errorf("archive image files = %d, references = %d", archiveFiles, len(archiveImages))
 	}
+}
+
+func isMediumCanonical(canonical string) bool {
+	return strings.HasPrefix(canonical, "https://medium.com/@fmind/") ||
+		strings.HasPrefix(canonical, "https://fmind.medium.com/")
+}
+
+// articleImageSlug maps static/img/articles/<slug>/<file> back to <slug>.
+func articleImageSlug(path string) string {
+	rest, ok := strings.CutPrefix(path, "static/img/articles/")
+	if !ok {
+		return ""
+	}
+	slug, _, _ := strings.Cut(rest, "/")
+	return slug
 }
 
 func TestParseArticleRejectsUnknownFrontmatterWithLine(t *testing.T) {

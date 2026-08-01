@@ -361,18 +361,30 @@ func TestProfileAPI(t *testing.T) {
 		t.Errorf("profile leadership roles = %d, want 3", len(payload.Leadership))
 	}
 
-	if len(payload.Articles) != 57 {
-		t.Fatalf("profile articles = %d, want 57", len(payload.Articles))
+	// Derived from the embedded set so publishing an article does not fail the suite;
+	// the invariant under test is that the profile exposes every public article.
+	if want := site.PublicArticleCount(t); len(payload.Articles) != want {
+		t.Fatalf("profile articles = %d, want %d", len(payload.Articles), want)
 	}
-	newest := payload.Articles[0]
+	// Article ordering is asserted against the frozen Medium import: a natively
+	// published article legitimately becomes the newest entry and must not turn this
+	// reverse-chronology check into a failure.
+	newestArchived := -1
+	for i, article := range payload.Articles {
+		if strings.HasPrefix(article.Canonical, "https://medium.com/@fmind/") || strings.HasPrefix(article.Canonical, "https://fmind.medium.com/") {
+			newestArchived = i
+			break
+		}
+	}
+	if newestArchived < 0 {
+		t.Fatal("profile exposes no imported Medium article")
+	}
+	newest := payload.Articles[newestArchived]
 	if newest.Title != "MCP 2026–07–28: Stateless core, enterprise authorization, and SDK betas" {
-		t.Errorf("newest article = %q", newest.Title)
+		t.Errorf("newest archived article = %q", newest.Title)
 	}
 	if newest.URL != "https://www.fmind.dev/articles/mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas/" {
-		t.Errorf("newest article URL = %q", newest.URL)
-	}
-	if !strings.HasPrefix(newest.Canonical, "https://medium.com/@fmind/") && !strings.HasPrefix(newest.Canonical, "https://fmind.medium.com/") {
-		t.Errorf("newest historical canonical = %q, want Medium", newest.Canonical)
+		t.Errorf("newest archived article URL = %q", newest.URL)
 	}
 }
 
@@ -421,8 +433,8 @@ func TestArticlePagesAndDiscovery(t *testing.T) {
 	if status != http.StatusOK || !strings.HasPrefix(headers.Get("Content-Type"), "application/atom+xml") {
 		t.Fatalf("Atom response status=%d content-type=%q", status, headers.Get("Content-Type"))
 	}
-	if got := strings.Count(feed, "<entry>"); got != 57 {
-		t.Errorf("Atom entries = %d, want 57", got)
+	if got, want := strings.Count(feed, "<entry>"), site.PublicArticleCount(t); got != want {
+		t.Errorf("Atom entries = %d, want %d", got, want)
 	}
 	if strings.Contains(feed, `href="/`) || strings.Contains(feed, `src="/`) {
 		t.Error("Atom feed contains a relative URL")
@@ -435,8 +447,9 @@ func TestArticlePagesAndDiscovery(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("sitemap status = %d, want 200", status)
 	}
-	if got := strings.Count(sitemap, "<url>"); got != 59 {
-		t.Errorf("sitemap URLs = %d, want 59", got)
+	// The sitemap lists every public article plus the home and article index pages.
+	if got, want := strings.Count(sitemap, "<url>"), site.PublicArticleCount(t)+2; got != want {
+		t.Errorf("sitemap URLs = %d, want %d", got, want)
 	}
 	if !strings.Contains(sitemap, "<lastmod>2026-07-08</lastmod>") {
 		t.Error("sitemap is missing article lastmod")
