@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -17,9 +18,20 @@ import (
 // canonicalHost is the production apex domain that 301-redirects to its www host,
 // consolidating link equity onto a single canonical origin.
 const (
-	canonicalApex   = "fmind.dev"
-	canonicalTarget = "https://www.fmind.dev"
+	canonicalApex    = "fmind.dev"
+	canonicalTarget  = "https://www.fmind.dev"
+	analyticsLogName = "analytics_pageview"
 )
+
+var botUserAgentTokens = []string{
+	"bot",
+	"crawler",
+	"spider",
+	"slurp",
+	"bingpreview",
+	"facebookexternalhit",
+	"linkedinbot",
+}
 
 // Middleware defines the standard function signature for http middleware wrappers.
 type Middleware func(http.Handler) http.Handler
@@ -128,6 +140,91 @@ func RequestLogger(logger *slog.Logger) Middleware {
 			)
 		})
 	}
+}
+
+// AnalyticsLogger emits one privacy-preserving record for each rendered HTML
+// page. It deliberately retains no IP, full referrer, user agent, or visitor ID.
+func AnalyticsLogger(logger *slog.Logger) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+			next.ServeHTTP(rw, r)
+
+			if !strings.HasPrefix(rw.Header().Get("Content-Type"), "text/html") || rw.statusCode >= 300 && rw.statusCode < 400 {
+				return
+			}
+			query := r.URL.Query()
+			logger.InfoContext(
+				r.Context(), analyticsLogName,
+				slog.Time("timestamp", time.Now().UTC()),
+				slog.String("path", analyticsPath(r.URL.Path, rw.statusCode)),
+				slog.Int("status", rw.statusCode),
+				slog.String("referer", refererHost(r.Referer())),
+				slog.String("utm_source", analyticsDimension(query.Get("utm_source"))),
+				slog.String("utm_medium", analyticsDimension(query.Get("utm_medium"))),
+				slog.String("utm_campaign", analyticsDimension(query.Get("utm_campaign"))),
+				slog.String("country", requestCountry(r.Header)),
+				slog.Bool("bot", isBot(r.UserAgent())),
+			)
+		})
+	}
+}
+
+func analyticsPath(requestPath string, status int) string {
+	// Unknown URLs are attacker-controlled and can contain identifiers. Retain
+	// their aggregate outcome without storing the raw 4xx/5xx request path.
+	if status >= 500 {
+		return "/500"
+	}
+	if status >= 400 {
+		return "/404"
+	}
+	return requestPath
+}
+
+func analyticsDimension(value string) string {
+	if len(value) > 128 {
+		return ""
+	}
+	for _, char := range value {
+		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char >= '0' && char <= '9' || strings.ContainsRune("._~+-", char) {
+			continue
+		}
+		return ""
+	}
+	return value
+}
+
+func refererHost(referer string) string {
+	parsed, err := url.Parse(referer)
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(parsed.Hostname())
+}
+
+func requestCountry(header http.Header) string {
+	country := header.Get("X-Client-Geo")
+	if country == "" {
+		// External Application Load Balancers can inject client geography through
+		// a custom header; accepting this fallback keeps Cloud Run itself untrusted.
+		country = header.Get("X-Client-Region")
+	}
+	country = strings.ToUpper(strings.TrimSpace(country))
+	if len(country) != 2 || country[0] < 'A' || country[0] > 'Z' || country[1] < 'A' || country[1] > 'Z' {
+		return ""
+	}
+	return country
+}
+
+func isBot(userAgent string) bool {
+	userAgent = strings.ToLower(userAgent)
+	for _, token := range botUserAgentTokens {
+		if strings.Contains(userAgent, token) {
+			return true
+		}
+	}
+	return false
 }
 
 // CanonicalHost 301-redirects the bare apex domain to its canonical www host in

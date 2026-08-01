@@ -18,10 +18,13 @@ import (
 // newServer spins the real application handler in development mode.
 func newServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	handler := site.NewAppHandler(slog.New(slog.DiscardHandler), config.Config{
+	handler, err := site.NewAppHandler(slog.New(slog.DiscardHandler), config.Config{
 		Environment: config.Development,
 		Port:        8080,
 	})
+	if err != nil {
+		t.Fatalf("build application handler: %v", err)
+	}
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 	return srv
@@ -358,34 +361,106 @@ func TestProfileAPI(t *testing.T) {
 		t.Errorf("profile leadership roles = %d, want 3", len(payload.Leadership))
 	}
 
-	posts := make([]string, len(payload.Posts))
-	for i, item := range payload.Posts {
-		posts[i] = item.Title
+	if len(payload.Articles) != 57 {
+		t.Fatalf("profile articles = %d, want 57", len(payload.Articles))
 	}
-	assertOrderedValues(t, "featured posts", posts, []string{
-		"Architecting the AI Agent Platform: A Definitive Guide",
-		"MCP 2026–07–28: Stateless core, enterprise authorization, and SDK betas",
-		"The Affordable AI Agents",
-		"Agent Levers: A Plan-Do-Check-Act Loop That Makes Coding Agents Finish What They Start",
-		"AI Agents as an Operating System: Rediscovering the Linux Philosophy",
-		"Powering Up Your Agent in Production with ADK, OAuth, and Gemini Enterprise",
-		"Stop Building Rigid AI/ML Pipelines: Embrace Reusable Components for Flexible MLOps",
-		"Make Your MLOps Code Base SOLID with Pydantic and Python's ABC",
-	})
-	postURLs := make([]string, len(payload.Posts))
-	for i, item := range payload.Posts {
-		postURLs[i] = item.URL
+	newest := payload.Articles[0]
+	if newest.Title != "MCP 2026–07–28: Stateless core, enterprise authorization, and SDK betas" {
+		t.Errorf("newest article = %q", newest.Title)
 	}
-	assertOrderedValues(t, "featured post URLs", postURLs, []string{
-		"https://fmind.medium.com/architecting-the-ai-agent-platform-a-definitive-guide-405750a3de44",
-		"https://fmind.medium.com/mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas-2646a980d594",
-		"https://fmind.medium.com/the-affordable-ai-agents-26d1d071d00b",
-		"https://fmind.medium.com/agent-levers-a-plan-do-check-act-loop-that-makes-coding-agents-finish-what-they-start-8885e4618f38",
-		"https://fmind.medium.com/ai-agents-as-an-operating-system-rediscovering-the-linux-philosophy-f0e76f29ebdb",
-		"https://fmind.medium.com/powering-up-your-agent-in-production-with-adk-oauth-and-gemini-enterprise-a52b0716fcba",
-		"https://fmind.medium.com/stop-building-rigid-ai-ml-pipelines-embrace-reusable-components-for-flexible-mlops-6e165d837110",
-		"https://fmind.medium.com/make-your-mlops-code-base-solid-with-pydantic-and-pythons-abc-aeedfe9c3e65",
-	})
+	if newest.URL != "https://www.fmind.dev/articles/mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas/" {
+		t.Errorf("newest article URL = %q", newest.URL)
+	}
+	if !strings.HasPrefix(newest.Canonical, "https://medium.com/@fmind/") && !strings.HasPrefix(newest.Canonical, "https://fmind.medium.com/") {
+		t.Errorf("newest historical canonical = %q, want Medium", newest.Canonical)
+	}
+}
+
+func TestArticlePagesAndDiscovery(t *testing.T) {
+	srv := newServer(t)
+	const slug = "mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas"
+	const title = "MCP 2026–07–28: Stateless core, enterprise authorization, and SDK betas"
+
+	status, _, index := get(t, srv.URL+"/articles/")
+	if status != http.StatusOK {
+		t.Fatalf("article index status = %d, want 200", status)
+	}
+	newest := strings.Index(index, title)
+	next := strings.Index(index, "The Affordable AI Agents")
+	if newest < 0 || next < 0 || newest >= next {
+		t.Errorf("article index is not reverse chronological: newest=%d next=%d", newest, next)
+	}
+	for _, want := range []string{"2026", "min read", "?tag=AI", "/articles/" + slug + "/"} {
+		if !strings.Contains(index, want) {
+			t.Errorf("article index missing %q", want)
+		}
+	}
+
+	status, _, article := get(t, srv.URL+"/articles/"+slug+"/")
+	if status != http.StatusOK {
+		t.Fatalf("article status = %d, want 200", status)
+	}
+	for _, want := range []string{
+		`<link rel="canonical" href="https://medium.com/@fmind/`,
+		`<meta property="og:type" content="article"`,
+		`<meta name="twitter:card" content="summary_large_image"`,
+		`<meta name="description"`,
+		`/static/img/articles/` + slug + `/cover.`,
+		`"@type":"BlogPosting"`,
+		`"author":{"@id":"https://www.fmind.dev/#person"}`,
+	} {
+		if !strings.Contains(article, want) {
+			t.Errorf("article page missing %q", want)
+		}
+	}
+	if got := strings.Count(article, `"@type":"Person"`); got != 1 {
+		t.Errorf("Person JSON-LD definitions = %d, want 1", got)
+	}
+
+	status, headers, feed := get(t, srv.URL+"/articles/feed.xml")
+	if status != http.StatusOK || !strings.HasPrefix(headers.Get("Content-Type"), "application/atom+xml") {
+		t.Fatalf("Atom response status=%d content-type=%q", status, headers.Get("Content-Type"))
+	}
+	if got := strings.Count(feed, "<entry>"); got != 57 {
+		t.Errorf("Atom entries = %d, want 57", got)
+	}
+	if strings.Contains(feed, `href="/`) || strings.Contains(feed, `src="/`) {
+		t.Error("Atom feed contains a relative URL")
+	}
+	if !strings.Contains(feed, "https://www.fmind.dev/articles/"+slug+"/") {
+		t.Error("Atom feed is missing the newest article URL")
+	}
+
+	status, _, sitemap := get(t, srv.URL+"/sitemap.xml")
+	if status != http.StatusOK {
+		t.Fatalf("sitemap status = %d, want 200", status)
+	}
+	if got := strings.Count(sitemap, "<url>"); got != 59 {
+		t.Errorf("sitemap URLs = %d, want 59", got)
+	}
+	if !strings.Contains(sitemap, "<lastmod>2026-07-08</lastmod>") {
+		t.Error("sitemap is missing article lastmod")
+	}
+
+	status, _, llms := get(t, srv.URL+"/llms.txt")
+	if status != http.StatusOK || !strings.Contains(llms, title) {
+		t.Errorf("llms.txt status=%d, newest article present=%t", status, strings.Contains(llms, title))
+	}
+}
+
+func TestArticleTagFilterIsServerRendered(t *testing.T) {
+	srv := newServer(t)
+
+	status, _, body := get(t, srv.URL+"/articles/?tag=MLOps")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want 200", status)
+	}
+	if !strings.Contains(body, "Make your MLOps code base SOLID") {
+		t.Error("MLOps filter is missing a matching article")
+	}
+	if strings.Contains(body, "The Affordable AI Agents") {
+		t.Error("MLOps filter includes an article without that tag")
+	}
 }
 
 func assertOrderedValues(t *testing.T, name string, got, want []string) {
@@ -439,6 +514,75 @@ func TestRequestLoggerRecordsFirstFinalStatus(t *testing.T) {
 	}
 	if got := logs.String(); !strings.Contains(got, `"status":201`) {
 		t.Errorf("log = %q, want status 201", got)
+	}
+}
+
+func TestAnalyticsLoggerEmitsOnlyAggregatePageviewFields(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&logs, nil))
+	handler := site.AnalyticsLogger(logger)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "https://www.fmind.dev/reset/alice@example.com/?utm_source=linkedin&utm_medium=social&utm_campaign=launch", nil)
+	req.Header.Set("Referer", "https://news.example/path?private=value")
+	req.Header.Set("User-Agent", "ExampleCrawler/1.0 secret-fingerprint")
+	req.Header.Set("X-Client-Geo", "fr")
+	req.RemoteAddr = "203.0.113.42:1234"
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	var record map[string]any
+	if err := json.Unmarshal(logs.Bytes(), &record); err != nil {
+		t.Fatalf("decode analytics log: %v", err)
+	}
+	wants := map[string]any{
+		"msg":          "analytics_pageview",
+		"path":         "/404",
+		"status":       float64(http.StatusNotFound),
+		"referer":      "news.example",
+		"utm_source":   "linkedin",
+		"utm_medium":   "social",
+		"utm_campaign": "launch",
+		"country":      "FR",
+		"bot":          true,
+	}
+	for key, want := range wants {
+		if got := record[key]; got != want {
+			t.Errorf("analytics %s = %#v, want %#v", key, got, want)
+		}
+	}
+	for _, forbidden := range []string{"ip", "remote_addr", "user_agent", "session", "visitor", "trace_id", "span_id"} {
+		if _, found := record[forbidden]; found {
+			t.Errorf("analytics record must not contain %q", forbidden)
+		}
+	}
+	serialized := logs.String()
+	for _, secret := range []string{"203.0.113.42", "secret-fingerprint", "/path?private=value", "alice@example.com"} {
+		if strings.Contains(serialized, secret) {
+			t.Errorf("analytics record leaked %q: %s", secret, serialized)
+		}
+	}
+}
+
+func TestAnalyticsLoggerSkipsNonHTMLAndRedirects(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&logs, nil))
+	for name, handler := range map[string]http.Handler{
+		"JSON": http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+		}),
+		"redirect": http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/articles/", http.StatusMovedPermanently)
+		}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			site.AnalyticsLogger(logger)(handler).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/test", nil))
+		})
+	}
+	if logs.Len() != 0 {
+		t.Errorf("unexpected analytics logs: %s", logs.String())
 	}
 }
 

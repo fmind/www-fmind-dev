@@ -1,5 +1,11 @@
 # Infrastructure variables defining default settings and parameters.
 
+variable "analytics_location" {
+  description = "The BigQuery location for privacy-preserving pageview analytics"
+  type        = string
+  default     = "EU"
+}
+
 variable "github_repository" {
   description = "The GitHub repository in the format owner/repo"
   type        = string

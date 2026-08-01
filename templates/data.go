@@ -350,41 +350,6 @@ var PAPERS = []ResearchPaper{
 	},
 }
 
-var POSTS = []CuratedPost{
-	{
-		Title: "Architecting the AI Agent Platform: A Definitive Guide",
-		URL:   "https://fmind.medium.com/architecting-the-ai-agent-platform-a-definitive-guide-405750a3de44",
-	},
-	{
-		Title: "MCP 2026–07–28: Stateless core, enterprise authorization, and SDK betas",
-		URL:   "https://fmind.medium.com/mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas-2646a980d594",
-	},
-	{
-		Title: "The Affordable AI Agents",
-		URL:   "https://fmind.medium.com/the-affordable-ai-agents-26d1d071d00b",
-	},
-	{
-		Title: "Agent Levers: A Plan-Do-Check-Act Loop That Makes Coding Agents Finish What They Start",
-		URL:   "https://fmind.medium.com/agent-levers-a-plan-do-check-act-loop-that-makes-coding-agents-finish-what-they-start-8885e4618f38",
-	},
-	{
-		Title: "AI Agents as an Operating System: Rediscovering the Linux Philosophy",
-		URL:   "https://fmind.medium.com/ai-agents-as-an-operating-system-rediscovering-the-linux-philosophy-f0e76f29ebdb",
-	},
-	{
-		Title: "Powering Up Your Agent in Production with ADK, OAuth, and Gemini Enterprise",
-		URL:   "https://fmind.medium.com/powering-up-your-agent-in-production-with-adk-oauth-and-gemini-enterprise-a52b0716fcba",
-	},
-	{
-		Title: "Stop Building Rigid AI/ML Pipelines: Embrace Reusable Components for Flexible MLOps",
-		URL:   "https://fmind.medium.com/stop-building-rigid-ai-ml-pipelines-embrace-reusable-components-for-flexible-mlops-6e165d837110",
-	},
-	{
-		Title: "Make Your MLOps Code Base SOLID with Pydantic and Python's ABC",
-		URL:   "https://fmind.medium.com/make-your-mlops-code-base-solid-with-pydantic-and-pythons-abc-aeedfe9c3e65",
-	},
-}
-
 func GetServices() []Service {
 	return []Service{
 		{

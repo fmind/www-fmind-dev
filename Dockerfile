@@ -14,7 +14,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM gcr.io/distroless/static-debian13:nonroot AS runner
 ENV ENVIRONMENT=production
-USER nonroot:nonroot
+# Distroless defines nonroot as numeric 65532; numeric ownership remains
+# resolvable even when a container runtime does not load /etc/passwd.
+USER 65532:65532
 WORKDIR /app
 EXPOSE 8080
 COPY --from=builder /app/www-fmind-dev ./www-fmind-dev

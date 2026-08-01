@@ -83,7 +83,7 @@ run = "gitleaks git --log-opts=\"--max-count=100\" --verbose"
 [tasks."check:links"]
 alias = "ck"
 description = "Check external content links are reachable"
-run = "lychee ."
+run = "lychee --root-dir \"$PWD\" ."
 
 [tasks."check:lint"]
 alias = "cl"

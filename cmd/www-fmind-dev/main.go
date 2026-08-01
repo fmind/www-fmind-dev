@@ -41,14 +41,20 @@ func main() {
 	defer func() {
 		flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := shutdownOTel(flushCtx); err != nil {
-			logger.Error("shutdown opentelemetry", "error", err)
+		if shutdownErr := shutdownOTel(flushCtx); shutdownErr != nil {
+			logger.Error("shutdown opentelemetry", "error", shutdownErr)
 		}
 	}()
 
+	handler, err := site.NewAppHandler(logger, cfg)
+	if err != nil {
+		logger.Error("build application handler", "error", err)
+		os.Exit(1)
+	}
+
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(cfg.Port),
-		Handler:           site.NewAppHandler(logger, cfg),
+		Handler:           handler,
 		ReadHeaderTimeout: 3 * time.Second,
 		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      10 * time.Second,

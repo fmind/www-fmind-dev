@@ -48,10 +48,9 @@ func MarkdownToHTML(text string) string {
 	return res
 }
 
-// GetStructuredData returns one connected JSON-LD graph for the profile page,
-// person, and website. Stable @id references make their relationships explicit
-// to search engines and agents instead of publishing disconnected objects.
-func GetStructuredData() string {
+// GetStructuredData returns one connected JSON-LD graph for the current page,
+// person, and website. Article authors reference the one Person node by @id.
+func GetStructuredData(article *Article) string {
 	personID := METADATA.SiteURL + "/#person"
 	profileID := METADATA.SiteURL + "/#profile"
 	websiteID := METADATA.SiteURL + "/#website"
@@ -152,9 +151,37 @@ func GetStructuredData() string {
 		},
 	}
 
+	graph := []map[string]any{person, website}
+	if article == nil {
+		graph = append(graph, profile)
+	} else {
+		graph = append(graph, map[string]any{
+			"@id":           article.URL + "#article",
+			"@type":         "BlogPosting",
+			"headline":      article.Title,
+			"description":   article.Description,
+			"url":           article.URL,
+			"datePublished": article.Date.Format("2006-01-02"),
+			"dateModified":  article.Date.Format("2006-01-02"),
+			"author": map[string]any{
+				"@id": personID,
+			},
+			"isPartOf": map[string]any{
+				"@id": websiteID,
+			},
+			"mainEntityOfPage": article.URL,
+			"image": map[string]any{
+				"@type":   "ImageObject",
+				"url":     article.ImageURL,
+				"caption": article.ImageAlt,
+			},
+			"keywords": article.Tags,
+		})
+	}
+
 	schema := map[string]any{
 		"@context": "https://schema.org",
-		"@graph":   []map[string]any{profile, person, website},
+		"@graph":   graph,
 	}
 	bytes, _ := json.Marshal(schema)
 	return string(bytes)

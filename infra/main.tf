@@ -8,6 +8,7 @@
 # - registry.tf    : Artifact Registry repository (+ retention policies)
 # - iam.tf         : Cloud Run runtime service account and project IAM roles
 # - cloud_run.tf   : Cloud Run service and its public-access IAM
+# - analytics.tf   : Privacy-preserving pageview export to BigQuery
 # - monitoring.tf  : Notification channel and error alert policies
 # - wif.tf         : Keyless GitHub Actions CI (Workload Identity Federation)
 # - providers.tf   : Provider + GCS remote state backend
