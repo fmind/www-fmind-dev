@@ -43,7 +43,7 @@ All tasks are defined in `mise.toml` and reused by the git hooks and CI:
 | `mise run install`     | Tidy Go modules and download dependencies                               |
 | `mise run watch`       | Live-reload dev server (Go + Tailwind)                                  |
 | `mise run format`      | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint) |
-| `mise run check`       | Lint, vulnerability scan, format check, secret scan                     |
+| `mise run check`       | Lint, vulnerability/secret scans, format checks, Terraform validation   |
 | `mise run check:links` | Check external content links are reachable (lychee; runs in CI)         |
 | `mise run test`        | Run the test suite with coverage (gotestsum)                            |
 | `mise run build`       | Generate templates, compile CSS, and build the binary                   |
