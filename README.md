@@ -57,9 +57,22 @@ The site runs on **Google Cloud Run** (project `www-fmind-dev`, `europe-west1`) 
 1. **Runtime config** — `ENVIRONMENT=production` is injected as a Cloud Run env var (see `infra/cloud_run.tf`); `PORT` is supplied by Cloud Run and tracing remains opt-in through standard `OTEL_EXPORTER_OTLP_*` variables.
 1. **Local container** — `mise run build:image` builds the production image; run it with `docker run -p 8080:8080 www-fmind-dev:local`.
 
-### Analytics dashboard handoff
+### Querying the analytics
 
-After Terraform is applied and the first production pageview creates the partitioned Logging export table in `website_analytics`, connect that table to Looker Studio. Configure the report to filter `_PARTITIONDATE` to the selected date range, exclude `jsonPayload.bot = true` by default, and enable data freshness caching. The minimum views are pageviews over time, top `jsonPayload.path` values, referrer hosts, UTM source/medium/campaign, and country; combining `utm_source`, `utm_medium`, and `path` answers which channel sent readers to which article without browser tracking.
+The first production pageview creates `www-fmind-dev.website_analytics.run_googleapis_com_stderr`, partitioned daily on `timestamp` with a 180-day expiry. Query it directly — no dashboard tool is required, and no BI layer is connected on purpose.
+
+Always filter on `timestamp` so the partition pruner reads one slice instead of the table, and exclude crawlers with `jsonPayload.bot = false`:
+
+```sql
+SELECT jsonPayload.utm_source, jsonPayload.utm_medium, jsonPayload.path, COUNT(*) AS views
+FROM `www-fmind-dev.website_analytics.run_googleapis_com_stderr`
+WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+  AND jsonPayload.bot = false
+GROUP BY 1, 2, 3
+ORDER BY views DESC
+```
+
+Swapping the grouped fields answers the other questions from the same table: `path` for top pages, `referer` for referrer hosts, `country` for the geographic split, and `TIMESTAMP_TRUNC(timestamp, DAY)` for pageviews over time.
 
 ## Connecting an AI agent to `/mcp`
 
