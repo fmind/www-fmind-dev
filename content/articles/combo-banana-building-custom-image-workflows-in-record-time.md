@@ -2,7 +2,7 @@
 title = "Combo-Banana: Building Custom Image Workflows in Record Time"
 description = "Build custom AI image workflows fast with Combo-Banana. Empower designers to automate tedious editing tasks with Google Nano-Banana."
 date = "2025-09-08"
-tags = ["Artificial Intelligence", "Generative Ai Tools", "Open Source", "Productivity", "Python"]
+tags = ["LLM", "Project"]
 slug = "combo-banana-building-custom-image-workflows-in-record-time"
 canonical = "https://medium.com/@fmind/combo-banana-building-custom-image-workflows-in-record-time-966f3ba71787"
 draft = false

@@ -2,7 +2,7 @@
 title = "Building with A2UI: Extending the Expressiveness of AI Agent Interfaces"
 description = "Building AI-First apps with A2UI: from the Agent-View-Controller (AVC) pattern to managing latency. A practical case study with Featest."
 date = "2026-01-28"
-tags = ["Artificial Intelligence", "Frontend Development", "Generative Ui", "Llms", "Software Architecture"]
+tags = ["Agent", "LLM"]
 slug = "building-with-a2ui-extending-the-expressiveness-of-ai-agent-interfaces"
 canonical = "https://medium.com/@fmind/building-with-a2ui-extending-the-expressiveness-of-ai-agent-interfaces-d380ceac2040"
 draft = false

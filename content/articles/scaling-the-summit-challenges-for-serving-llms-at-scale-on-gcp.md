@@ -2,7 +2,7 @@
 title = "Scaling the Summit: Challenges for Serving LLMs at Scale on GCP"
 description = "Navigate the challenges of scaling LLMs on GCP and get benchmark insights for cost-effective, reliable, and quick LLM serving."
 date = "2025-07-17"
-tags = ["Artificial Intelligence", "Data Science", "Generative Ai Tools", "Google Cloud Platform", "LLM"]
+tags = ["LLM", "Cloud"]
 slug = "scaling-the-summit-challenges-for-serving-llms-at-scale-on-gcp"
 canonical = "https://medium.com/@fmind/scaling-the-summit-challenges-for-serving-llms-at-scale-on-gcp-e0211efcdbbf"
 draft = false

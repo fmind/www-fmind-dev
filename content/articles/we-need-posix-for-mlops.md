@@ -2,7 +2,7 @@
 title = "We need POSIX for MLOps"
 description = "There is an ever-growing landscape of tools and solutions for MLOps. In this article, I propose a solution to address this challenge."
 date = "2023-04-17"
-tags = ["AI", "Linux", "Machine Learning", "MLOps", "Posix"]
+tags = ["MLOps"]
 slug = "we-need-posix-for-mlops"
 canonical = "https://medium.com/@fmind/we-need-posix-for-mlops-e7bea8d8ec29"
 draft = false

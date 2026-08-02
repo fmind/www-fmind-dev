@@ -12,7 +12,6 @@ on:
       - "content/**"
       - "go.mod"
       - "go.sum"
-      - "infra/**"
       - "mise.toml"
       - "static/**"
       - "templates/**"
@@ -27,14 +26,13 @@ on:
       - "content/**"
       - "go.mod"
       - "go.sum"
-      - "infra/**"
       - "mise.toml"
       - "static/**"
       - "templates/**"
   workflow_dispatch:
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 env:
@@ -48,11 +46,14 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 100
       - name: Set up mise tools
-        uses: jdx/mise-action@v4
+        uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
         with:
           install: true
           cache: true
@@ -69,39 +70,31 @@ jobs:
     needs: verify
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       id-token: write
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v7
-      - name: Set up mise
-        uses: jdx/mise-action@v4
-        with:
-          install: false
-          cache: true
-      - name: Build CSS
-        run: |
-          mise install github:dobicinaitis/tailwind-cli-extra
-          mise run build:css
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Google Auth
         id: auth
-        uses: google-github-actions/auth@v3
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           token_format: access_token
           service_account: ${{ env.SERVICE_ACCOUNT }}
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
       - name: Docker Auth
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.AR_HOSTNAME }}
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Build and Push Image
         id: build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           platforms: linux/amd64
@@ -114,7 +107,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Deploy to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v3
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3.0.1
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}

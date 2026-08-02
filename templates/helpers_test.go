@@ -3,6 +3,7 @@ package templates
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestMarkdownToHTML verifies the correct translation of **bold** syntax to <strong> tags.
@@ -33,6 +34,28 @@ func TestMarkdownToHTML(t *testing.T) {
 		got := MarkdownToHTML(tc.input)
 		if got != tc.want {
 			t.Errorf("MarkdownToHTML(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestArticleStructuredDataUsesCanonicalAndUpdatedDate(t *testing.T) {
+	article := Article{
+		Title:       "Example",
+		Description: "Description",
+		URL:         "https://www.fmind.dev/articles/example/",
+		Canonical:   "https://medium.example/example",
+		ImageURL:    "https://www.fmind.dev/static/example.webp",
+		Date:        time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
+		Updated:     time.Date(2026, time.February, 2, 0, 0, 0, 0, time.UTC),
+	}
+
+	data, err := GetStructuredData(&article)
+	if err != nil {
+		t.Fatalf("build structured data: %v", err)
+	}
+	for _, want := range []string{`"mainEntityOfPage":"https://medium.example/example"`, `"url":"https://medium.example/example"`, `"dateModified":"2026-02-02"`} {
+		if !strings.Contains(data, want) {
+			t.Errorf("structured data missing %s: %s", want, data)
 		}
 	}
 }

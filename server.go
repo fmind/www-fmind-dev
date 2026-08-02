@@ -4,6 +4,7 @@
 package site
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
@@ -31,36 +32,81 @@ const ServiceName = "www-fmind-dev"
 //go:embed static
 var staticFS embed.FS
 
-// initAssets performs the immutable embedded-asset setup exactly once, even when
-// tests or callers construct more than one application handler concurrently.
-var initAssets = sync.OnceFunc(func() {
-	initAssetHashes()
-	// Inline the compiled stylesheet to drop the render-blocking CSS request.
-	if css, err := fs.ReadFile(staticFS, "static/dist/styles.css"); err == nil {
-		templates.InlineStyles = string(css)
-	}
-})
-
 // rootFiles maps top-level well-known URLs to their embedded source and content
 // type, so crawlers and agents can fetch them from the domain root.
-var rootFiles = map[string]struct{ file, contentType string }{
+var rootFileSources = map[string]struct{ file, contentType string }{
 	"/favicon.ico":      {"static/favicon.ico", "image/x-icon"},
 	"/robots.txt":       {"static/robots.txt", "text/plain; charset=utf-8"},
 	"/humans.txt":       {"static/humans.txt", "text/plain; charset=utf-8"},
 	"/site.webmanifest": {"static/site.webmanifest", "application/manifest+json"},
 }
 
+type applicationAssets struct {
+	rootFiles map[string]staticResponse
+}
+
+type staticResponse struct {
+	contentType string
+	body        []byte
+}
+
+// initAssets performs immutable embedded-asset setup once without discarding
+// failures. A missing generated stylesheet or unreadable file aborts startup.
+var initAssets = sync.OnceValues(func() (applicationAssets, error) {
+	return loadApplicationAssets(staticFS)
+})
+
 // NewAppHandler builds the root application handler: the router wrapped in the
 // security/logging middleware chain and an outer OpenTelemetry span.
 func NewAppHandler(logger *slog.Logger, cfg config.Config) (http.Handler, error) {
-	initAssets()
+	assets, err := initAssets()
+	if err != nil {
+		return nil, fmt.Errorf("initialize assets: %w", err)
+	}
 	collection, err := loadArticles()
 	if err != nil {
 		return nil, fmt.Errorf("load articles: %w", err)
 	}
+	return newAppHandler(logger, cfg, collection, assets)
+}
+
+func newAppHandler(logger *slog.Logger, cfg config.Config, collection articleCollection, assets applicationAssets) (http.Handler, error) {
 	publicArticles := visibleArticles(collection.all, false)
 	pageArticles := visibleArticles(collection.all, cfg.Environment == config.Development)
 	summaries := articleSummaries(publicArticles)
+	related := relatedArticleIndex(pageArticles)
+	structuredHome, err := templates.GetStructuredData(nil)
+	if err != nil {
+		return nil, fmt.Errorf("build home structured data: %w", err)
+	}
+	articleMetadataBySlug := make(map[string]templates.PageMetadata, len(collection.bySlug))
+	for slug, article := range collection.bySlug {
+		articleStructured, structuredErr := templates.GetStructuredData(&article)
+		if structuredErr != nil {
+			return nil, fmt.Errorf("build structured data for %q: %w", slug, structuredErr)
+		}
+		articleMetadataBySlug[slug] = articleMetadata(article, articleStructured)
+	}
+	profile, err := json.MarshalIndent(snapshot(summaries), "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("encode profile: %w", err)
+	}
+	profile = append(profile, '\n')
+	feed, err := renderAtomFeed(publicArticles)
+	if err != nil {
+		return nil, fmt.Errorf("render Atom feed: %w", err)
+	}
+	sitemap, err := renderSitemap(publicArticles)
+	if err != nil {
+		return nil, fmt.Errorf("render sitemap: %w", err)
+	}
+	llms := renderLLMSTxt(publicArticles)
+	llmsFull := renderLLMSFull(llms, publicArticles)
+	serverCard, err := renderMCPServerCard()
+	if err != nil {
+		return nil, fmt.Errorf("render MCP server card: %w", err)
+	}
+	notFoundPage := templates.Layout(templates.NotFound(), notFoundMetadata(structuredHome))
 
 	mux := http.NewServeMux()
 
@@ -72,11 +118,12 @@ func NewAppHandler(logger *slog.Logger, cfg config.Config) (http.Handler, error)
 	mux.HandleFunc("GET /healthz", health)
 
 	// Root well-known files.
-	for url, src := range rootFiles {
-		mux.HandleFunc("GET "+url, serveRootFile(src.file, src.contentType))
+	for path, response := range assets.rootFiles {
+		mux.HandleFunc("GET "+path, serveStaticResponse(response, "public, max-age=86400, must-revalidate", false))
 	}
-	mux.HandleFunc("GET /llms.txt", serveLLMSTxt(publicArticles))
-	mux.HandleFunc("GET /sitemap.xml", serveSitemap(publicArticles))
+	mux.HandleFunc("GET /llms.txt", serveStaticResponse(staticResponse{"text/plain; charset=utf-8", llms}, "public, max-age=3600, must-revalidate", false))
+	mux.HandleFunc("GET /llms-full.txt", serveStaticResponse(staticResponse{"text/plain; charset=utf-8", llmsFull}, "public, max-age=3600, must-revalidate", false))
+	mux.HandleFunc("GET /sitemap.xml", serveStaticResponse(staticResponse{"application/xml; charset=utf-8", sitemap}, "public, max-age=3600, must-revalidate", false))
 
 	// security.txt (RFC 9116) is generated rather than a static file, so its
 	// Expires date is always one year ahead and the policy never silently lapses.
@@ -85,7 +132,12 @@ func NewAppHandler(logger *slog.Logger, cfg config.Config) (http.Handler, error)
 
 	// Machine-readable surfaces for AI agents: a single JSON document and a
 	// read-only MCP server (Streamable HTTP) over the same portfolio data.
-	mux.HandleFunc("GET /api/profile", serveProfile(summaries))
+	mux.HandleFunc("GET /api/profile", serveStaticResponse(staticResponse{"application/json; charset=utf-8", profile}, "public, max-age=3600", true))
+	cardResponse := staticResponse{"application/mcp-server-card+json; charset=utf-8", serverCard}
+	mux.HandleFunc("GET /mcp/server-card", serveStaticResponse(cardResponse, "public, max-age=3600, must-revalidate", true))
+	// Keep the SEP-1649 well-known probe for client compatibility while the
+	// experimental extension standardizes on the MCP-relative discovery route.
+	mux.HandleFunc("GET /.well-known/mcp/server-card.json", serveStaticResponse(cardResponse, "public, max-age=3600, must-revalidate", true))
 	// 1 MiB is ample for any JSON-RPC call to this read-only server; larger
 	// bodies fail fast instead of being buffered whole into memory.
 	mcpHandler := MaxBody(1 << 20)(newMCPHandler(summaries))
@@ -94,12 +146,12 @@ func NewAppHandler(logger *slog.Logger, cfg config.Config) (http.Handler, error)
 
 	// Articles are parsed once above; every human and machine surface reads the
 	// same immutable, reverse-chronological collection.
-	mux.HandleFunc("GET /articles/feed.xml", serveAtomFeed(publicArticles))
+	mux.HandleFunc("GET /articles/feed.xml", serveStaticResponse(staticResponse{"application/atom+xml; charset=utf-8", feed}, "public, max-age=3600, must-revalidate", false))
 	mux.HandleFunc("GET /articles/{$}", func(w http.ResponseWriter, r *http.Request) {
 		groups, tags, activeTag := articleIndexData(pageArticles, r.URL.Query().Get("tag"))
 		renderPage(logger, w, r, http.StatusOK, templates.Layout(
 			templates.ArticleIndex(groups, tags, activeTag),
-			articleIndexMetadata(),
+			articleIndexMetadata(groups, structuredHome),
 		))
 	})
 	mux.HandleFunc("GET /articles/{slug}", func(w http.ResponseWriter, r *http.Request) {
@@ -109,24 +161,24 @@ func NewAppHandler(logger *slog.Logger, cfg config.Config) (http.Handler, error)
 	mux.HandleFunc("GET /articles/{slug}/", func(w http.ResponseWriter, r *http.Request) {
 		article, ok := collection.bySlug[r.PathValue("slug")]
 		if !ok || article.Draft && cfg.Environment == config.Production {
-			renderNotFound(logger, w, r)
+			renderNotFound(logger, w, r, notFoundPage)
 			return
 		}
 		renderPage(logger, w, r, http.StatusOK, templates.Layout(
-			templates.ArticlePage(article),
-			articleMetadata(article),
+			templates.ArticlePage(article, related[article.Slug]),
+			articleMetadataBySlug[article.Slug],
 		))
 	})
 
 	// Home page.
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		renderPage(logger, w, r, http.StatusOK, templates.Layout(templates.Home(pageArticles), homeMetadata()))
+		renderPage(logger, w, r, http.StatusOK, templates.Layout(templates.Home(pageArticles), homeMetadata(structuredHome)))
 	})
 
 	// Catch-all: render the 404 page for anything unmatched. It is served noindex
 	// (and without the homepage canonical) so crawlers never index an error page.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		renderNotFound(logger, w, r)
+		renderNotFound(logger, w, r, notFoundPage)
 	})
 
 	// Compress text responses with zstd/gzip. SkipPrecompressed prevents binary
@@ -152,81 +204,82 @@ func health(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// serveProfile returns the full portfolio as a single JSON document, a simple
-// non-MCP surface for scripts and crawlers.
-func serveProfile(articles []templates.ArticleSummary) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(snapshot(articles)); err != nil {
-			slog.DebugContext(r.Context(), "write profile response", "error", err)
-		}
-	}
-}
-
 func renderPage(logger *slog.Logger, w http.ResponseWriter, r *http.Request, status int, page templ.Component) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(status)
-	if err := page.Render(r.Context(), w); err != nil {
+	var body bytes.Buffer
+	if err := page.Render(r.Context(), &body); err != nil {
 		logger.ErrorContext(r.Context(), "render page", "path", r.URL.Path, "error", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(status)
+	if _, err := w.Write(body.Bytes()); err != nil {
+		logger.DebugContext(r.Context(), "write page", "path", r.URL.Path, "error", err)
 	}
 }
 
-func renderNotFound(logger *slog.Logger, w http.ResponseWriter, r *http.Request) {
-	renderPage(logger, w, r, http.StatusNotFound, templates.Layout(templates.NotFound(), notFoundMetadata()))
+func renderNotFound(logger *slog.Logger, w http.ResponseWriter, r *http.Request, page templ.Component) {
+	renderPage(logger, w, r, http.StatusNotFound, page)
 }
 
-func homeMetadata() templates.PageMetadata {
+func homeMetadata(structured string) templates.PageMetadata {
 	return templates.PageMetadata{
-		Title:       templates.METADATA.Title,
-		Description: templates.METADATA.Description,
-		Canonical:   templates.METADATA.SiteURL + "/",
-		ImageURL:    templates.METADATA.SiteURL + "/static/img/og-image.jpg",
-		ImageAlt:    templates.METADATA.Name + " — " + templates.METADATA.JobTitle,
-		Kind:        "website",
-		IsHome:      true,
+		Title:          templates.METADATA.Title,
+		Description:    templates.METADATA.Description,
+		Canonical:      templates.METADATA.SiteURL + "/",
+		ImageURL:       templates.METADATA.SiteURL + "/static/img/og-image.jpg",
+		ImageAlt:       templates.METADATA.Name + " — " + templates.METADATA.JobTitle,
+		Kind:           "website",
+		StructuredData: structured,
+		IsHome:         true,
 	}
 }
 
-func articleIndexMetadata() templates.PageMetadata {
+// articleIndexMetadata builds the index head. groups carries the filtered result
+// so the first card's cover — the page's LCP image — is preloaded per filter.
+func articleIndexMetadata(groups []templates.ArticleYear, structured string) templates.PageMetadata {
+	preload := ""
+	if len(groups) > 0 && len(groups[0].Articles) > 0 {
+		preload = groups[0].Articles[0].CardImagePath()
+	}
 	return templates.PageMetadata{
-		Title:       "Articles | Médéric Hurier (Fmind)",
-		Description: "Articles on AI agents, MLOps, cloud architecture, security, and pragmatic engineering systems.",
-		Canonical:   templates.METADATA.SiteURL + "/articles/",
-		ImageURL:    templates.METADATA.SiteURL + "/static/img/og-image.jpg",
-		ImageAlt:    "Articles by " + templates.METADATA.Name,
-		Kind:        "website",
+		Title:          "Articles | Médéric Hurier (Fmind)",
+		Description:    "Articles on AI agents, MLOps, cloud architecture, security, and pragmatic engineering systems.",
+		Canonical:      templates.METADATA.SiteURL + "/articles/",
+		ImageURL:       templates.METADATA.SiteURL + "/static/img/og-image.jpg",
+		ImageAlt:       "Articles by " + templates.METADATA.Name,
+		Kind:           "website",
+		StructuredData: structured,
+		PreloadImage:   preload,
 	}
 }
 
-func articleMetadata(article templates.Article) templates.PageMetadata {
-	canonical := article.Canonical
-	if canonical == "" {
-		canonical = article.URL
-	}
+func articleMetadata(article templates.Article, structured string) templates.PageMetadata {
 	return templates.PageMetadata{
-		Title:       article.Title + " | Fmind",
-		Description: article.Description,
-		Canonical:   canonical,
-		ImageURL:    article.ImageURL,
-		ImageAlt:    article.ImageAlt,
-		Kind:        "article",
-		NoIndex:     article.Draft,
-		Article:     &article,
+		Title:          article.Title + " | Fmind",
+		Description:    article.Description,
+		Canonical:      article.CanonicalURL(),
+		ImageURL:       article.ImageURL,
+		ImageAlt:       article.ImageAlt,
+		Kind:           "article",
+		StructuredData: structured,
+		PreloadImage:   article.ImagePath(),
+		NoIndex:        article.Draft,
+		Article:        &article,
 	}
 }
 
-func notFoundMetadata() templates.PageMetadata {
+func notFoundMetadata(structured string) templates.PageMetadata {
 	return templates.PageMetadata{
-		Title:       "Page not found | Fmind",
-		Description: "The requested page could not be found.",
-		Canonical:   templates.METADATA.SiteURL + "/",
-		ImageURL:    templates.METADATA.SiteURL + "/static/img/og-image.jpg",
-		ImageAlt:    templates.METADATA.Name + " — " + templates.METADATA.JobTitle,
-		Kind:        "website",
-		NoIndex:     true,
+		Title:          "Page not found | Fmind",
+		Description:    "The requested page could not be found.",
+		Canonical:      templates.METADATA.SiteURL + "/",
+		ImageURL:       templates.METADATA.SiteURL + "/static/img/og-image.jpg",
+		ImageAlt:       templates.METADATA.Name + " — " + templates.METADATA.JobTitle,
+		Kind:           "website",
+		StructuredData: structured,
+		NoIndex:        true,
 	}
 }
 
@@ -257,38 +310,52 @@ func serveSecurityTxt(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// serveRootFile serves a single embedded file at a fixed content type.
-func serveRootFile(name, contentType string) http.HandlerFunc {
+func serveStaticResponse(response staticResponse, cacheControl string, cors bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := fs.ReadFile(staticFS, name)
-		if err != nil {
-			http.NotFound(w, r)
-			return
+		w.Header().Set("Content-Type", response.contentType)
+		w.Header().Set("Cache-Control", cacheControl)
+		if cors {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
-		w.Header().Set("Content-Type", contentType)
-		w.Header().Set("Cache-Control", "public, max-age=86400, must-revalidate")
-		if _, err := w.Write(data); err != nil {
-			slog.DebugContext(r.Context(), "write root file", "path", r.URL.Path, "error", err)
+		if _, err := w.Write(response.body); err != nil {
+			slog.DebugContext(r.Context(), "write static response", "path", r.URL.Path, "error", err)
 		}
 	}
 }
 
-// initAssetHashes walks the embedded static assets and records a short content
-// hash per path, so templates.StaticURL can append ?v=<hash> for cache busting.
-func initAssetHashes() {
-	err := fs.WalkDir(staticFS, "static", func(p string, d fs.DirEntry, err error) error {
+func loadApplicationAssets(assets fs.FS) (applicationAssets, error) {
+	css, err := fs.ReadFile(assets, "static/dist/styles.css")
+	if err != nil {
+		return applicationAssets{}, fmt.Errorf("read generated stylesheet: %w", err)
+	}
+	hashes := make(map[string]string)
+	if err := fs.WalkDir(assets, "static", func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		data, err := fs.ReadFile(staticFS, p)
+		data, err := fs.ReadFile(assets, p)
 		if err != nil {
-			return err
+			return fmt.Errorf("read %q for hashing: %w", p, err)
 		}
 		sum := sha256.Sum256(data)
-		templates.AssetHashes["/"+p] = hex.EncodeToString(sum[:])[:8]
+		hashes["/"+p] = hex.EncodeToString(sum[:])[:8]
 		return nil
-	})
-	if err != nil {
-		slog.Error("hashing static assets", "error", err)
+	}); err != nil {
+		return applicationAssets{}, fmt.Errorf("hash static assets: %w", err)
 	}
+
+	rootFiles := make(map[string]staticResponse, len(rootFileSources))
+	for route, source := range rootFileSources {
+		data, err := fs.ReadFile(assets, source.file)
+		if err != nil {
+			return applicationAssets{}, fmt.Errorf("read root file %q: %w", source.file, err)
+		}
+		rootFiles[route] = staticResponse{contentType: source.contentType, body: data}
+	}
+
+	// Publish the fully validated immutable values together, so templates never
+	// observe a partially initialized asset map.
+	templates.AssetHashes = hashes
+	templates.InlineStyles = string(css)
+	return applicationAssets{rootFiles: rootFiles}, nil
 }

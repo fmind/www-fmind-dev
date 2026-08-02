@@ -7,13 +7,6 @@ resource "google_service_account" "cloudrun_sa" {
   depends_on   = [time_sleep.wait_for_apis]
 }
 
-# IAM permissions for logging.
-resource "google_project_iam_member" "log_writer" {
-  project = var.project_id
-  role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.cloudrun_sa.email}"
-}
-
 # IAM permissions for tracing (OpenTelemetry -> Cloud Trace, opt-in via OTLP).
 resource "google_project_iam_member" "trace_agent" {
   project = var.project_id

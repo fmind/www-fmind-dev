@@ -6,7 +6,8 @@ Go 1.26 server-rendered web app (Go + Templ + Tailwind/DaisyUI + a small vanilla
 
 The canonical vocabulary lives in `mise.toml` and is reused by the repo's lefthook hooks and CI. Run from this directory.
 
-- `mise install` — tidy Go modules and download dependencies.
+- `mise install` — install the pinned project toolchain.
+- `mise run install` — generate templates, tidy Go modules, and download dependencies.
 - `mise run watch` — live-reload dev server (air + Tailwind watch).
 - `mise run format` — goimports, gofumpt, `templ fmt`, dprint.
 - `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, and Terraform validation.
@@ -30,7 +31,7 @@ Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint,
 - `LICENSE` — Software license file governing distribution and reuse rights (MIT).
 - `README.md` — Human-readable documentation covering project setup, run instructions, and usage.
 - `bin/` — Output directory for compiled application binaries (ignored by Git).
-- `cmd/` — Entry point directories containing main packages for compiled binaries.
+- `cmd/` — Main packages for the web server and deterministic article-cover generator.
 - `config/` — Configuration structures and environment variables parser packages.
 - `content/` — Embedded Markdown article sources with strict TOML frontmatter.
 - `coverage.out` — Generated Go unit test code coverage analysis profiles.
@@ -44,7 +45,9 @@ Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint,
 - `mcp_test.go` — Test suites for validating Model Context Protocol (MCP) endpoint behavior.
 - `middleware.go` — Custom HTTP middlewares covering logging, security headers, compression, and sizing.
 - `mise.toml` — Developer tooling, tasks, environment variables, and alias definitions.
-- `publications.go` — Generated Atom, sitemap, llms.txt, and article-index discovery surfaces.
+- `publications.go` — Generated Atom, sitemap, llms.txt, article-index, and related-article surfaces.
+- `publications_test.go` — Tests for the discovery surfaces and the related-article ranking.
+- `server.json` — Publish-ready metadata for the official MCP Registry.
 - `server.go` — HTTP router initialization, routing rules, static asset serving, and metadata files.
 - `server_test.go` — Integration and request handling tests for HTTP endpoints and middlewares.
 - `static/` — Embedded static assets containing web fonts, article images, and compiled styles.
@@ -59,5 +62,7 @@ Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint,
 - All Tailwind/DaisyUI classes live in `.templ` files (the `@source` scan and DaisyUI `include:` list depend on this — no classes in Go strings).
 - Every static asset is self-hosted; never reference a CDN at runtime.
 - The validated article collection is the only publication source for HTML, Atom, sitemap, llms.txt, JSON, and MCP surfaces; production discovery never includes drafts.
+- Article tags come from the closed vocabulary in `templates/tags.go`; each needs a matching `[data-tag='…']` color rule in `static/css/input.css`, and anything else fails startup.
+- A new article needs its card cover generated (`mise run build:covers`) and committed; startup fails without it. The pinned pure-Go WebP encoder runs with `nodynamic`, so derivatives are reproducible without an external image-processing binary.
 - Definition of done: `mise run format` clean, `mise run check` no findings, `mise run test` green, new behavior covered by a test.
 - Conventional Commits; no attribution.

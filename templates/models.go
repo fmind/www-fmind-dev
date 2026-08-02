@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+// CardCoverWidth is the canonical article-card derivative width shared by the
+// generator, parser validation, and rendered image dimensions.
+const CardCoverWidth = 800
+
 // Data Models
 
 type SocialLink struct {
@@ -100,25 +104,30 @@ type ResearchPaper struct {
 // Article is one validated Markdown publication plus its pre-rendered safe HTML.
 // Runtime handlers only read this immutable startup snapshot.
 type Article struct {
-	Date           time.Time `json:"date"`
-	Markdown       string    `json:"content"`
-	Description    string    `json:"description"`
-	Title          string    `json:"title"`
-	Slug           string    `json:"slug"`
-	Canonical      string    `json:"canonical,omitzero"`
-	HTML           string    `json:"-"`
-	URL            string    `json:"url"`
-	ImageURL       string    `json:"image_url"`
-	ImageAlt       string    `json:"image_alt"`
-	Tags           []string  `json:"tags"`
-	ReadingMinutes int       `json:"reading_minutes"`
-	Draft          bool      `json:"draft"`
+	Date        time.Time `json:"date"`
+	Updated     time.Time `json:"updated"`
+	Markdown    string    `json:"content"`
+	Description string    `json:"description"`
+	Title       string    `json:"title"`
+	Slug        string    `json:"slug"`
+	Canonical   string    `json:"canonical,omitzero"`
+	HTML        string    `json:"-"`
+	URL         string    `json:"url"`
+	ImageURL    string    `json:"image_url"`
+	// CardImageURL is the downscaled cover teasers load. Feeds, social metadata,
+	// and JSON-LD keep ImageURL so external consumers still get the full asset.
+	CardImageURL   string   `json:"-"`
+	ImageAlt       string   `json:"image_alt"`
+	Tags           []string `json:"tags"`
+	ReadingMinutes int      `json:"reading_minutes"`
+	Draft          bool     `json:"draft"`
 }
 
 // ArticleSummary is the compact publication representation exposed through
 // lists, JSON, llms.txt, and MCP so discovery does not duplicate full bodies.
 type ArticleSummary struct {
 	Date           time.Time `json:"date"`
+	Updated        time.Time `json:"updated"`
 	Title          string    `json:"title"`
 	Description    string    `json:"description"`
 	Slug           string    `json:"slug"`
@@ -135,6 +144,7 @@ func (article Article) Summary() ArticleSummary {
 		Title:          article.Title,
 		Description:    article.Description,
 		Date:           article.Date,
+		Updated:        article.Updated,
 		Tags:           article.Tags,
 		Slug:           article.Slug,
 		Canonical:      article.Canonical,
@@ -149,6 +159,31 @@ func (article Article) Summary() ArticleSummary {
 // stays absolute for feeds, JSON-LD, social metadata, JSON, and MCP clients.
 func (article Article) ImagePath() string {
 	return strings.TrimPrefix(article.ImageURL, METADATA.SiteURL)
+}
+
+// CardImagePath is the same-origin path of the teaser-sized cover. Cards never
+// render wider than ~700 CSS px in any breakpoint, so one derivative covers every
+// layout at 2× density and no srcset is warranted.
+func (article Article) CardImagePath() string {
+	return strings.TrimPrefix(article.CardImageURL, METADATA.SiteURL)
+}
+
+// CanonicalURL returns the externally declared canonical when present and the
+// hosted article URL otherwise.
+func (article Article) CanonicalURL() string {
+	if article.Canonical != "" {
+		return article.Canonical
+	}
+	return article.URL
+}
+
+// ModifiedDate falls back to publication for articles without updated
+// frontmatter and for compact fixtures that only set Date.
+func (article Article) ModifiedDate() time.Time {
+	if article.Updated.IsZero() {
+		return article.Date
+	}
+	return article.Updated
 }
 
 // ArticleYear groups the reverse-chronological index without client-side state.
@@ -166,8 +201,14 @@ type PageMetadata struct {
 	ImageURL    string
 	ImageAlt    string
 	Kind        string
-	NoIndex     bool
-	IsHome      bool
+	// StructuredData is precomputed during application construction so rendering
+	// cannot hide a JSON encoding error behind an already-started response.
+	StructuredData string
+	// PreloadImage is the same-origin path of this page's Largest Contentful Paint
+	// image, preloaded in <head> so the browser starts it before parsing the body.
+	PreloadImage string
+	NoIndex      bool
+	IsHome       bool
 }
 
 type Service struct {

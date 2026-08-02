@@ -2,7 +2,7 @@
 title = "It’s Not Artificial: Recreating a Conversational Format with Gemini’s Multi-Speaker Text to Speech"
 description = "A guide to creating conversational AI with Gemini. Generate custom educational audio with multiple voices using a simple Python script."
 date = "2025-07-20"
-tags = ["Artificial Intelligence", "Conversational AI", "Data Science", "Gemini", "Generative Ai Tools"]
+tags = ["LLM", "Demo"]
 slug = "its-not-artificial-recreating-a-conversational-format-with-gemini-s-multi-speaker-text-to-speech"
 canonical = "https://medium.com/@fmind/its-not-artificial-recreating-a-conversational-format-with-gemini-s-multi-speaker-text-to-speech-5e836feadab7"
 draft = false

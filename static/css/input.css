@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Structural prose styles (heading margins, list bullets, spacing); daisyUI's
+   "typography" include only themes the colors and needs this plugin to work. */
+@plugin "@tailwindcss/typography";
 @plugin "daisyui" {
   themes: light, dark;
   include: button, card, navbar, menu, hero, avatar, badge, footer, typography;
@@ -13,13 +16,21 @@
   --color-primary: oklch(0.55 0.22 263.6);
   --color-primary-content: oklch(0.98 0.01 263.6);
   --color-accent: oklch(0.55 0.22 263.6);
+  /* Brand navy (background of the dark palette) doubles as text on light. */
+  --color-base-content: #0f172a;
 }
 
+/* Dark theme follows the Fmind brand palette (publications/BRANDING.md):
+   background #0F172A, panel #1E293B, border #334155, foreground #F8FAFC. */
 @plugin 'daisyui/theme' {
   name: 'dark';
   --color-primary: oklch(0.648 0.205 263.6);
   --color-primary-content: oklch(0.18 0.03 263.6);
   --color-accent: oklch(0.648 0.205 263.6);
+  --color-base-100: #0f172a;
+  --color-base-200: #1e293b;
+  --color-base-300: #334155;
+  --color-base-content: #f8fafc;
 }
 
 @theme {
@@ -73,10 +84,136 @@
   display: inline-flex;
 }
 
+[data-company='Decathlon'] {
+  border-left-color: #3643ba;
+}
+
+[data-company='European Commission'] {
+  border-left-color: #004494;
+}
+
+[data-company='ArcelorMittal'] {
+  border-left-color: #f47d30;
+}
+
+[data-company='BNP Paribas'] {
+  border-left-color: #00915e;
+}
+
+[data-company='Google'] {
+  border-left-color: #4285f4;
+}
+
+[data-company='SFEIR'] {
+  border-left-color: #000000;
+}
+
+[data-company='University of Luxembourg'] {
+  border-left-color: #e3000f;
+}
+
+[data-company='Clearstream'] {
+  border-left-color: #008c95;
+}
+
+/* Article tags. One pill style driven by a single `--tag` hue that each
+   `[data-tag]` rule sets, so adding a tag means adding one color line here and
+   one entry to the canonical vocabulary — never a class in the markup. Text and
+   surface are derived from that hue per theme to keep contrast above 4.5:1. */
+.tag {
+  --tag: oklch(55.4% 0.046 257.417);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid color-mix(in oklab, var(--tag) 30%, transparent);
+  border-radius: 9999px;
+  background-color: color-mix(in oklab, var(--tag) 10%, transparent);
+  padding: 0.3rem 0.7rem;
+  color: color-mix(in oklab, var(--tag) 55%, black);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.tag::before {
+  display: block;
+  border-radius: 9999px;
+  background-color: var(--tag);
+  width: 0.45rem;
+  height: 0.45rem;
+  content: '';
+}
+
+a.tag:hover {
+  border-color: color-mix(in oklab, var(--tag) 60%, transparent);
+  background-color: color-mix(in oklab, var(--tag) 20%, transparent);
+}
+
+.tag-active {
+  border-color: var(--tag);
+  background-color: color-mix(in oklab, var(--tag) 22%, transparent);
+  font-weight: 700;
+}
+
+[data-theme='dark'] .tag {
+  background-color: color-mix(in oklab, var(--tag) 16%, transparent);
+  color: color-mix(in oklab, var(--tag) 72%, white);
+}
+
+[data-theme='dark'] a.tag:hover,
+[data-theme='dark'] .tag-active {
+  background-color: color-mix(in oklab, var(--tag) 28%, transparent);
+}
+
+[data-tag='Agent'] {
+  --tag: oklch(60.6% 0.25 292.717);
+}
+
+[data-tag='LLM'] {
+  --tag: oklch(66.7% 0.295 322.15);
+}
+
+[data-tag='RAG'] {
+  --tag: oklch(65.6% 0.241 354.308);
+}
+
+[data-tag='MLOps'] {
+  --tag: oklch(62.3% 0.214 259.815);
+}
+
+[data-tag='Cloud'] {
+  --tag: oklch(68.5% 0.169 237.323);
+}
+
+[data-tag='Python'] {
+  --tag: oklch(76.9% 0.188 70.08);
+}
+
+[data-tag='Go'] {
+  --tag: oklch(71.5% 0.143 215.221);
+}
+
+[data-tag='Project'] {
+  --tag: oklch(69.6% 0.17 162.48);
+}
+
+[data-tag='Demo'] {
+  --tag: oklch(64.5% 0.246 16.439);
+}
+
+[data-tag='Guide'] {
+  --tag: oklch(70.5% 0.213 47.604);
+}
+
 #about,
 #work-experience,
 #certifications,
-#publications,
+#articles,
 #projects,
 #services {
   content-visibility: auto;

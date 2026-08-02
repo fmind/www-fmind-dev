@@ -2,7 +2,7 @@
 title = "Agent Evolutions: Stop Guessing the Design — Evolve It"
 description = "Most coding-agent tasks have one right answer hiding behind a workflow. “Add password sign-in.” “Fix the off-by-one in the pagination…"
 date = "2026-06-01"
-tags = ["AI Agent", "Artificial Intelligence", "Open Source", "Programming", "Software Engineering"]
+tags = ["Agent", "Project"]
 slug = "agent-evolutions-stop-guessing-the-design-evolve-it"
 canonical = "https://medium.com/@fmind/agent-evolutions-stop-guessing-the-design-evolve-it-5074a41b99d3"
 draft = false

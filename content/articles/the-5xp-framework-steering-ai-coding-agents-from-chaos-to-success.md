@@ -2,7 +2,7 @@
 title = "The 5xP Framework: Steering AI Coding Agents from Chaos to Success"
 description = "AI Coding — or Spec-Driven Development — is a recent trend that amazes as much as it scares IT engineers. We now have access to powerful…"
 date = "2026-02-28"
-tags = ["AI Agent", "Artificial Intelligence", "Coding", "Productivity", "Software Engineering"]
+tags = ["Agent", "Guide"]
 slug = "the-5xp-framework-steering-ai-coding-agents-from-chaos-to-success"
 canonical = "https://medium.com/@fmind/the-5xp-framework-steering-ai-coding-agents-from-chaos-to-success-83fbdb318b2b"
 draft = false

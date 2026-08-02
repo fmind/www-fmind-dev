@@ -2,7 +2,7 @@
 title = "Vibe Youtubing with NotebookLM: The MLOps Coding Course Gets a Video Upgrade in Under 48 Hours"
 description = "I’m incredibly excited to announce the launch of the first video series for my MLOps Coding Course, covering the introduction and the…"
 date = "2025-08-26"
-tags = ["Artificial Intelligence", "Data Science", "Generative Ai Tools", "Machine Learning", "MLOps"]
+tags = ["LLM", "Demo"]
 slug = "vibe-youtubing-with-notebooklm-the-mlops-coding-course-gets-a-video-upgrade-in-under-48-hours"
 canonical = "https://medium.com/@fmind/vibe-youtubing-with-notebooklm-the-mlops-coding-course-gets-a-video-upgrade-in-under-48-hours-d34efd306207"
 draft = false

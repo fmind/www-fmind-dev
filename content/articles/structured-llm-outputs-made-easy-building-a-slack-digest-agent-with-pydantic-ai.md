@@ -2,7 +2,7 @@
 title = "Structured LLM Outputs Made Easy: Building a Slack Digest Agent with Pydantic AI"
 description = "As developers and AI practitioners, many of us belong to vibrant online communities, like the MLOps Community on Slack. These platforms are…"
 date = "2025-04-15"
-tags = ["Agents", "Artificial Intelligence", "Data Science", "Machine Learning", "Programming"]
+tags = ["Agent", "LLM", "Python"]
 slug = "structured-llm-outputs-made-easy-building-a-slack-digest-agent-with-pydantic-ai"
 canonical = "https://medium.com/@fmind/structured-llm-outputs-made-easy-building-a-slack-digest-agent-with-pydantic-ai-d61df262e63d"
 draft = false

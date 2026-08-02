@@ -2,7 +2,7 @@
 title = "Framework, Template, or Example? 🤔 Choosing the Right AI Starter Kit for Your Team ✨"
 description = "Building AI applications is incredibly exciting. But let’s be honest: getting started can be challenging, especially in large…"
 date = "2025-03-29"
-tags = ["Artificial Intelligence", "Data Science", "Generative Ai Tools", "Machine Learning", "MLOps"]
+tags = ["MLOps", "Guide"]
 slug = "framework-template-or-example-choosing-the-right-ai-starter-kit-for-your-team"
 canonical = "https://medium.com/@fmind/framework-template-or-example-choosing-the-right-ai-starter-kit-for-your-team-c16fd2e9b6b8"
 draft = false

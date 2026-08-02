@@ -2,7 +2,7 @@
 title = "Da2a: The Future of Data Platforms is Agentic, Distributed, and Collaborative"
 description = "For decades, the story of data platforms has been one of centralization and heavy engineering. We built massive data warehouses and data…"
 date = "2025-09-27"
-tags = ["AI Agent", "Artificial Intelligence", "Data Science", "Generative Ai Tools", "Machine Learning"]
+tags = ["Agent", "Cloud"]
 slug = "da2a-the-future-of-data-platforms-is-agentic-distributed-and-collaborative"
 canonical = "https://medium.com/@fmind/da2a-the-future-of-data-platforms-is-agentic-distributed-and-collaborative-741d5aa96fc4"
 draft = false

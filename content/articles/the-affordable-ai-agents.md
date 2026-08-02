@@ -2,7 +2,7 @@
 title = "The Affordable AI Agents"
 description = "As AI agents transition from isolated developer experiments into production-scale workflows, engineering organizations are waking up to a…"
 date = "2026-06-25"
-tags = ["AI", "AI Agent", "Artificial Intelligence", "Generative Ai Tools", "Software Engineering"]
+tags = ["Agent", "LLM"]
 slug = "the-affordable-ai-agents"
 canonical = "https://medium.com/@fmind/the-affordable-ai-agents-26d1d071d00b"
 draft = false

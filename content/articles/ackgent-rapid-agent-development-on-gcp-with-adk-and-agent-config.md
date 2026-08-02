@@ -1,8 +1,8 @@
 +++
 title = "Ackgent: Rapid Agent Development on GCP with ADK and Agent Config"
-description = "Speed up AI agent development on GCP with Ackgent. Build, deploy, and iterate faster using Google ADK and Agent Config declarative approach"
+description = "Speed up AI agent development on GCP with Ackgent. Build, deploy, and iterate faster using Google ADK and Agent Config's declarative approach."
 date = "2025-09-14"
-tags = ["AI Agent", "Artificial Intelligence", "Data Science", "Generative Ai Tools", "Google Adk"]
+tags = ["Agent", "Cloud", "Project"]
 slug = "ackgent-rapid-agent-development-on-gcp-with-adk-and-agent-config"
 canonical = "https://medium.com/@fmind/ackgent-rapid-agent-development-on-gcp-with-adk-and-agent-config-3712dd1cd9dd"
 draft = false
@@ -51,11 +51,11 @@ The central insight here is that **config helps you focus on the use case, not t
 
 ### Introducing Ackgent: The Agent Config Starter Kit
 
-To help teams adopt this powerful paradigm, I’ve created a new GitHub repository: [**Ackgent**](https://github.com/fmind/ackgent). This repository a demonstration on how to leverage ADK Agent Config within a modern, production-ready Python environment.
+To help teams adopt this powerful paradigm, I’ve created a new GitHub repository: [**Ackgent**](https://github.com/fmind/ackgent). This repository is a demonstration of how to leverage ADK Agent Config within a modern, production-ready Python environment.
 
-![Web Inteface of Ackgent with the Internet and Datetime agents](/static/img/articles/ackgent-rapid-agent-development-on-gcp-with-adk-and-agent-config/02.webp)
+![Web Interface of Ackgent with the Internet and Datetime agents](/static/img/articles/ackgent-rapid-agent-development-on-gcp-with-adk-and-agent-config/02.webp)
 
-Web Inteface of Ackgent with the Internet and Datetime agents
+Web Interface of Ackgent with the Internet and Datetime agents
 
 This template encapsulates best practices for structuring a project where configuration is the core, supported by a suite of modern development tools.
 

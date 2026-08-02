@@ -2,7 +2,7 @@
 title = "MLOps Coding Course: Bridging the gap between Data Scientists and Machine Learning Engineers"
 description = "The MLOps Coding Course is an open-source resource specifically designed to bridge the gap between data science and software engineering."
 date = "2024-05-28"
-tags = ["AI", "Coding", "Course", "Machine Learning", "MLOps"]
+tags = ["MLOps", "Guide"]
 slug = "mlops-coding-course-bridging-the-gap-between-data-scientists-and-machine-learning-engineers"
 canonical = "https://medium.com/@fmind/mlops-coding-course-bridging-the-gap-between-data-scientists-and-machine-learning-engineers-eeeba3c95403"
 draft = false

@@ -5,10 +5,30 @@ import (
 	"net/url"
 )
 
-templ ArticleCard(article Article) {
+// TagBadge renders a non-interactive tag. The color comes from the stylesheet
+// keyed on data-tag, so the vocabulary in tags.go stays the only list to edit.
+templ TagBadge(tag string) {
+	<span class="tag" data-tag={ tag }>{ tag }</span>
+}
+
+// TagLink renders a tag that filters the index. active draws the selected state.
+templ TagLink(tag string, active bool) {
+	<a class={ "tag", templ.KV("tag-active", active) } data-tag={ tag } href={ templ.SafeURL("/articles/?tag=" + url.QueryEscape(tag)) }>
+		{ tag }
+	</a>
+}
+
+// ArticleCard renders one article teaser. priority marks the card that is above
+// the fold on its page: its cover is the Largest Contentful Paint candidate, so
+// it must load eagerly — lazy-loading it would delay the metric it defines.
+templ ArticleCard(article Article, priority bool) {
 	<article class="card bg-base-100 border border-base-300 shadow-lg hover:shadow-xl transition-shadow overflow-hidden h-full">
 		<a href={ templ.SafeURL("/articles/" + article.Slug + "/") } class="block">
-			<img class="w-full aspect-[16/9] object-cover" src={ templ.SafeURL(article.ImagePath()) } alt={ article.ImageAlt } loading="lazy" decoding="async"/>
+			if priority {
+				<img class="w-full aspect-[16/9] object-cover" src={ templ.SafeURL(article.CardImagePath()) } alt={ article.ImageAlt } width={ fmt.Sprintf("%d", CardCoverWidth) } height="450" fetchpriority="high" decoding="async"/>
+			} else {
+				<img class="w-full aspect-[16/9] object-cover" src={ templ.SafeURL(article.CardImagePath()) } alt={ article.ImageAlt } width={ fmt.Sprintf("%d", CardCoverWidth) } height="450" loading="lazy" decoding="async"/>
+			}
 		</a>
 		<div class="card-body p-5 sm:p-6">
 			<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-base-content/65">
@@ -16,14 +36,18 @@ templ ArticleCard(article Article) {
 				<span aria-hidden="true">·</span>
 				<span>{ fmt.Sprintf("%d min read", article.ReadingMinutes) }</span>
 			</div>
-			<h2 class="card-title font-heading text-xl leading-snug mt-2">
+			<!-- h3: cards always sit under a section heading (year, "Articles",
+			     "Keep reading"), so the page outline stays sequential. -->
+			<h3 class="card-title font-heading text-xl leading-snug mt-2">
 				<a class="hover:text-primary transition-colors" href={ templ.SafeURL("/articles/" + article.Slug + "/") }>{ article.Title }</a>
-			</h2>
+			</h3>
 			<p class="text-base-content/75 leading-relaxed mt-2">{ article.Description }</p>
 			if len(article.Tags) > 0 {
-				<ul class="flex flex-wrap gap-2 mt-3" aria-label="Article tags">
+				<ul class="flex flex-wrap gap-2 mt-4" aria-label="Article tags">
 					for _, tag := range article.Tags {
-						<li><span class="badge badge-outline border-base-content/25">{ tag }</span></li>
+						<li>
+							@TagBadge(tag)
+						</li>
 					}
 				</ul>
 			}
@@ -40,21 +64,21 @@ templ ArticleIndex(years []ArticleYear, tags []string, activeTag string) {
 				<p class="text-lg text-base-content/70 leading-relaxed mt-5">Pragmatic field notes on AI agents, MLOps, cloud architecture, and engineering systems.</p>
 			</header>
 			<nav class="flex flex-wrap justify-center gap-2 mb-12" aria-label="Filter articles by tag">
-				<a class={ "btn btn-sm rounded-full", templ.KV("btn-primary", activeTag == ""), templ.KV("btn-ghost border border-base-300", activeTag != "") } href="/articles/">All</a>
+				<a class={ "tag", templ.KV("tag-active", activeTag == "") } href="/articles/">All</a>
 				for _, tag := range tags {
-					<a class={ "btn btn-sm rounded-full", templ.KV("btn-primary", activeTag == tag), templ.KV("btn-ghost border border-base-300", activeTag != tag) } href={ templ.SafeURL("/articles/?tag=" + url.QueryEscape(tag)) }>{ tag }</a>
+					@TagLink(tag, activeTag == tag)
 				}
 			</nav>
 			if len(years) == 0 {
 				<div class="alert max-w-2xl mx-auto"><span>No articles match this tag.</span></div>
 			}
 			<div class="space-y-16">
-				for _, group := range years {
+				for groupIndex, group := range years {
 					<section aria-labelledby={ fmt.Sprintf("year-%d", group.Year) }>
 						<h2 id={ fmt.Sprintf("year-%d", group.Year) } class="text-3xl font-heading font-bold mb-6 border-b border-base-300 pb-3">{ fmt.Sprintf("%d", group.Year) }</h2>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-							for _, article := range group.Articles {
-								@ArticleCard(article)
+							for articleIndex, article := range group.Articles {
+								@ArticleCard(article, groupIndex == 0 && articleIndex == 0)
 							}
 						</div>
 					</section>
@@ -64,7 +88,65 @@ templ ArticleIndex(years []ArticleYear, tags []string, activeTag string) {
 	</section>
 }
 
-templ ArticlePage(article Article) {
+// ArticleFooter closes the loop on an article page. Most readers arrive here
+// straight from a search engine or a syndicated copy, so the page has to say who
+// wrote it and offer a next step instead of ending at the last paragraph.
+templ ArticleFooter(related []Article) {
+	<footer class="max-w-4xl mx-auto mt-16 md:mt-20 space-y-12">
+		<section class="card bg-base-200 border border-base-300" aria-labelledby="article-author">
+			<div class="card-body p-6 md:p-8 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+				<img
+					class="w-20 h-20 rounded-full object-cover ring ring-primary ring-offset-base-100 ring-offset-2 shrink-0"
+					src={ StaticURL("static/img/avatar-192.webp") }
+					alt={ METADATA.Name }
+					width="80"
+					height="80"
+					loading="lazy"
+					decoding="async"
+				/>
+				<div class="flex-1 min-w-0">
+					<h2 id="article-author" class="font-heading text-xl font-bold">
+						<a class="hover:text-primary transition-colors" href="/#about">{ METADATA.Name } ({ METADATA.AlternateName })</a>
+					</h2>
+					<p class="text-sm text-primary font-semibold mt-1">{ METADATA.JobTitle }</p>
+					<p class="text-base-content/75 leading-relaxed mt-3">{ METADATA.Description }</p>
+				</div>
+				<div class="flex flex-col gap-2 w-full sm:w-auto shrink-0">
+					<a
+						class="btn btn-primary rounded-xl font-bold"
+						href={ templ.SafeURL(METADATA.CalendarURL) }
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						Book a Session
+					</a>
+					<a class="btn btn-ghost border border-base-300 rounded-xl" href={ templ.SafeURL("mailto:" + METADATA.Email) }>
+						Contact Me
+					</a>
+				</div>
+			</div>
+		</section>
+		if len(related) > 0 {
+			<section aria-labelledby="related-articles">
+				<h2 id="related-articles" class="font-heading text-2xl font-bold mb-6 flex items-center gap-2">
+					<span class="w-2 h-8 bg-primary rounded-full" aria-hidden="true"></span>
+					Keep reading
+				</h2>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					for _, item := range related {
+						@ArticleCard(item, false)
+					}
+				</div>
+			</section>
+		}
+		<div class="flex flex-wrap justify-center items-center gap-3 text-sm">
+			<a class="btn btn-outline btn-primary rounded-full font-semibold" href="/articles/">All articles</a>
+			<a class="btn btn-ghost border border-base-300 rounded-full" href="/articles/feed.xml">Subscribe (Atom)</a>
+		</div>
+	</footer>
+}
+
+templ ArticlePage(article Article, related []Article) {
 	<article class="bg-base-100 min-h-screen px-4 py-12 md:py-20">
 		<header class="max-w-4xl mx-auto text-center mb-10 md:mb-14">
 			<a class="link link-primary font-semibold" href="/articles/">← All articles</a>
@@ -76,15 +158,20 @@ templ ArticlePage(article Article) {
 				<span>{ fmt.Sprintf("%d min read", article.ReadingMinutes) }</span>
 			</div>
 			if len(article.Tags) > 0 {
-				<ul class="flex flex-wrap justify-center gap-2 mt-5" aria-label="Article tags">
+				<ul class="flex flex-wrap justify-center gap-2 mt-6" aria-label="Article tags">
 					for _, tag := range article.Tags {
-						<li><a class="badge badge-outline border-base-content/25 hover:border-primary hover:text-primary" href={ templ.SafeURL("/articles/?tag=" + url.QueryEscape(tag)) }>{ tag }</a></li>
+						<li>
+							@TagLink(tag, false)
+						</li>
 					}
 				</ul>
 			}
 		</header>
-		<div class="prose prose-lg md:prose-xl mx-auto max-w-4xl text-base-content prose-headings:font-heading prose-headings:scroll-mt-24 prose-a:text-primary prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-code:before:content-none prose-code:after:content-none [&_figure]:my-10 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-base-content/60">
+		<!-- Code blocks stay on the brand panel palette in both themes:
+		     slate-800/700/50 are the exact brand panel, border, and foreground. -->
+		<div class="prose prose-lg md:prose-xl mx-auto max-w-4xl text-base-content prose-headings:font-heading prose-headings:scroll-mt-24 prose-a:text-primary prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-slate-800 prose-pre:text-slate-50 prose-pre:border prose-pre:border-slate-700 prose-code:before:content-none prose-code:after:content-none [&_figure]:my-10 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-base-content/60 [&_video]:my-10 [&_video]:w-full [&_video]:rounded-xl [&_video]:shadow-lg">
 			@templ.Raw(article.HTML)
 		</div>
+		@ArticleFooter(related)
 	</article>
 }

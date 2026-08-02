@@ -1,8 +1,8 @@
 +++
 title = "Poetry Was Good, Uv Is Better: An MLOps Migration Story"
-description = "Poetry to Uv: A faster, simpler way to manage dependencies for MLOps projects"
+description = "Poetry to Uv: A faster, simpler way to manage dependencies for MLOps projects."
 date = "2025-01-27"
-tags = ["AI", "Machine Learning", "MLOps", "Programming", "Python"]
+tags = ["MLOps", "Python"]
 slug = "poetry-was-good-uv-is-better-an-mlops-migration-story"
 canonical = "https://medium.com/@fmind/poetry-was-good-uv-is-better-an-mlops-migration-story-f52bf0c6c703"
 draft = false

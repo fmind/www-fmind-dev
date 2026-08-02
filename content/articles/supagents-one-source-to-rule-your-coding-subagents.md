@@ -2,7 +2,7 @@
 title = "Supagents: One Source to Rule Your Coding Subagents"
 description = "The AI providers are in a horse race. Every quarter, a new model lands, a new harness ships, and the gap between “the best tool for this…"
 date = "2026-05-10"
-tags = ["AI Agent", "Artificial Intelligence", "Coding", "Open Source", "Software Engineering"]
+tags = ["Agent", "Project"]
 slug = "supagents-one-source-to-rule-your-coding-subagents"
 canonical = "https://medium.com/@fmind/supagents-one-source-to-rule-your-coding-subagents-1395502b7c5f"
 draft = false

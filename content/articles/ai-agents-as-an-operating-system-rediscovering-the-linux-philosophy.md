@@ -2,7 +2,7 @@
 title = "AI Agents as an Operating System: Rediscovering the Linux Philosophy"
 description = "We are building the most advanced AI systems in history, yet the best way to control them relies on paradigms from the 1970s. I see…"
 date = "2026-03-14"
-tags = ["AI Agent", "Artificial Intelligence", "LLM", "Software Development", "Software Engineering"]
+tags = ["Agent", "LLM"]
 slug = "ai-agents-as-an-operating-system-rediscovering-the-linux-philosophy"
 canonical = "https://medium.com/@fmind/ai-agents-as-an-operating-system-rediscovering-the-linux-philosophy-f0e76f29ebdb"
 draft = false

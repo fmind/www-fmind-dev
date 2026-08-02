@@ -2,7 +2,7 @@
 title = "Architecting the AI Agent Platform: A Definitive Guide"
 description = "Build a production-grade AI Agent Platform. A guide to the 7-layer architecture for scaling secure, autonomous enterprise agents."
 date = "2025-12-10"
-tags = ["AI Agent", "Artificial Intelligence", "Cloud Computing", "Data Science", "Software Architecture"]
+tags = ["Agent", "Cloud", "Guide"]
 slug = "architecting-the-ai-agent-platform-a-definitive-guide"
 canonical = "https://medium.com/@fmind/architecting-the-ai-agent-platform-a-definitive-guide-405750a3de44"
 draft = false

@@ -2,7 +2,7 @@
 title = "MLOps Coding Course: Mastering Observability for Reliable ML 💡"
 description = "This article dives deep into the essential tools and practices for achieving comprehensive observability in your AI/ML projects."
 date = "2024-07-28"
-tags = ["AI", "Course", "Data Science", "Machine Learning", "MLOps"]
+tags = ["MLOps", "Guide"]
 slug = "mlops-coding-course-mastering-observability-for-reliable-ml"
 canonical = "https://medium.com/@fmind/mlops-coding-course-mastering-observability-for-reliable-ml-f36eb7802865"
 draft = false
@@ -67,7 +67,7 @@ Employ [MLflow’s evaluate API](https://mlflow.org/docs/latest/model-evaluation
 
 Model Monitoring with [MLflow Model Evaluation](https://mlflow.org/docs/latest/model-evaluation/index.html)
 
-**For data and model drift detection, i**ntegrate tools like [Evidently](https://www.evidentlyai.com/) to automate the generation of interactive reports. Visualize data drift, model performance variations, and other critical insights, enabling you to understand and address potential issues quickly.
+**For data and model drift detection, integrate** tools like [Evidently](https://www.evidentlyai.com/) to automate the generation of interactive reports. Visualize data drift, model performance variations, and other critical insights, enabling you to understand and address potential issues quickly.
 
 [**Evidently Example**](https://docs.evidentlyai.com/examples/introduction) **:**
 

@@ -2,7 +2,7 @@
 title = "mAIdAI: Building a Personal Assistant with Google Cloud and Vertex AI"
 description = "Build a personal AI assistant using Google Cloud Run, Vertex AI, and Google Chat. A guide to architecting context-aware agents."
 date = "2026-02-05"
-tags = ["AI Agent", "Artificial Intelligence", "Automation", "Generative Ai Tools", "Programming"]
+tags = ["Agent", "Cloud", "Project"]
 slug = "maidai-building-a-personal-assistant-with-google-cloud-and-vertex-ai"
 canonical = "https://medium.com/@fmind/maidai-building-a-personal-assistant-with-google-cloud-and-vertex-ai-a136aa73656b"
 draft = false

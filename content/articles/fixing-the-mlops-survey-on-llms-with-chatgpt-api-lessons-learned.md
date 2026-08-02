@@ -1,14 +1,14 @@
 +++
 title = "Fixing the MLOps Survey on LLMs with ChatGPT API: Lessons Learned"
-description = "Large Language Model (LLM) is such an existing topic. Since the release of ChatGPT, we saw a surge of innovation ranging from education…"
+description = "Large Language Model (LLM) is such an exciting topic. Since the release of ChatGPT, we saw a surge of innovation ranging from education…"
 date = "2023-05-08"
-tags = ["ChatGPT", "LLM", "MLOps", "NLP", "Surveys"]
+tags = ["LLM", "MLOps", "Demo"]
 slug = "fixing-the-mlops-survey-on-llms-with-chatgpt-api-lessons-learned"
 canonical = "https://medium.com/@fmind/fixing-the-mlops-survey-on-llms-with-chatgpt-api-lessons-learned-62d90e721331"
 draft = false
 +++
 
-[Large Language Model](https://en.wikipedia.org/wiki/Large_language_model) (LLM) is such an existing topic. Since [the release of ChatGPT](https://openai.com/blog/chatgpt), we saw [a surge of innovation](https://www.entrepreneur.com/leadership/how-to-use-chatgpt-to-unlock-new-levels-of-innovation/446151) ranging from [education mentorship](https://techcrunch.com/2023/05/05/openai-chatgpt-chegg-edtech/) to [finance advisory](https://www.bloomberg.com/company/press/bloomberggpt-50-billion-parameter-llm-tuned-finance/). Each week is a new opportunity for [addressing new kinds of problems](https://blog.character.ai/introducing-character/), [increasing human productivity](https://www.jasper.ai/), or [improving existing solutions](https://gamerant.com/skyrim-mod-ai-npc-memories/). Yet, we may wonder if this is just a new [hype cycle](https://www.gartner.com/en/research/methodologies/gartner-hype-cycle) or if [organizations are truly adopting LLMs at scale](https://www.forbes.com/sites/forbestechcouncil/2023/04/25/the-generative-ai-frontier-mastering-llm-adoption-for-ceos-and-ctos-to-drive-business-success/) …
+[Large Language Model](https://en.wikipedia.org/wiki/Large_language_model) (LLM) is such an exciting topic. Since [the release of ChatGPT](https://openai.com/blog/chatgpt), we saw [a surge of innovation](https://www.entrepreneur.com/leadership/how-to-use-chatgpt-to-unlock-new-levels-of-innovation/446151) ranging from [education mentorship](https://techcrunch.com/2023/05/05/openai-chatgpt-chegg-edtech/) to [finance advisory](https://www.bloomberg.com/company/press/bloomberggpt-50-billion-parameter-llm-tuned-finance/). Each week is a new opportunity for [addressing new kinds of problems](https://blog.character.ai/introducing-character/), [increasing human productivity](https://www.jasper.ai/), or [improving existing solutions](https://gamerant.com/skyrim-mod-ai-npc-memories/). Yet, we may wonder if this is just a new [hype cycle](https://www.gartner.com/en/research/methodologies/gartner-hype-cycle) or if [organizations are truly adopting LLMs at scale](https://www.forbes.com/sites/forbestechcouncil/2023/04/25/the-generative-ai-frontier-mastering-llm-adoption-for-ceos-and-ctos-to-drive-business-success/) …
 
 ![Photo by Brett Jordan on Unsplash](/static/img/articles/fixing-the-mlops-survey-on-llms-with-chatgpt-api-lessons-learned/cover.webp)
 
@@ -126,7 +126,7 @@ I used the following function to associate the user inputs with the model output
             messages = chat(instructions, subset.tolist())
             content = query(model, messages=messages)
             records = from_jsonlines(content)
-            # handle the case where lenght are different
+            # handle the case where lengths are different
             if len(records) != len(subset):
                 print(f'Warning! Got: {len(records)}, expected: {len(subset)}')
                 records = records + [{} for i in range(len(subset) - len(records))] 

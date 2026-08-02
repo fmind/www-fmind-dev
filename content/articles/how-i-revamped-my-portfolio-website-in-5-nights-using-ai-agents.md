@@ -2,7 +2,7 @@
 title = "How I Revamped My Portfolio Website in 5 Nights Using AI Agents"
 description = "I see many friends and acquaintances generating amazing applications in mere weeks. We are in the midst of a craze of innovation, an era…"
 date = "2026-02-19"
-tags = ["AI", "Artificial Intelligence", "Productivity", "Software Engineering", "Web Development"]
+tags = ["Agent", "Demo"]
 slug = "how-i-revamped-my-portfolio-website-in-5-nights-using-ai-agents"
 canonical = "https://medium.com/@fmind/how-i-revamped-my-portfolio-website-in-5-nights-using-ai-agents-961579130c8a"
 draft = false

@@ -2,7 +2,7 @@
 title = "Agent Docs: Answer Locally Before the Web — A Shared Reference for Every Coding Agent"
 description = "Pair-program with a coding agent for an afternoon and you start noticing a quiet, recurring tax. Every time the agent reaches for a flag, a…"
 date = "2026-05-14"
-tags = ["AI Agent", "Artificial Intelligence", "Coding", "Machine Learning", "Programming"]
+tags = ["Agent", "Project"]
 slug = "agent-docs-answer-locally-before-the-web-a-shared-reference-for-every-coding-agent"
 canonical = "https://medium.com/@fmind/agent-docs-answer-locally-before-the-web-a-shared-reference-for-every-coding-agent-c91e16a8c330"
 draft = false

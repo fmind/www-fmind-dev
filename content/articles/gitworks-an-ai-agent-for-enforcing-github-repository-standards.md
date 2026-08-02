@@ -2,7 +2,7 @@
 title = "GitWorks: an AI Agent for Enforcing GitHub Repository Standards"
 description = "Maintaining consistency and quality across software projects, especially in collaborative environments, is a significant challenge. As projects grow and teams evolve, ensuring adherence to…"
 date = "2025-04-14"
-tags = ["Artificial Intelligence", "Coding", "Data Science", "Generative Ai Tools", "Machine Learning"]
+tags = ["Agent", "Project"]
 slug = "gitworks-an-ai-agent-for-enforcing-github-repository-standards"
 canonical = "https://medium.com/@fmind/gitworks-an-ai-agent-for-enforcing-github-repository-standards-e0193f60981d"
 draft = false

@@ -7,14 +7,14 @@ run_auto_install = false
 [tools]
 # Pin the CSS generator so local and CI binaries embed byte-identical styles.
 "github:dobicinaitis/tailwind-cli-extra" = "2.10.5"
-dprint = "latest"
-gitleaks = "latest"
+dprint = "0.55.2"
+gitleaks = "8.30.1"
 go = "1.26.5"
-golangci-lint = "latest"
-gotestsum = "latest"
-hadolint = "latest"
-lefthook = "latest"
-lychee = "latest"
+golangci-lint = "2.12.2"
+gotestsum = "1.13.0"
+hadolint = "2.15.1"
+lefthook = "2.1.10"
+lychee = "0.24.2"
 terraform = "1.15.8"
 
 [tasks.all]
@@ -38,9 +38,14 @@ sources = ["go.mod", "go.sum", "**/*.go", "static/**"]
 outputs = ["bin/{{env.APP_NAME}}"]
 run = "go build -trimpath -o bin/$APP_NAME ./cmd/$APP_NAME"
 
+[tasks."build:covers"]
+description = "Generate the downscaled article card covers (FORCE=1 rebuilds all)"
+sources = ["static/img/articles/*/cover.*", "cmd/covers/**/*.go"]
+outputs = ["static/img/articles/*/cover-800.webp"]
+run = "go run -tags nodynamic ./cmd/covers"
+
 [tasks."build:image"]
 description = "Build the production OCI image"
-depends = ["build:css"]
 run = "docker build --target runner -t $APP_NAME:local ."
 
 [tasks."build:templ"]

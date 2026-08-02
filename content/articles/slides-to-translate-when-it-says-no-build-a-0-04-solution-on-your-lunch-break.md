@@ -2,7 +2,7 @@
 title = "Slides-To-Translate: When IT Says No, Build a $0.04 Solution on Your Lunch Break"
 description = "It is a classic tale of corporate life. A colleague of mine at Decathlon had a mammoth task: translate a 155-slide presentation into…"
 date = "2025-07-29"
-tags = ["Coding", "Data Science", "Generative Ai Tools", "Hacking", "Programming"]
+tags = ["LLM", "Demo"]
 slug = "slides-to-translate-when-it-says-no-build-a-0-04-solution-on-your-lunch-break"
 canonical = "https://medium.com/@fmind/slides-to-translate-when-it-says-no-build-a-0-04-solution-on-your-lunch-break-3afa8bd9f6bb"
 draft = false
@@ -119,7 +119,7 @@ Screenshot of the Luxembourgish Version
 
 ### See it in Action 🚀
 
-Want to see the results for yourself? While I can share corporate slides publically, I can use some slides I wrote for a [MLOps Community Meetup](https://mlops.community/). Here are the original presentation and the versions translated by the script:
+Want to see the results for yourself? While I can't share corporate slides publicly, I can use some slides I wrote for an [MLOps Community Meetup](https://mlops.community/). Here are the original presentation and the versions translated by the script:
 
 - 📊 **Original Presentation**: [https://docs.google.com/presentation/d/1CvmBW0BmorHpC6NwYCh94qTAMZY9MlUx7ClcSwCg7Dg/edit?slide=id.p#slide=id.p](https://docs.google.com/presentation/d/1CvmBW0BmorHpC6NwYCh94qTAMZY9MlUx7ClcSwCg7Dg/edit?slide=id.p#slide=id.p)
 - 🇫🇷 **Translated to French**: [https://docs.google.com/presentation/d/1t7MqZG5BUCbTbDKlOu25e0BLi00IIIcFVWKZCCt8h2o/edit?slide=id.p#slide=id.p](https://docs.google.com/presentation/d/1t7MqZG5BUCbTbDKlOu25e0BLi00IIIcFVWKZCCt8h2o/edit?slide=id.p#slide=id.p)

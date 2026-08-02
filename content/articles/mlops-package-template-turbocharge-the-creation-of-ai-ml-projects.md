@@ -2,7 +2,7 @@
 title = "MLOps Package Template: Turbocharge the Creation of AI/ML Projects ⚡"
 description = "The Cookiecutter MLOps Package offers a powerful code template to jumpstart your MLOps journey and accelerate your AI/ML development…"
 date = "2024-08-05"
-tags = ["Data Science", "Machine Learning", "MLOps", "Python", "Template"]
+tags = ["MLOps", "Python", "Project"]
 slug = "mlops-package-template-turbocharge-the-creation-of-ai-ml-projects"
 canonical = "https://medium.com/@fmind/mlops-package-template-turbocharge-the-creation-of-ai-ml-projects-587dd2ef43e7"
 draft = false

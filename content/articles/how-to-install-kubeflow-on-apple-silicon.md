@@ -1,8 +1,8 @@
 +++
 title = "How to install Kubeflow Pipelines v2 on Apple Silicon"
-description = "Kubeflow Pipelines (KFP) is a powerful platform for building machine learning pipelines at scale with Kubernetes"
+description = "Kubeflow Pipelines (KFP) is a powerful platform for building machine learning pipelines at scale with Kubernetes."
 date = "2022-09-24"
-tags = ["Artificial Intelligence", "Kubeflow", "Kubeflow Pipelines", "M1", "Machine Learning"]
+tags = ["Cloud", "Guide"]
 slug = "how-to-install-kubeflow-on-apple-silicon"
 canonical = "https://medium.com/@fmind/how-to-install-kubeflow-on-apple-silicon-3565db8773f3"
 draft = false
@@ -41,7 +41,7 @@ You need to make two choices for installing Kubeflow Pipelines:
     KFP_PLATFORM=platform-agnostic-emissary
     KFP_VERSION=2.0.0b4
 
-    # star the installation using kubectl aply
+    # start the installation using kubectl apply
     kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/cluster-scoped-resources?ref=$KFP_VERSION"
     kubectl wait --for condition=established --timeout=60s crd/applications.app.k8s.io
     kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/$KFP_PLATFORM?ref=$KFP_VERSION"

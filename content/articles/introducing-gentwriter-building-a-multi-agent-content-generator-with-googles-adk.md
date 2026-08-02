@@ -2,7 +2,7 @@
 title = "Introducing GentWriter: Building a Multi-Agent Content Generator with Google’s ADK 👾"
 description = "In the fast-paced world of content creation, efficiency is key. Manually crafting social media posts for different platforms based on a…"
 date = "2025-04-28"
-tags = ["Agents", "Data Science", "Generative Ai Tools", "Machine Learning", "Python"]
+tags = ["Agent", "Python", "Project"]
 slug = "introducing-gentwriter-building-a-multi-agent-content-generator-with-googles-adk"
 canonical = "https://medium.com/@fmind/introducing-gentwriter-building-a-multi-agent-content-generator-with-googles-adk-a216558692de"
 draft = false

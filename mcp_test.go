@@ -13,14 +13,11 @@ import (
 func TestMCPEndpoint(t *testing.T) {
 	srv := newServer(t)
 
-	reqBody := `{"jsonrpc":"2.0","id":1,"method":"initialize",` +
-		`"params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`
-	req, err := http.NewRequest(http.MethodPost, srv.URL+"/mcp", strings.NewReader(reqBody))
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/event-stream")
+	reqBody := `{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{` +
+		`"io.modelcontextprotocol/protocolVersion":"2026-07-28",` +
+		`"io.modelcontextprotocol/clientInfo":{"name":"test","version":"1.0"},` +
+		`"io.modelcontextprotocol/clientCapabilities":{}}}}`
+	req := newMCPRequest(t, srv.URL, "server/discover", "", reqBody)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -36,15 +33,16 @@ func TestMCPEndpoint(t *testing.T) {
 		t.Fatalf("status = %d, want 200; body=%s", resp.StatusCode, body)
 	}
 	if !strings.Contains(string(body), `"jsonrpc"`) || !strings.Contains(string(body), site.ServiceName) {
-		t.Errorf("unexpected MCP initialize response: %s", body)
+		t.Errorf("unexpected MCP discover response: %s", body)
 	}
 	for _, want := range []string{
+		`"supportedVersions":["2026-07-28"`,
 		`"websiteUrl":"https://www.fmind.dev/"`,
 		`"icons"`,
 		"AI Architect (PhD) • VC Expert Advisor",
 	} {
 		if !strings.Contains(string(body), want) {
-			t.Errorf("MCP initialize response missing %s: %s", want, body)
+			t.Errorf("MCP discover response missing %s: %s", want, body)
 		}
 	}
 	if sessionID := resp.Header.Get("Mcp-Session-Id"); sessionID != "" {
@@ -52,13 +50,11 @@ func TestMCPEndpoint(t *testing.T) {
 	}
 
 	publicationsBody := `{"jsonrpc":"2.0","id":2,"method":"tools/call",` +
-		`"params":{"name":"list_publications","arguments":{}}}`
-	publicationsReq, err := http.NewRequest(http.MethodPost, srv.URL+"/mcp", strings.NewReader(publicationsBody))
-	if err != nil {
-		t.Fatalf("new publications request: %v", err)
-	}
-	publicationsReq.Header.Set("Content-Type", "application/json")
-	publicationsReq.Header.Set("Accept", "application/json, text/event-stream")
+		`"params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28",` +
+		`"io.modelcontextprotocol/clientInfo":{"name":"test","version":"1.0"},` +
+		`"io.modelcontextprotocol/clientCapabilities":{}},` +
+		`"name":"list_publications","arguments":{}}}`
+	publicationsReq := newMCPRequest(t, srv.URL, "tools/call", "list_publications", publicationsBody)
 	publicationsResp, err := http.DefaultClient.Do(publicationsReq)
 	if err != nil {
 		t.Fatalf("call list_publications: %v", err)
@@ -80,19 +76,55 @@ func TestMCPEndpoint(t *testing.T) {
 			t.Errorf("list_publications response missing %q: %s", want, publications)
 		}
 	}
+
+	listBody := `{"jsonrpc":"2.0","id":3,"method":"prompts/list","params":{` +
+		`"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28",` +
+		`"io.modelcontextprotocol/clientInfo":{"name":"test","version":"1.0"},` +
+		`"io.modelcontextprotocol/clientCapabilities":{}}}}`
+	listResp, err := http.DefaultClient.Do(newMCPRequest(t, srv.URL, "prompts/list", "", listBody))
+	if err != nil {
+		t.Fatalf("list prompts: %v", err)
+	}
+	defer closeBody(t, listResp.Body)
+	prompts, err := io.ReadAll(listResp.Body)
+	if err != nil {
+		t.Fatalf("read prompts response: %v", err)
+	}
+	for _, want := range []string{`"name":"assess_fit"`, `"name":"brief_me"`, `"ttlMs":3600000`} {
+		if !strings.Contains(string(prompts), want) {
+			t.Errorf("prompts/list response missing %s: %s", want, prompts)
+		}
+	}
+
+	promptBody := `{"jsonrpc":"2.0","id":4,"method":"prompts/get","params":{` +
+		`"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28",` +
+		`"io.modelcontextprotocol/clientInfo":{"name":"test","version":"1.0"},` +
+		`"io.modelcontextprotocol/clientCapabilities":{}},` +
+		`"name":"assess_fit","arguments":{"brief":"Secure an enterprise agent platform"}}}`
+	promptResp, err := http.DefaultClient.Do(newMCPRequest(t, srv.URL, "prompts/get", "assess_fit", promptBody))
+	if err != nil {
+		t.Fatalf("get prompt: %v", err)
+	}
+	defer closeBody(t, promptResp.Body)
+	prompt, err := io.ReadAll(promptResp.Body)
+	if err != nil {
+		t.Fatalf("read prompt response: %v", err)
+	}
+	for _, want := range []string{"Secure an enterprise agent platform", "list_experience", "evidence-based fit assessment"} {
+		if !strings.Contains(string(prompt), want) {
+			t.Errorf("prompts/get response missing %q: %s", want, prompt)
+		}
+	}
 }
 
 func TestMCPRejectsCrossOriginBrowserPost(t *testing.T) {
 	srv := newServer(t)
 
-	reqBody := `{"jsonrpc":"2.0","id":1,"method":"initialize",` +
-		`"params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`
-	req, err := http.NewRequest(http.MethodPost, srv.URL+"/mcp", strings.NewReader(reqBody))
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/event-stream")
+	reqBody := `{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{` +
+		`"io.modelcontextprotocol/protocolVersion":"2026-07-28",` +
+		`"io.modelcontextprotocol/clientInfo":{"name":"test","version":"1.0"},` +
+		`"io.modelcontextprotocol/clientCapabilities":{}}}}`
+	req := newMCPRequest(t, srv.URL, "server/discover", "", reqBody)
 	req.Header.Set("Origin", "https://evil.example")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -112,14 +144,11 @@ func TestMCPRejectsCrossOriginBrowserPost(t *testing.T) {
 func TestMCPAcceptsSameOriginBrowserPost(t *testing.T) {
 	srv := newServer(t)
 
-	reqBody := `{"jsonrpc":"2.0","id":1,"method":"initialize",` +
-		`"params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`
-	req, err := http.NewRequest(http.MethodPost, srv.URL+"/mcp", strings.NewReader(reqBody))
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/event-stream")
+	reqBody := `{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{` +
+		`"io.modelcontextprotocol/protocolVersion":"2026-07-28",` +
+		`"io.modelcontextprotocol/clientInfo":{"name":"test","version":"1.0"},` +
+		`"io.modelcontextprotocol/clientCapabilities":{}}}}`
+	req := newMCPRequest(t, srv.URL, "server/discover", "", reqBody)
 	req.Header.Set("Origin", srv.URL)
 	req.Header.Set("Sec-Fetch-Site", "same-origin")
 
@@ -135,6 +164,22 @@ func TestMCPAcceptsSameOriginBrowserPost(t *testing.T) {
 		}
 		t.Fatalf("status = %d, want 200; body=%s", resp.StatusCode, body)
 	}
+}
+
+func newMCPRequest(t *testing.T, serverURL, method, name, body string) *http.Request {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, serverURL+"/mcp", strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("new MCP request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("Mcp-Protocol-Version", "2026-07-28")
+	req.Header.Set("Mcp-Method", method)
+	if name != "" {
+		req.Header.Set("Mcp-Name", name)
+	}
+	return req
 }
 
 // TestMaxBodyCapsRequestBody proves the /mcp guard: an oversized body trips the

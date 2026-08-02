@@ -2,7 +2,7 @@
 title = "Forging a Personal Chatbot with OpenAI API, Chroma DB, HuggingFace Spaces, and Gradio 🔥"
 description = "If you have checked the Internet in 2023, you’re likely familiar with Generative AI. The launch of ChatGPT has sparked a surge in interest…"
 date = "2023-10-24"
-tags = ["AI", "Artificial Intelligence", "Generative Ai Tools", "MLOps", "OpenAI"]
+tags = ["LLM", "RAG", "Demo"]
 slug = "forging-a-personal-chatbot-with-openai-api-chroma-db-huggingface-spaces-and-gradio"
 canonical = "https://medium.com/@fmind/forging-a-personal-chatbot-with-openai-api-chroma-db-huggingface-spaces-and-gradio-bc50e7a93071"
 draft = false
@@ -10,7 +10,7 @@ draft = false
 
 [If you have checked the Internet in 2023](https://www.zdnet.com/article/generative-ai-is-everything-everywhere-all-at-once/), you’re likely familiar with [Generative AI](https://en.wikipedia.org/wiki/Generative_artificial_intelligence). The [launch of ChatGPT](https://openai.com/blog/chatgpt) has sparked a surge in [interest](https://github.com/f/awesome-chatgpt-prompts), [investment](https://fortune.com/2023/08/30/chatgpt-creator-openai-earnings-80-million-a-month-1-billion-annual-revenue-540-million-loss-sam-altman/), and [innovative projects](https://autogpt.net/) focused on [Large Language Models](https://en.wikipedia.org/wiki/Large_language_model) (LLMs), [Artificial General Intelligence](https://en.wikipedia.org/wiki/Artificial_general_intelligence) (AGI), and [Retrieval Augmented Generation](https://www.promptingguide.ai/techniques/rag) (RAG). Yet, [navigating this burgeoning field can be challenging](https://web.archive.org/web/20230616022719/https://mlops.community/surveys/llm/): What tangible benefits does Generative AI offer? How complex is it to develop a Generative AI application? What kind of performance can one expect from such applications in real-world projects?
 
-**In this article, I outline a project I developed to field questions about my resume and deepen my understanding of Generative AI**. The first section introduces the use case, objectives, and tools chosen for the project. The second section details the steps involved in converting unstructured documents into Chroma DB, a vector databaase. The third section elaborates on how to construct and integrate a chatbot assistant utilizing the OpenAI API, HuggingFace Spaces, and Gradio. Finally, I delve into the merits of learning through practical experience, along with critical design choices — such as the deliberate decision not to employ LangChain for this project.
+**In this article, I outline a project I developed to field questions about my resume and deepen my understanding of Generative AI**. The first section introduces the use case, objectives, and tools chosen for the project. The second section details the steps involved in converting unstructured documents into Chroma DB, a vector database. The third section elaborates on how to construct and integrate a chatbot assistant utilizing the OpenAI API, HuggingFace Spaces, and Gradio. Finally, I delve into the merits of learning through practical experience, along with critical design choices — such as the deliberate decision not to employ LangChain for this project.
 
 ![Forging a Personal Chatbot with OpenAI API, Chroma DB, HuggingFace Spaces, and Gradio 🔥](/static/img/articles/forging-a-personal-chatbot-with-openai-api-chroma-db-huggingface-spaces-and-gradio/cover.webp)
 

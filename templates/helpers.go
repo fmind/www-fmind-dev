@@ -5,6 +5,7 @@ package templates
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"html"
 	"strings"
 
@@ -50,7 +51,7 @@ func MarkdownToHTML(text string) string {
 
 // GetStructuredData returns one connected JSON-LD graph for the current page,
 // person, and website. Article authors reference the one Person node by @id.
-func GetStructuredData(article *Article) string {
+func GetStructuredData(article *Article) (string, error) {
 	personID := METADATA.SiteURL + "/#person"
 	profileID := METADATA.SiteURL + "/#profile"
 	websiteID := METADATA.SiteURL + "/#website"
@@ -155,21 +156,22 @@ func GetStructuredData(article *Article) string {
 	if article == nil {
 		graph = append(graph, profile)
 	} else {
+		articleURL := article.CanonicalURL()
 		graph = append(graph, map[string]any{
-			"@id":           article.URL + "#article",
+			"@id":           articleURL + "#article",
 			"@type":         "BlogPosting",
 			"headline":      article.Title,
 			"description":   article.Description,
-			"url":           article.URL,
+			"url":           articleURL,
 			"datePublished": article.Date.Format("2006-01-02"),
-			"dateModified":  article.Date.Format("2006-01-02"),
+			"dateModified":  article.ModifiedDate().Format("2006-01-02"),
 			"author": map[string]any{
 				"@id": personID,
 			},
 			"isPartOf": map[string]any{
 				"@id": websiteID,
 			},
-			"mainEntityOfPage": article.URL,
+			"mainEntityOfPage": articleURL,
 			"image": map[string]any{
 				"@type":   "ImageObject",
 				"url":     article.ImageURL,
@@ -183,6 +185,9 @@ func GetStructuredData(article *Article) string {
 		"@context": "https://schema.org",
 		"@graph":   graph,
 	}
-	bytes, _ := json.Marshal(schema)
-	return string(bytes)
+	encoded, err := json.Marshal(schema)
+	if err != nil {
+		return "", fmt.Errorf("marshal structured data: %w", err)
+	}
+	return string(encoded), nil
 }

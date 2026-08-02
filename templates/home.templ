@@ -132,7 +132,7 @@ templ WorkExperienceSection() {
 			<ul class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 max-w-6xl mx-auto">
 				for _, item := range EXPERIENCES {
 					<li class="h-full">
-						<div class="card card-side bg-base-100 shadow-xl border-l-4 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 h-full flex flex-col sm:flex-row overflow-hidden group" style={ fmt.Sprintf("border-left-color: %s;", item.BrandColor) }>
+						<div class="card card-side bg-base-100 shadow-xl border-l-4 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 h-full flex flex-col sm:flex-row overflow-hidden group" data-company={ item.Company }>
 							<!-- Logo Figure Container (Left side) -->
 							<figure class="w-full sm:w-1/3 p-4 sm:p-6 shrink-0 flex items-center justify-center min-h-24 sm:min-h-[150px] bg-slate-50 border-r border-base-200">
 								<div class="rounded-lg p-2 flex items-center justify-center w-full h-full max-h-24 max-w-[150px]">
@@ -293,138 +293,44 @@ templ CertificationsSection() {
 	</section>
 }
 
-templ PublicationsSection(articles []Article) {
-	<section class="py-16 md:py-24 bg-base-200 px-4" id="publications">
+// HOME_ARTICLE_COUNT is the article teaser count on the home page: enough to
+// fill the three-column grid twice over without turning it into a second index.
+const HOME_ARTICLE_COUNT = 6
+
+templ ArticlesSection(articles []Article) {
+	<section class="py-16 md:py-24 bg-base-200 px-4" id="articles">
 		<div class="container mx-auto">
 			<!-- Section Header -->
 			<div class="text-center mb-10 md:mb-16">
-				<h2 class="text-4xl md:text-5xl font-heading font-bold mb-4 text-primary">Publications</h2>
+				<h2 class="text-4xl md:text-5xl font-heading font-bold mb-4 text-primary">Articles</h2>
 				<p class="text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance">
-					Sharing research, insights, and structural guidelines with the global engineering community.
+					Field notes on AI agents, MLOps, cloud architecture, and security — written from delivery, not theory.
 				</p>
 			</div>
-			<!-- Content Grid: Left Column (Academic) & Right Column (Featured Articles) -->
-			<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-6xl mx-auto">
-				<!-- Left Column: Thesis & Academic Papers -->
-				<div class="lg:col-span-7 space-y-8">
-					<!-- PhD Thesis Highlight Card -->
-					<div class="group card bg-base-100 shadow-xl border-l-4 border-primary hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-						<div class="card-body p-6 md:p-8">
-							<div class="badge badge-primary badge-outline font-semibold mb-3 select-none">PhD Thesis</div>
-							<a
-								class="card-title text-xl md:text-2xl font-bold mb-2 group-hover:text-accent transition-colors inline-flex items-center gap-2 select-text"
-								href={ templ.SafeURL(THESIS.URL) }
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								{ THESIS.Title }
-								@Icon("external_link", "w-5 h-5 text-accent opacity-0 group-hover:opacity-100 transition-opacity shrink-0")
-							</a>
-							<p class="text-base-content/70 italic text-sm mb-4 select-text">
-								{ THESIS.InstitutionDetails }
-							</p>
-							<p class="mb-6 text-sm md:text-base leading-relaxed text-base-content/85 select-text">
-								{ THESIS.Description }
-							</p>
-							<div class="card-actions flex flex-wrap gap-2">
-								for _, link := range THESIS.Links {
-									<a
-										class="btn btn-ghost btn-xs sm:btn-sm border border-base-300 hover:bg-base-200"
-										href={ templ.SafeURL(link.URL) }
-										target="_blank"
-										rel="noopener noreferrer"
-									>
-										@Icon("github", "w-4 h-4 mr-1.5")
-										{ link.Label }
-									</a>
-								}
-							</div>
-						</div>
-					</div>
-					<!-- Academic Research List -->
-					<div class="space-y-8">
-						<h3 class="text-2xl font-bold mb-6 text-base-content flex items-center gap-2">
-							@Icon("academic_cap", "w-6 h-6 text-primary")
-							Academic Research
-						</h3>
-						<div class="space-y-4">
-							for _, paper := range PAPERS {
-								<div class="group card bg-base-100 shadow-sm hover:shadow-md transition-all duration-300 border border-base-300 border-l-2 border-l-transparent hover:border-l-primary/50">
-									<div class="card-body p-5">
-										<a
-											class="font-bold text-base md:text-md group-hover:text-accent transition-colors inline-flex items-center gap-1.5 select-text"
-											href={ templ.SafeURL(paper.URL) }
-											target="_blank"
-											rel="noopener noreferrer"
-										>
-											{ paper.Title }
-											@Icon("external_link", "w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity shrink-0")
-										</a>
-										<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3">
-											<p class="text-base-content/60 text-xs md:text-sm truncate min-w-0 select-text">
-												{ paper.Venue }
-											</p>
-											if paper.Code != "" {
-												<div class="card-actions shrink-0">
-													<a
-														class="btn btn-ghost btn-xs sm:btn-sm border border-base-300 hover:bg-base-200"
-														href={ templ.SafeURL(paper.Code) }
-														target="_blank"
-														rel="noopener noreferrer"
-													>
-														@Icon("github", "w-4 h-4 mr-1.5")
-														{ paper.CodeLabel }
-													</a>
-												</div>
-											}
-										</div>
-									</div>
-								</div>
-							}
-						</div>
-					</div>
-				</div>
-				<!-- Right Column: Latest Articles -->
-				<div class="lg:col-span-5 space-y-6">
-					<h3 class="text-2xl font-bold text-base-content flex items-center gap-2">
-						<span class="w-2 h-8 bg-primary rounded-full"></span>
-						Latest Articles
-					</h3>
-					<div class="card bg-base-100 shadow-xl border border-base-300 overflow-hidden">
-						<div class="card-body p-2 divide-y divide-base-200">
-							for i, article := range articles {
-								if i < 8 {
-									<a
-										class="flex items-start gap-3 p-4 hover:bg-base-200 transition-colors duration-200 group"
-										href={ templ.SafeURL("/articles/" + article.Slug + "/") }
-									>
-										<div class="mt-0.5 shrink-0 text-accent">
-											@Icon("article", "w-5 h-5")
-										</div>
-										<span class="text-sm font-semibold text-base-content/85 group-hover:text-primary transition-colors leading-snug select-text">
-											{ article.Title }
-										</span>
-										<span class="text-xs text-base-content/50 whitespace-nowrap">{ article.Date.Format("2006") }</span>
-									</a>
-								}
-							}
-						</div>
-					</div>
-					<a
-						class="btn btn-outline btn-primary btn-md w-full shadow-md rounded-xl hover:scale-[1.01] transition-transform font-bold"
-						href="/articles/"
-					>
-						@Icon("article", "w-5 h-5 mr-2")
-						Browse all articles
-					</a>
-				</div>
+			<!-- Recent articles: the same card component the index uses, so both
+			     surfaces stay identical as the article model evolves. -->
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+				for i, article := range articles {
+					if i < HOME_ARTICLE_COUNT {
+						@ArticleCard(article, false)
+					}
+				}
+			</div>
+			<div class="flex justify-center mt-10 md:mt-12">
+				<a
+					class="btn btn-primary btn-lg rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-transform hover:shadow-xl hover:shadow-primary/20 font-bold"
+					href="/articles/"
+				>
+					@Icon("article", "w-5 h-5 mr-2")
+					{ fmt.Sprintf("Browse all %d articles", len(articles)) }
+				</a>
 			</div>
 		</div>
 	</section>
 }
 
 templ ProjectsSection() {
-	<section class="py-16 md:py-24 bg-base-100 px-4" id="projects">
+	<section class="py-16 md:py-24 bg-base-200 px-4" id="projects">
 		<div class="container mx-auto">
 			<!-- Section Header -->
 			<div class="text-center mb-10 md:mb-16">
@@ -449,7 +355,7 @@ templ ProjectsSection() {
 				</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 					for _, project := range OPEN_SOURCE {
-						<div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-base-300 hover:border-primary/30 group overflow-hidden">
+						<div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-base-300 hover:border-primary/30 group overflow-hidden">
 							<!-- Top Gradient Accent line -->
 							<div class="h-0.5 bg-gradient-to-r from-primary to-blue-400"></div>
 							<div class="card-body p-6 flex flex-col justify-between">
@@ -515,7 +421,7 @@ templ ProjectsSection() {
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 					for _, playlist := range YOUTUBE_SERIES {
 						<a
-							class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-base-300 block group overflow-hidden"
+							class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-base-300 block group overflow-hidden"
 							href={ templ.SafeURL(playlist.URL) }
 							target="_blank"
 							rel="noopener noreferrer"
@@ -546,7 +452,7 @@ templ ProjectsSection() {
 }
 
 templ ServicesSection() {
-	<section class="py-16 md:py-24 bg-base-200 overflow-hidden relative px-4" id="services">
+	<section class="py-16 md:py-24 bg-base-100 overflow-hidden relative px-4" id="services">
 		<div class="container mx-auto">
 			<!-- Section Header -->
 			<div class="text-center mb-10 md:mb-16">
@@ -560,7 +466,7 @@ templ ServicesSection() {
 			<!-- Services Cards Grid -->
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
 				for _, service := range GetServices() {
-					<div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-primary group rounded-2xl overflow-hidden">
+					<div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-primary group rounded-2xl overflow-hidden">
 						<div class="card-body p-8 items-center text-center">
 							<!-- Large Icon -->
 							<span class="text-6xl mb-4 inline-block group-hover:scale-110 transition-transform duration-300 select-none" aria-hidden="true">
@@ -609,8 +515,8 @@ templ Home(articles []Article) {
 		@AboutSection()
 		@WorkExperienceSection()
 		@CertificationsSection()
-		@PublicationsSection(articles)
 		@ProjectsSection()
 		@ServicesSection()
+		@ArticlesSection(articles)
 	</div>
 }

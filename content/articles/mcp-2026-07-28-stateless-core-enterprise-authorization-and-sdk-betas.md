@@ -2,7 +2,7 @@
 title = "MCP 2026–07–28: Stateless core, enterprise authorization, and SDK betas"
 description = "Running a remote Model Context Protocol (MCP) server behind multiple instances presents immediate infrastructure challenges. Because the…"
 date = "2026-07-08"
-tags = ["AI Agent", "Artificial Intelligence", "Data Science", "Machine Learning", "Programming"]
+tags = ["Agent", "Guide"]
 slug = "mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas"
 canonical = "https://medium.com/@fmind/mcp-2026-07-28-stateless-core-enterprise-authorization-and-sdk-betas-2646a980d594"
 draft = false

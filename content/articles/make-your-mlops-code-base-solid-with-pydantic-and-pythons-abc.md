@@ -2,7 +2,7 @@
 title = "Make your MLOps code base SOLID with Pydantic and Python’s ABC"
 description = "MLOps projects are straightforward to initiate, but challenging to perfect. While AI/ML projects often start with a notebook for…"
 date = "2024-03-13"
-tags = ["AI", "Data Science", "Machine Learning", "MLOps", "Software Engineering"]
+tags = ["MLOps", "Python"]
 slug = "make-your-mlops-code-base-solid-with-pydantic-and-pythons-abc"
 canonical = "https://medium.com/@fmind/make-your-mlops-code-base-solid-with-pydantic-and-pythons-abc-aeedfe9c3e65"
 draft = false

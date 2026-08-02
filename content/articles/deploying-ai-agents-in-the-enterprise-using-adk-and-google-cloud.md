@@ -2,7 +2,7 @@
 title = "Deploying AI Agents in the Enterprise using ADK and Google Cloud"
 description = "Learn to deploy AI agents in the enterprise using ADK \u0026 Google Cloud. We compare Cloud Run \u0026 Vertex AI for secure, scalable AgentOps."
 date = "2025-08-10"
-tags = ["AI Agent", "Agentops", "Artificial Intelligence", "Data Science", "Generative Ai Tools"]
+tags = ["Agent", "Cloud"]
 slug = "deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud"
 canonical = "https://medium.com/@fmind/deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud-b49e7eda3b41"
 draft = false
@@ -16,7 +16,7 @@ I’ve recently been tackling these exact challenges with my customers. The goal
 
 AgentOps is uniquely challenging because it combines the inherent complexity of non-deterministic systems (like Machine Learning) with the stringent requirements of enterprise security and the need to expose these applications securely to a wide audience.
 
-In this article, we’ll explore the challenges of deploying agents in a corporate environment and dive into practical strategies using [Google Cloud Platform (GCP)](https://cloud.google.com/gcp?authuser=1), based on the findings and code in my [Github Repository](https://github.com/fmind/search-agent/tree/main/search_agent).
+In this article, we’ll explore the challenges of deploying agents in a corporate environment and dive into practical strategies using [Google Cloud Platform (GCP)](https://cloud.google.com/gcp?authuser=1), based on the findings and code in my [GitHub Repository](https://github.com/fmind/search-agent/tree/main/search_agent).
 
 ![Source: Gemini App](/static/img/articles/deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud/cover.webp)
 
@@ -156,7 +156,7 @@ AgentSpace is an intranet search, AI assistant, and agentic platform. On top of 
 
 Integration of Agent Engine and AgentSpace: [https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview](https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview)
 
-**Verdict:** AgentSpace and Vertex AI Engine are the future integrated solution for streamlined, secure agent deployment on GCP. As of August 2025, these solutions need to mature a bit more to catch up with the flexbility offered by Cloud Run.
+**Verdict:** AgentSpace and Vertex AI Engine are the future integrated solution for streamlined, secure agent deployment on GCP. As of August 2025, these solutions need to mature a bit more to catch up with the flexibility offered by Cloud Run.
 
 ### Deep Dive: Securing Agents with IAP on Cloud Run 🔒
 
@@ -206,7 +206,7 @@ This is crucial for secure A2A communication in the entreprise. Agents need to d
 
 Search Agent — Agent Card for the A2A Protocol
 
-To make this work, the calling agent needs to generate a valid JWT token. Here is a Python snippet demonstrating how to achieve this when calling an IAP-protected endpoint ([from the Github Repository User Agent](https://github.com/fmind/search-agent/blob/main/user_agent/agent.py)):
+To make this work, the calling agent needs to generate a valid JWT token. Here is a Python snippet demonstrating how to achieve this when calling an IAP-protected endpoint ([from the GitHub Repository User Agent](https://github.com/fmind/search-agent/blob/main/user_agent/agent.py)):
 
     """User-facing agent that delegates search queries to a remote A2A agent."""
 

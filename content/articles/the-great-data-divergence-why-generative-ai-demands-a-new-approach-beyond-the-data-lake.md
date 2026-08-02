@@ -2,7 +2,7 @@
 title = "The Great Data Divergence: Why Generative AI Demands a New Approach Beyond the Data Lake"
 description = "Explore the shift from slow data pipelines to real-time API management for building Gen AI systems and modern enterprise data architecture."
 date = "2025-06-23"
-tags = ["Artificial Intelligence", "Data Science", "Generative Ai Tools", "Machine Learning", "Programming"]
+tags = ["LLM", "Cloud"]
 slug = "the-great-data-divergence-why-generative-ai-demands-a-new-approach-beyond-the-data-lake"
 canonical = "https://medium.com/@fmind/the-great-data-divergence-why-generative-ai-demands-a-new-approach-beyond-the-data-lake-2c6de568f1d3"
 draft = false

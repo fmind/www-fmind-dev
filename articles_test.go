@@ -1,6 +1,10 @@
 package site
 
 import (
+	"bytes"
+	"fmt"
+	"image"
+	"image/png"
 	"io/fs"
 	"regexp"
 	"strings"
@@ -81,21 +85,55 @@ func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 			t.Errorf("image reference %q: %v", image, err)
 		}
 	}
-	archiveFiles := 0
+	// Card covers are generated from the originals and referenced by templates
+	// rather than by article bodies, so they are counted separately below.
+	cardCover := fmt.Sprintf("cover-%d.webp", templates.CardCoverWidth)
+	archiveFiles, cardCovers := 0, 0
 	if err := fs.WalkDir(staticFS, "static/img/articles", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !entry.IsDir() && archiveSlugs[articleImageSlug(path)] {
+		if entry.IsDir() || !archiveSlugs[articleImageSlug(path)] {
+			return nil
+		}
+		if entry.Name() == cardCover {
+			cardCovers++
+		} else {
 			archiveFiles++
 		}
 		return nil
 	}); err != nil {
 		t.Fatalf("walk article images: %v", err)
 	}
+	if cardCovers != len(archive) {
+		t.Errorf("generated card covers = %d, want one per article (%d)", cardCovers, len(archive))
+	}
 	if archiveFiles != len(archiveImages) {
 		t.Errorf("archive image files = %d, references = %d", archiveFiles, len(archiveImages))
 	}
+}
+
+// exampleAssets is the minimal asset set a fixture article needs: an original
+// cover in the given format, the generated card derivative, and one decodable
+// figure a body can reference.
+func exampleAssets(t *testing.T, extension string) fstest.MapFS {
+	t.Helper()
+	return fstest.MapFS{
+		"static/img/articles/example/cover" + extension:                                    {Data: []byte("image")},
+		fmt.Sprintf("static/img/articles/example/cover-%d.webp", templates.CardCoverWidth): {Data: []byte("image")},
+		"static/img/articles/example/figure.png":                                           {Data: examplePNG(t)},
+	}
+}
+
+// examplePNG encodes a real image so the renderer can read intrinsic dimensions;
+// the 4x3 shape makes a transposed width/height obvious in an assertion.
+func examplePNG(t *testing.T) []byte {
+	t.Helper()
+	var encoded bytes.Buffer
+	if err := png.Encode(&encoded, image.NewRGBA(image.Rect(0, 0, 4, 3))); err != nil {
+		t.Fatalf("encode example png: %v", err)
+	}
+	return encoded.Bytes()
 }
 
 func isMediumCanonical(canonical string) bool {
@@ -118,7 +156,7 @@ func TestParseArticleRejectsUnknownFrontmatterWithLine(t *testing.T) {
 title = "Example"
 description = "Example article"
 date = "2026-08-01"
-tags = ["AI"]
+tags = ["Agent"]
 slug = "example"
 canonical = "https://fmind.medium.com/example-123"
 draft = false
@@ -127,7 +165,7 @@ surprise = "not allowed"
 
 Body.
 `)
-	assets := fstest.MapFS{"static/img/articles/example/cover.webp": {Data: []byte("image")}}
+	assets := exampleAssets(t, ".webp")
 	_, err := parseArticle("content/articles/example.md", data, assets)
 	if err == nil {
 		t.Fatal("unknown frontmatter key should fail")
@@ -142,7 +180,7 @@ func TestParseArticleRendersMarkdownWithoutRawHTML(t *testing.T) {
 title = "Example"
 description = "Example article"
 date = "2026-08-01"
-tags = ["AI"]
+tags = ["Agent"]
 slug = "example"
 draft = false
 +++
@@ -155,7 +193,7 @@ Text with ~~old~~ syntax and a footnote.[^1]
 
 [^1]: Detail.
 `)
-	assets := fstest.MapFS{"static/img/articles/example/cover.png": {Data: []byte("image")}}
+	assets := exampleAssets(t, ".png")
 	article, err := parseArticle("content/articles/example.md", data, assets)
 	if err != nil {
 		t.Fatalf("parse article: %v", err)
@@ -167,6 +205,159 @@ Text with ~~old~~ syntax and a footnote.[^1]
 	}
 	if strings.Contains(article.HTML, "<script>") {
 		t.Error("raw HTML was rendered")
+	}
+}
+
+// TestParseArticleNormalizesHeadingsAndDefersImages covers the two rendering
+// rules the page outline and image loading depend on: the body never emits a
+// second <h1> or skips a level under the title, and the LCP image is eager.
+func TestParseArticleNormalizesHeadingsAndDefersImages(t *testing.T) {
+	frontmatter := `+++
+title = "Example"
+description = "Example article"
+date = "2026-08-01"
+tags = ["Agent"]
+slug = "example"
+draft = false
++++
+
+`
+	assets := exampleAssets(t, ".webp")
+
+	cases := []struct {
+		name string
+		body string
+		want []string
+		deny []string
+	}{
+		{
+			name: "imported bodies starting at h3 are promoted",
+			body: "### Section\n\n#### Detail\n\n![figure](/static/img/articles/example/figure.png)\n",
+			want: []string{"<h2 id=\"section\">", "<h3 id=\"detail\">", `<img fetchpriority="high" decoding="async" width="4" height="3"`},
+			deny: []string{"<h1", "<h4", `loading="lazy"`},
+		},
+		{
+			name: "bodies starting at h1 are demoted below the page title",
+			body: "# Section\n\n## Detail\n",
+			want: []string{"<h2 id=\"section\">", "<h3 id=\"detail\">"},
+			deny: []string{"<h1"},
+		},
+		{
+			name: "bodies already starting at h2 are left alone",
+			body: "## Section\n\n### Detail\n",
+			want: []string{"<h2 id=\"section\">", "<h3 id=\"detail\">"},
+			deny: []string{"<h1", "<h4"},
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			article, err := parseArticle("content/articles/example.md", []byte(frontmatter+testCase.body), assets)
+			if err != nil {
+				t.Fatalf("parse article: %v", err)
+			}
+			for _, want := range testCase.want {
+				if !strings.Contains(article.HTML, want) {
+					t.Errorf("rendered article missing %q: %s", want, article.HTML)
+				}
+			}
+			for _, deny := range testCase.deny {
+				if strings.Contains(article.HTML, deny) {
+					t.Errorf("rendered article should not contain %q: %s", deny, article.HTML)
+				}
+			}
+		})
+	}
+}
+
+func TestEnhanceBodyImagesPrioritizesCoverAndDefersFigures(t *testing.T) {
+	assets := fstest.MapFS{
+		"static/img/articles/example/cover.webp":     {Data: sizedPNG(t, 1_200, 600)},
+		"static/img/articles/example/cover-800.webp": {Data: []byte("derivative")},
+		"static/img/articles/example/figure.png":     {Data: sizedPNG(t, 400, 300)},
+	}
+	body := `<p><img src="/static/img/articles/example/cover.webp" alt="cover"></p>` +
+		`<p><img src="/static/img/articles/example/figure.png" alt="figure"></p>`
+
+	got, err := enhanceBodyImages(body, assets)
+	if err != nil {
+		t.Fatalf("enhance images: %v", err)
+	}
+	for _, want := range []string{
+		`<img fetchpriority="high" decoding="async" width="1200" height="600"`,
+		`srcset="/static/img/articles/example/cover-800.webp 800w, /static/img/articles/example/cover.webp 1200w"`,
+		`sizes="(max-width: 896px) 100vw, 896px"`,
+		`<img loading="lazy" decoding="async" width="400" height="300"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("enhanced body missing %q: %s", want, got)
+		}
+	}
+}
+
+func TestEnhanceBodyImagesConvertsExplicitMP4ToVideo(t *testing.T) {
+	body := `<p><img src="/static/img/articles/example/demo.mp4" alt="editor demo"></p>`
+	got, err := enhanceBodyImages(body, fstest.MapFS{})
+	if err != nil {
+		t.Fatalf("enhance video: %v", err)
+	}
+	for _, want := range []string{"<video muted loop playsinline autoplay controls", `type="video/mp4"`, `aria-label="editor demo"`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("enhanced video missing %q: %s", want, got)
+		}
+	}
+}
+
+func TestParseArticleUpdatedDate(t *testing.T) {
+	data := []byte(`+++
+title = "Example"
+description = "Example article"
+date = "2026-07-01"
+updated = "2026-08-01"
+tags = ["Agent"]
+slug = "example"
+draft = false
++++
+
+Body.
+`)
+	article, err := parseArticle("content/articles/example.md", data, exampleAssets(t, ".webp"))
+	if err != nil {
+		t.Fatalf("parse updated article: %v", err)
+	}
+	if got := article.ModifiedDate().Format(time.DateOnly); got != "2026-08-01" {
+		t.Errorf("modified date = %q, want 2026-08-01", got)
+	}
+}
+
+func sizedPNG(t *testing.T, width, height int) []byte {
+	t.Helper()
+	var encoded bytes.Buffer
+	if err := png.Encode(&encoded, image.NewRGBA(image.Rect(0, 0, width, height))); err != nil {
+		t.Fatalf("encode %dx%d png: %v", width, height, err)
+	}
+	return encoded.Bytes()
+}
+
+func TestParseArticleRejectsTagsOutsideTheVocabulary(t *testing.T) {
+	data := []byte(`+++
+title = "Example"
+description = "Example article"
+date = "2026-08-01"
+tags = ["Data Science"]
+slug = "example"
+draft = false
++++
+
+Body.
+`)
+	assets := exampleAssets(t, ".webp")
+
+	_, err := parseArticle("content/articles/example.md", data, assets)
+	if err == nil {
+		t.Fatal("a tag outside the canonical vocabulary should fail")
+	}
+	if message := err.Error(); !strings.Contains(message, "Data Science") || !strings.Contains(message, "Agent") {
+		t.Errorf("error = %q, want the rejected tag and the allowed list", message)
 	}
 }
 

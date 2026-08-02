@@ -2,7 +2,7 @@
 title = "How to configure VS Code for AI, ML and MLOps development in Python 🛠️️"
 description = "Visual Studio Code is a remarkable application. In the past, developers faced a choice between simple, lightweight text editors like Vim…"
 date = "2023-11-23"
-tags = ["AI", "MLOps", "Machine Learning", "Programming", "VS Code"]
+tags = ["Python", "Guide"]
 slug = "how-to-configure-vs-code-for-ai-ml-and-mlops-development-in-python"
 canonical = "https://medium.com/@fmind/how-to-configure-vs-code-for-ai-ml-and-mlops-development-in-python-%EF%B8%8F%EF%B8%8F-8582d8c6ea54"
 draft = false
@@ -29,7 +29,7 @@ This section lists the extensions you can install from [VS Code Marketplace](htt
 - [**ms-python.isort**](https://marketplace.visualstudio.com/items?itemName=ms-python.isort) **:** format your import statements automatically.
 - [**ms-python.mypy-type-checker**](https://marketplace.visualstudio.com/items?itemName=ms-python.mypy-type-checker): source typing for Python. Great to validate your code and communicate it should be used.
 - [**ms-python.pylint**](https://marketplace.visualstudio.com/items?itemName=ms-python.pylint): linting support for Python. Improve your code quality and avoid code smells.
-- [**ms-python.python**](https://marketplace.visualstudio.com/items?itemName=ms-python.python): language support for Python (linting, debugging, code formating, and more).
+- [**ms-python.python**](https://marketplace.visualstudio.com/items?itemName=ms-python.python): language support for Python (linting, debugging, code formatting, and more).
 - [**ms-python.vscode-pylance**](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance): enhanced language server for Python (static checker, intellicode, …).
 - [**ms-toolsai.jupyter**](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter): extension pack for Jupyter Notebooks: Keymap, Slideshow, Notebook Renderer, and Cell Tags.
 - [**ms-toolsai.jupyter-keymap**](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter-keymap): keybindings from Jupyter Notebooks.
@@ -119,7 +119,7 @@ If you’re interested in configuring your terminal, numerous individuals share 
 
 [**GitHub Copilot**](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) **is a game changer for programmers**. Once you figure out the program in your head, you have to type it and the time spent between thinking to typing maybe 1:10. What if you could just “Tab” you way out? Instead of writing the text yourself, express your intent with clear names or comments, and let GitHub Copilot write the rest for you by pressing “Tab”. This is an autocompletion engine cranked up to 9999, and it is even better now with its new [GitHub Copilot Chat](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) feature!
 
-![Example of GitHub Copilot in action: https://github.com/features/copilot](/static/img/articles/how-to-configure-vs-code-for-ai-ml-and-mlops-development-in-python/04.gif)
+![Example of GitHub Copilot in action: https://github.com/features/copilot](/static/img/articles/how-to-configure-vs-code-for-ai-ml-and-mlops-development-in-python/04.mp4)
 
 Example of GitHub Copilot in action: [https://github.com/features/copilot](https://github.com/features/copilot)
 

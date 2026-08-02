@@ -13,6 +13,7 @@ import (
 	"github.com/klauspost/compress/gzhttp"
 
 	"github.com/fmind/www-fmind-dev/config"
+	"github.com/fmind/www-fmind-dev/templates"
 )
 
 // canonicalHost is the production apex domain that 301-redirects to its www host,
@@ -204,6 +205,9 @@ func refererHost(referer string) string {
 }
 
 func requestCountry(header http.Header) string {
+	// The external load balancer must remove inbound X-Client-Geo before it
+	// injects its value. That boundary is managed outside this Terraform state;
+	// infra/main.tf records the externally owned domain mapping.
 	country := header.Get("X-Client-Geo")
 	if country == "" {
 		// External Application Load Balancers can inject client geography through
@@ -232,7 +236,8 @@ func isBot(userAgent string) bool {
 func CanonicalHost(env config.Environment) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if env == config.Production && r.Host == canonicalApex {
+			host, _, _ := strings.Cut(r.Host, ":")
+			if env == config.Production && host == canonicalApex {
 				target := canonicalTarget + r.URL.Path
 				if r.URL.RawQuery != "" {
 					target += "?" + r.URL.RawQuery
@@ -261,6 +266,7 @@ func SecurityHeaders(env config.Environment) Middleware {
 			// by this per-request nonce, so neither 'unsafe-inline' nor 'unsafe-eval'
 			// is needed — the strongest practical script-src.
 			scriptSrc := "'self' 'nonce-" + nonce + "'"
+			styleSrc := "'self' 'nonce-" + nonce + "'"
 
 			h := w.Header()
 			h.Set("Content-Security-Policy", strings.Join([]string{
@@ -270,7 +276,7 @@ func SecurityHeaders(env config.Environment) Middleware {
 				"frame-ancestors 'none'",
 				"form-action 'self'",
 				"script-src " + scriptSrc,
-				"style-src 'self' 'unsafe-inline'",
+				"style-src " + styleSrc,
 				"img-src 'self' data:",
 				"font-src 'self'",
 				"connect-src 'self'",
@@ -282,7 +288,7 @@ func SecurityHeaders(env config.Environment) Middleware {
 			h.Set("X-Permitted-Cross-Domain-Policies", "none")
 			// OWASP: "0" disables the legacy, exploitable XSS auditor; CSP is the defense.
 			h.Set("X-XSS-Protection", "0")
-			h.Set("Permissions-Policy", "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), sync-xhr=(), usb=()")
+			h.Set("Permissions-Policy", "accelerometer=(), autoplay=(self), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), sync-xhr=(), usb=()")
 
 			if env == config.Production {
 				h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
@@ -322,11 +328,29 @@ func SkipPrecompressed(next http.Handler) http.Handler {
 // a shorter, revalidated policy for everything else under /static/.
 func StaticCache(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.RawQuery, "v=") || strings.HasSuffix(r.URL.Path, ".woff2") {
+		if r.URL.Query().Has("v") || strings.HasSuffix(r.URL.Path, ".woff2") {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else {
 			w.Header().Set("Cache-Control", "public, max-age=86400, must-revalidate")
 		}
+		if hash := templates.AssetHashes[r.URL.Path]; hash != "" {
+			etag := `"` + hash + `"`
+			w.Header().Set("ETag", etag)
+			if etagMatches(r.Header.Get("If-None-Match"), etag) {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func etagMatches(header, current string) bool {
+	for candidate := range strings.SplitSeq(header, ",") {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "*" || strings.TrimPrefix(candidate, "W/") == current {
+			return true
+		}
+	}
+	return false
 }

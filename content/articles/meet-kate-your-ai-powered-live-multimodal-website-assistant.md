@@ -1,8 +1,8 @@
 +++
 title = "Meet Kate: Your AI-Powered, Live Multimodal Website Assistant 🤖"
-description = "Meet Kate: an AI-powered, live, multimodal website assistant. She uses voice, understands your needs, and retrieves info from a website"
+description = "Meet Kate: an AI-powered, live, multimodal website assistant. She uses voice, understands your needs, and retrieves info from a website."
 date = "2025-02-15"
-tags = ["Artificial Intelligence", "Data Science", "Generative Ai Tools", "Machine Learning", "Voice Assistant"]
+tags = ["Agent", "Demo"]
 slug = "meet-kate-your-ai-powered-live-multimodal-website-assistant"
 canonical = "https://medium.com/@fmind/meet-kate-your-ai-powered-live-multimodal-website-assistant-8f64fbad3937"
 draft = false

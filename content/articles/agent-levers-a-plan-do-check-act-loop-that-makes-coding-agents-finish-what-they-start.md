@@ -2,7 +2,7 @@
 title = "Agent Levers: A Plan-Do-Check-Act Loop That Makes Coding Agents Finish What They Start"
 description = "A coding agent is only as useful as the spec you give it. That sentence sounds like a truism until you watch it play out for an afternoon."
 date = "2026-05-25"
-tags = ["AI", "Artificial Intelligence", "Coding", "Productivity", "Software Engineering"]
+tags = ["Agent", "Guide"]
 slug = "agent-levers-a-plan-do-check-act-loop-that-makes-coding-agents-finish-what-they-start"
 canonical = "https://medium.com/@fmind/agent-levers-a-plan-do-check-act-loop-that-makes-coding-agents-finish-what-they-start-8885e4618f38"
 draft = false

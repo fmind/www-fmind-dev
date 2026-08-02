@@ -4,7 +4,7 @@ resource "google_cloud_run_v2_service" "web" {
   name                = var.service_name
   location            = var.region
   ingress             = "INGRESS_TRAFFIC_ALL"
-  deletion_protection = false
+  deletion_protection = true
 
   template {
     service_account = google_service_account.cloudrun_sa.email
@@ -52,6 +52,14 @@ resource "google_cloud_run_v2_service" "web" {
           path = "/health"
         }
       }
+      liveness_probe {
+        timeout_seconds   = 3
+        period_seconds    = 30
+        failure_threshold = 3
+        http_get {
+          path = "/health"
+        }
+      }
     }
   }
 
@@ -68,7 +76,6 @@ resource "google_cloud_run_v2_service" "web" {
 
   depends_on = [
     time_sleep.wait_for_apis,
-    google_project_iam_member.log_writer,
     google_project_iam_member.trace_agent,
   ]
 }

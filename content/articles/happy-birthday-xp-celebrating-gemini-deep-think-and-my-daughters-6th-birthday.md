@@ -2,7 +2,7 @@
 title = "Happy Birthday XP: Celebrating Gemini Deep Think (and My Daughter’s 6th Birthday)"
 description = "A father tests Gemini AI’s coding skills to create a magical birthday for his 6-year-old. See the staggering results from Deep Think!"
 date = "2025-08-03"
-tags = ["Artificial Intelligence", "Data Science", "Gemini", "Generative Ai Tools", "Google"]
+tags = ["LLM", "Demo"]
 slug = "happy-birthday-xp-celebrating-gemini-deep-think-and-my-daughters-6th-birthday"
 canonical = "https://medium.com/@fmind/happy-birthday-xp-celebrating-gemini-deep-think-and-my-daughters-6th-birthday-eca018c7cea0"
 draft = false

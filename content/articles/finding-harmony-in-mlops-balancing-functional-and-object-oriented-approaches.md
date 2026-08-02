@@ -2,7 +2,7 @@
 title = "Finding Harmony in MLOps: Balancing Functional and Object-Oriented Approaches ☯"
 description = "Programmers have always been passionate about their preferences, whether they discuss spaces vs. tabs, Vim vs. Emacs, or light mode vs…"
 date = "2023-07-31"
-tags = ["AI", "Machine Learning", "MLOps", "Programming", "Python"]
+tags = ["MLOps", "Python"]
 slug = "finding-harmony-in-mlops-balancing-functional-and-object-oriented-approaches"
 canonical = "https://medium.com/@fmind/finding-harmony-in-mlops-balancing-functional-and-object-oriented-approaches-503591be6d9b"
 draft = false

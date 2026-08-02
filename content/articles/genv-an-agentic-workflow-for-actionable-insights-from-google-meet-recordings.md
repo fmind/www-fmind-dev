@@ -2,7 +2,7 @@
 title = "GenV: An Agentic Workflow for Actionable Insights from Google Meet Recordings"
 description = "Video meetings on platforms like Google Meet are essential for collaboration, but how often do crucial details get lost moments after the…"
 date = "2025-04-11"
-tags = ["Artificial Intelligence", "Data Science", "Generative Ai Tools", "Machine Learning", "MLOps"]
+tags = ["Agent", "Project"]
 slug = "genv-an-agentic-workflow-for-actionable-insights-from-google-meet-recordings"
 canonical = "https://medium.com/@fmind/genv-an-agentic-workflow-for-actionable-insights-from-google-meet-recordings-746d465fb827"
 draft = false

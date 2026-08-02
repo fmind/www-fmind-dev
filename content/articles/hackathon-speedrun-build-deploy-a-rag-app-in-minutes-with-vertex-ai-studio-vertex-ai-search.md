@@ -2,7 +2,7 @@
 title = "Hackathon Speedrun: Build \u0026 Deploy a RAG App in Minutes with Vertex AI Studio \u0026 Vertex AI Search!"
 description = "Build \u0026 deploy a RAG app in minutes! Use Vertex AI Studio \u0026 Vertex AI Search for a rapid hackathon win. Ground LLMs with your data."
 date = "2025-05-11"
-tags = ["Artificial Intelligence", "Data Science", "Generative Ai Tools", "Machine Learning", "Retrieval Augmented Gen"]
+tags = ["RAG", "Cloud", "Demo"]
 slug = "hackathon-speedrun-build-deploy-a-rag-app-in-minutes-with-vertex-ai-studio-vertex-ai-search"
 canonical = "https://medium.com/@fmind/hackathon-speedrun-build-deploy-a-rag-app-in-minutes-with-vertex-ai-studio-vertex-ai-search-f1687be7e6b4"
 draft = false

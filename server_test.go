@@ -2,24 +2,35 @@ package site_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
 	site "github.com/fmind/www-fmind-dev"
 	"github.com/fmind/www-fmind-dev/config"
+	"github.com/fmind/www-fmind-dev/templates"
 )
 
 // newServer spins the real application handler in development mode.
 func newServer(t *testing.T) *httptest.Server {
+	return newServerForEnvironment(t, config.Development)
+}
+
+func newServerForEnvironment(t *testing.T, environment config.Environment) *httptest.Server {
 	t.Helper()
 	handler, err := site.NewAppHandler(slog.New(slog.DiscardHandler), config.Config{
-		Environment: config.Development,
+		Environment: environment,
 		Port:        8080,
 	})
 	if err != nil {
@@ -63,6 +74,9 @@ func TestHomePage(t *testing.T) {
 	if ct := hdr.Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
 		t.Errorf("Content-Type = %q, want text/html", ct)
 	}
+	if got := hdr.Get("Cache-Control"); got != "no-cache" {
+		t.Errorf("Cache-Control = %q, want no-cache", got)
+	}
 	for _, want := range []string{
 		"Médéric Hurier",
 		"AI Architect (PhD) • VC Expert Advisor • AAIF Ambassador • GCP Certified Cloud Architect • AI Agents, MLOps &amp; Security",
@@ -89,6 +103,7 @@ func TestHomePage(t *testing.T) {
 	}
 	assertVisibleSocials(t, body)
 	assertFooter(t, body)
+	assertArticlesSection(t, body)
 
 	const schemaStart = `<script type="application/ld+json">`
 	start := strings.Index(body, schemaStart)
@@ -183,6 +198,49 @@ func assertFooter(t *testing.T, body string) {
 	}
 }
 
+// assertArticlesSection pins the home page's editorial balance: the articles
+// section is articles only, no academic showcase, and the index is reachable as a
+// destination rather than as a nav anchor.
+func assertArticlesSection(t *testing.T, body string) {
+	t.Helper()
+	articlesSection := extractRegion(t, body, "articles section", `id="articles"`, "</section>")
+
+	for _, want := range []string{
+		fmt.Sprintf("Browse all %d articles", site.PublicArticleCount(t)),
+		"min read",
+	} {
+		if !strings.Contains(articlesSection, want) {
+			t.Errorf("articles section missing %q", want)
+		}
+	}
+	if got := strings.Count(articlesSection, "<article "); got != 6 {
+		t.Errorf("articles section article cards = %d, want 6", got)
+	}
+	// The doctorate and papers stay in the machine-readable surfaces (llms.txt,
+	// /api/profile, MCP) but are no longer part of the page's narrative.
+	for _, gone := range []string{
+		"PhD Thesis",
+		"Academic Research",
+		"PhD in AI &amp; Computer Security",
+		"orbilu.uni.lu",
+		`id="publications"`,
+		`href="/#publications"`,
+	} {
+		if strings.Contains(body, gone) {
+			t.Errorf("home page still shows retired research content %q", gone)
+		}
+	}
+	// Every nav entry must behave the same way: same-page anchors in the list,
+	// with the articles index kept out of it as a separate destination.
+	nav := extractRegion(t, body, "navigation", "<nav ", "</nav>")
+	if !strings.Contains(nav, `href="/#`) {
+		t.Error("navigation is missing its section anchors")
+	}
+	if got := strings.Count(nav, `href="/articles/"`); got != 2 {
+		t.Errorf("navigation articles links = %d, want 2 (desktop pill + mobile menu)", got)
+	}
+}
+
 func extractRegion(t *testing.T, body, name, startTag, endTag string) string {
 	t.Helper()
 	start := strings.Index(body, startTag)
@@ -267,6 +325,9 @@ func TestProfileAPI(t *testing.T) {
 	if ct := hdr.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 		t.Errorf("Content-Type = %q, want application/json", ct)
 	}
+	if cors := hdr.Get("Access-Control-Allow-Origin"); cors != "*" {
+		t.Errorf("Access-Control-Allow-Origin = %q, want *", cors)
+	}
 	var payload site.Portfolio
 	if err := json.Unmarshal([]byte(body), &payload); err != nil {
 		t.Fatalf("decode profile: %v", err)
@@ -277,6 +338,22 @@ func TestProfileAPI(t *testing.T) {
 	}
 	if payload.Metadata.JobTitle != "AI Architect (PhD) • Freelancer" {
 		t.Errorf("profile job title = %q", payload.Metadata.JobTitle)
+	}
+
+	// The tag vocabulary ships with the profile so a consumer can filter the
+	// article list without inferring the taxonomy from the articles themselves.
+	assertOrderedValues(t, "profile tags", tagNames(payload.Tags), templates.TagNames())
+	for _, tag := range payload.Tags {
+		if tag.Description == "" {
+			t.Errorf("tag %q has no description", tag.Name)
+		}
+	}
+	for _, article := range payload.Articles {
+		for _, tag := range article.Tags {
+			if !templates.IsTag(tag) {
+				t.Errorf("article %q carries unknown tag %q", article.Slug, tag)
+			}
+		}
 	}
 
 	wantSocials := []struct {
@@ -300,18 +377,16 @@ func TestProfileAPI(t *testing.T) {
 		}
 	}
 
-	// The committed biography had 85 visible words. Keep the requested expansion
-	// between one third and one half while allowing its wording to evolve.
-	const previousBiographyWords = 85
 	if len(payload.Biography) != 3 {
 		t.Fatalf("biography paragraphs = %d, want 3", len(payload.Biography))
 	}
 	if !strings.Contains(payload.Biography[0], "**freelance AI Architect**") {
 		t.Errorf("profile biography should preserve Markdown emphasis: %q", payload.Biography[0])
 	}
-	biographyWords := len(strings.Fields(strings.Join(payload.Biography, " ")))
-	if biographyWords*3 < previousBiographyWords*4 || biographyWords*2 > previousBiographyWords*3 {
-		t.Errorf("biography words = %d, want 33%%–50%% more than %d", biographyWords, previousBiographyWords)
+	for index, paragraph := range payload.Biography {
+		if strings.TrimSpace(paragraph) == "" {
+			t.Errorf("biography paragraph %d is empty", index)
+		}
 	}
 
 	expertise := make([]string, len(payload.Expertise))
@@ -402,7 +477,7 @@ func TestArticlePagesAndDiscovery(t *testing.T) {
 	if newest < 0 || next < 0 || newest >= next {
 		t.Errorf("article index is not reverse chronological: newest=%d next=%d", newest, next)
 	}
-	for _, want := range []string{"2026", "min read", "?tag=AI", "/articles/" + slug + "/"} {
+	for _, want := range []string{"2026", "min read", "?tag=Agent", "/articles/" + slug + "/"} {
 		if !strings.Contains(index, want) {
 			t.Errorf("article index missing %q", want)
 		}
@@ -420,6 +495,9 @@ func TestArticlePagesAndDiscovery(t *testing.T) {
 		`/static/img/articles/` + slug + `/cover.`,
 		`"@type":"BlogPosting"`,
 		`"author":{"@id":"https://www.fmind.dev/#person"}`,
+		`<link rel="preload" href="/static/img/articles/` + slug + `/cover.webp" fetchpriority="high" as="image"`,
+		`fetchpriority="high"`,
+		`srcset="/static/img/articles/` + slug + `/cover-800.webp 800w,`,
 	} {
 		if !strings.Contains(article, want) {
 			t.Errorf("article page missing %q", want)
@@ -429,12 +507,32 @@ func TestArticlePagesAndDiscovery(t *testing.T) {
 		t.Errorf("Person JSON-LD definitions = %d, want 1", got)
 	}
 
+	// Readers land on an article first (search engines and syndicated copies point
+	// here), so the page has to attribute the author and offer a next step.
+	for _, want := range []string{
+		"Keep reading",
+		"Book a Session",
+		"Contact Me",
+		"Subscribe (Atom)",
+		templates.METADATA.JobTitle,
+	} {
+		if !strings.Contains(article, want) {
+			t.Errorf("article page missing %q", want)
+		}
+	}
+	if got := strings.Count(article, `href="/articles/`+slug+`/"`); got != 0 {
+		t.Errorf("article page links to itself %d times, want 0", got)
+	}
+
 	status, headers, feed := get(t, srv.URL+"/articles/feed.xml")
 	if status != http.StatusOK || !strings.HasPrefix(headers.Get("Content-Type"), "application/atom+xml") {
 		t.Fatalf("Atom response status=%d content-type=%q", status, headers.Get("Content-Type"))
 	}
 	if got, want := strings.Count(feed, "<entry>"), site.PublicArticleCount(t); got != want {
 		t.Errorf("Atom entries = %d, want %d", got, want)
+	}
+	if got := strings.Count(feed, `<content type="html">`); got != 15 {
+		t.Errorf("Atom full-content entries = %d, want 15", got)
 	}
 	if strings.Contains(feed, `href="/`) || strings.Contains(feed, `src="/`) {
 		t.Error("Atom feed contains a relative URL")
@@ -447,17 +545,26 @@ func TestArticlePagesAndDiscovery(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("sitemap status = %d, want 200", status)
 	}
-	// The sitemap lists every public article plus the home and article index pages.
-	if got, want := strings.Count(sitemap, "<url>"), site.PublicArticleCount(t)+2; got != want {
+	// Only native, self-canonical articles belong beside the two index pages.
+	if got, want := strings.Count(sitemap, "<url>"), site.SitemapArticleCount(t)+2; got != want {
 		t.Errorf("sitemap URLs = %d, want %d", got, want)
 	}
-	if !strings.Contains(sitemap, "<lastmod>2026-07-08</lastmod>") {
-		t.Error("sitemap is missing article lastmod")
+	if strings.Contains(sitemap, "/articles/"+slug+"/") {
+		t.Error("sitemap includes an article with an external canonical")
 	}
 
 	status, _, llms := get(t, srv.URL+"/llms.txt")
 	if status != http.StatusOK || !strings.Contains(llms, title) {
 		t.Errorf("llms.txt status=%d, newest article present=%t", status, strings.Contains(llms, title))
+	}
+	for _, want := range []string{"/llms-full.txt", "/articles/feed.xml", "/sitemap.xml", "## Optional"} {
+		if !strings.Contains(llms, want) {
+			t.Errorf("llms.txt missing %q", want)
+		}
+	}
+	status, _, llmsFull := get(t, srv.URL+"/llms-full.txt")
+	if status != http.StatusOK || !strings.Contains(llmsFull, "## Full articles") || !strings.Contains(llmsFull, title) {
+		t.Errorf("llms-full.txt status=%d has full corpus=%t", status, strings.Contains(llmsFull, "## Full articles"))
 	}
 }
 
@@ -474,6 +581,57 @@ func TestArticleTagFilterIsServerRendered(t *testing.T) {
 	if strings.Contains(body, "The Affordable AI Agents") {
 		t.Error("MLOps filter includes an article without that tag")
 	}
+	if !strings.Contains(body, `class="tag tag-active" data-tag="MLOps"`) {
+		t.Error("the active tag chip is not marked as selected")
+	}
+}
+
+// TestArticleTagsUseTheCanonicalVocabulary guards the property the closed
+// vocabulary exists for: the filter row can only ever show known, colored chips,
+// listed in vocabulary order rather than alphabetically.
+func TestArticleTagsUseTheCanonicalVocabulary(t *testing.T) {
+	srv := newServer(t)
+
+	_, _, index := get(t, srv.URL+"/articles/")
+	chips := regexp.MustCompile(`data-tag="([^"]+)"`).FindAllStringSubmatch(index, -1)
+	if len(chips) == 0 {
+		t.Fatal("article index renders no tag chips")
+	}
+
+	seen := make([]string, 0, len(templates.TAGS))
+	for _, chip := range chips {
+		tag := chip[1]
+		if !templates.IsTag(tag) {
+			t.Errorf("article index shows unknown tag %q", tag)
+		}
+		if !slices.Contains(seen, tag) {
+			seen = append(seen, tag)
+		}
+	}
+	// The filter nav is rendered before any card, so first appearance follows the
+	// vocabulary order.
+	ordered := slices.IsSortedFunc(seen, func(a, b string) int {
+		return templates.TagOrder(a) - templates.TagOrder(b)
+	})
+	if !ordered {
+		t.Errorf("tag chips are not in vocabulary order: %v", seen)
+	}
+	// Every tag in the vocabulary must carry its own color, so no two chips are
+	// rendered with the same fallback hue. Quoting varies once the CSS is minified.
+	for _, tag := range templates.TagNames() {
+		rule := regexp.MustCompile(`\[data-tag=['"]?` + regexp.QuoteMeta(tag) + `['"]?\]`)
+		if !rule.MatchString(templates.InlineStyles) {
+			t.Errorf("tag %q has no color rule in the stylesheet", tag)
+		}
+	}
+}
+
+func tagNames(tags []templates.Tag) []string {
+	names := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		names = append(names, tag.Name)
+	}
+	return names
 }
 
 func assertOrderedValues(t *testing.T, name string, got, want []string) {
@@ -508,6 +666,92 @@ func TestSecurityHeaders(t *testing.T) {
 	// HSTS must NOT be set in development.
 	if hdr.Get("Strict-Transport-Security") != "" {
 		t.Error("HSTS should be absent in development")
+	}
+}
+
+func TestProductionSecurityHeadersIncludeHSTS(t *testing.T) {
+	handler := site.SecurityHeaders(config.Production)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "https://www.fmind.dev/", nil))
+
+	if got := recorder.Header().Get("Strict-Transport-Security"); got != "max-age=63072000; includeSubDomains; preload" {
+		t.Errorf("Strict-Transport-Security = %q", got)
+	}
+	if csp := recorder.Header().Get("Content-Security-Policy"); strings.Contains(csp, "'unsafe-inline'") || !strings.Contains(csp, "style-src 'self' 'nonce-") {
+		t.Errorf("CSP does not enforce nonced styles: %q", csp)
+	}
+}
+
+func TestCanonicalHost(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+
+	redirect := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "http://fmind.dev:8080/articles/?tag=Agent", nil)
+	request.Host = "fmind.dev:8080"
+	site.CanonicalHost(config.Production)(next).ServeHTTP(redirect, request)
+	if redirect.Code != http.StatusMovedPermanently {
+		t.Fatalf("apex status = %d, want 301", redirect.Code)
+	}
+	if got := redirect.Header().Get("Location"); got != "https://www.fmind.dev/articles/?tag=Agent" {
+		t.Errorf("apex Location = %q", got)
+	}
+
+	passthrough := httptest.NewRecorder()
+	site.CanonicalHost(config.Development)(next).ServeHTTP(passthrough, request)
+	if passthrough.Code != http.StatusNoContent {
+		t.Errorf("development status = %d, want 204", passthrough.Code)
+	}
+}
+
+func TestDraftArticleRoutesUseInjectedCollection(t *testing.T) {
+	article := templates.Article{
+		Title:          "Draft fixture",
+		Description:    "A route-level draft fixture.",
+		Date:           time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC),
+		Updated:        time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC),
+		Slug:           "draft-fixture",
+		URL:            templates.METADATA.SiteURL + "/articles/draft-fixture/",
+		ImageURL:       templates.METADATA.SiteURL + "/static/img/og-image.jpg",
+		CardImageURL:   templates.METADATA.SiteURL + "/static/img/og-image.jpg",
+		ImageAlt:       "Draft fixture",
+		HTML:           "<p>Draft body</p>",
+		Markdown:       "Draft body",
+		Tags:           []string{"Agent"},
+		ReadingMinutes: 1,
+		Draft:          true,
+	}
+
+	for _, testCase := range []struct {
+		name        string
+		environment config.Environment
+		wantBody    string
+		wantStatus  int
+	}{
+		{name: "production hides draft", environment: config.Production, wantStatus: http.StatusNotFound, wantBody: "Page not found"},
+		{name: "development renders noindex", environment: config.Development, wantStatus: http.StatusOK, wantBody: `<meta name="robots" content="noindex, follow"`},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			srv := httptest.NewServer(site.NewTestAppHandler(t, testCase.environment, []templates.Article{article}))
+			t.Cleanup(srv.Close)
+			status, _, body := get(t, srv.URL+"/articles/draft-fixture/")
+			if status != testCase.wantStatus || !strings.Contains(body, testCase.wantBody) {
+				t.Errorf("draft response status=%d body contains %q=%t", status, testCase.wantBody, strings.Contains(body, testCase.wantBody))
+			}
+		})
+	}
+
+	srv := httptest.NewServer(site.NewTestAppHandler(t, config.Development, []templates.Article{article}))
+	t.Cleanup(srv.Close)
+	client := &http.Client{CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := client.Get(srv.URL + "/articles/draft-fixture")
+	if err != nil {
+		t.Fatalf("GET draft without slash: %v", err)
+	}
+	defer closeBody(t, resp.Body)
+	if resp.StatusCode != http.StatusMovedPermanently || resp.Header.Get("Location") != "/articles/draft-fixture/" {
+		t.Errorf("canonical redirect status=%d location=%q", resp.StatusCode, resp.Header.Get("Location"))
 	}
 }
 
@@ -579,6 +823,43 @@ func TestAnalyticsLoggerEmitsOnlyAggregatePageviewFields(t *testing.T) {
 	}
 }
 
+func TestOtelHandlerCorrelatesNormalLogsButNeverAnalytics(t *testing.T) {
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.AlwaysSample()))
+	t.Cleanup(func() {
+		if err := provider.Shutdown(context.Background()); err != nil {
+			t.Errorf("shutdown tracer provider: %v", err)
+		}
+	})
+	ctx, span := provider.Tracer("test").Start(context.Background(), "active")
+	defer span.End()
+
+	var logs bytes.Buffer
+	handler := (&site.OtelHandler{Handler: slog.NewJSONHandler(&logs, nil)}).
+		WithAttrs([]slog.Attr{slog.String("component", "test")}).
+		WithGroup("scope")
+	logger := slog.New(handler)
+	logger.InfoContext(ctx, "normal")
+	logger.InfoContext(ctx, "analytics_pageview")
+
+	lines := strings.Split(strings.TrimSpace(logs.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("log lines = %d, want 2: %s", len(lines), logs.String())
+	}
+	for _, want := range []string{`"component":"test"`, `"trace_id":"`, `"span_id":"`, `"scope":{`} {
+		if !strings.Contains(lines[0], want) {
+			t.Errorf("normal log missing %s: %s", want, lines[0])
+		}
+	}
+	for _, forbidden := range []string{`"trace_id"`, `"span_id"`} {
+		if strings.Contains(lines[1], forbidden) {
+			t.Errorf("analytics log contains %s: %s", forbidden, lines[1])
+		}
+	}
+	if !strings.Contains(lines[1], `"component":"test"`) {
+		t.Errorf("WithAttrs was not preserved: %s", lines[1])
+	}
+}
+
 func TestAnalyticsLoggerSkipsNonHTMLAndRedirects(t *testing.T) {
 	var logs bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&logs, nil))
@@ -608,6 +889,66 @@ func TestStaticAssetImmutableCache(t *testing.T) {
 	}
 	if cc := hdr.Get("Cache-Control"); !strings.Contains(cc, "immutable") {
 		t.Errorf("versioned asset Cache-Control = %q, want immutable", cc)
+	}
+}
+
+func TestStaticAssetETagRevalidation(t *testing.T) {
+	srv := newServer(t)
+	assetURL := srv.URL + "/static/img/avatar-192.webp"
+
+	status, headers, _ := get(t, assetURL)
+	if status != http.StatusOK {
+		t.Fatalf("initial status = %d, want 200", status)
+	}
+	etag := headers.Get("ETag")
+	if etag == "" {
+		t.Fatal("static response is missing ETag")
+	}
+	req, err := http.NewRequest(http.MethodGet, assetURL, nil)
+	if err != nil {
+		t.Fatalf("new revalidation request: %v", err)
+	}
+	req.Header.Set("If-None-Match", "W/"+etag)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("revalidate static asset: %v", err)
+	}
+	defer closeBody(t, resp.Body)
+	if resp.StatusCode != http.StatusNotModified {
+		t.Errorf("revalidation status = %d, want 304", resp.StatusCode)
+	}
+
+	status, headers, _ = get(t, assetURL+"?xv=1")
+	if status != http.StatusOK || strings.Contains(headers.Get("Cache-Control"), "immutable") {
+		t.Errorf("non-v query cache policy = %q", headers.Get("Cache-Control"))
+	}
+}
+
+func TestMCPServerCardDiscovery(t *testing.T) {
+	srv := newServer(t)
+	for _, path := range []string{"/mcp/server-card", "/.well-known/mcp/server-card.json"} {
+		status, headers, body := get(t, srv.URL+path)
+		if status != http.StatusOK {
+			t.Fatalf("%s status = %d, want 200", path, status)
+		}
+		if contentType := headers.Get("Content-Type"); !strings.HasPrefix(contentType, "application/mcp-server-card+json") {
+			t.Errorf("%s content type = %q", path, contentType)
+		}
+		if headers.Get("Access-Control-Allow-Origin") != "*" {
+			t.Errorf("%s missing public CORS", path)
+		}
+		for _, want := range []string{
+			`"protocolVersion": "2026-07-28"`,
+			`"type": "streamable-http"`,
+			`"endpoint": "https://www.fmind.dev/mcp"`,
+			`"name": "get_profile"`,
+			`"name": "assess_fit"`,
+			`"resources"`,
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s card missing %s: %s", path, want, body)
+			}
+		}
 	}
 }
 

@@ -2,7 +2,7 @@
 title = "Lessons Learned from the Gemini Long Context Kaggle Competition 🧠"
 description = "Explored Gemini’s long context in a Kaggle competition. Key lessons learned about its potential and limitations for real-world…"
 date = "2025-02-07"
-tags = ["Artificial Intelligence", "Data Science", "Gemini", "LLM", "MLOps"]
+tags = ["LLM", "Demo"]
 slug = "lessons-learned-from-the-gemini-long-context-kaggle-competition"
 canonical = "https://medium.com/@fmind/lessons-learned-from-the-gemini-long-context-kaggle-competition-95381d38f303"
 draft = false

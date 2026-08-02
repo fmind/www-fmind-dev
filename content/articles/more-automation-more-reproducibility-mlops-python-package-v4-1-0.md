@@ -2,7 +2,7 @@
 title = "More Automation + More Reproducibility = MLOps Python Package v4.1.0"
 description = "The MLOps Python Package is your go-to solution for building robust and reproducible AI/ML workflows. Check out the latest v4.1.0 release!"
 date = "2025-03-06"
-tags = ["Artificial Intelligence", "Data Science", "Machine Learning", "MLOps", "Python"]
+tags = ["MLOps", "Python", "Project"]
 slug = "more-automation-more-reproducibility-mlops-python-package-v4-1-0"
 canonical = "https://medium.com/@fmind/more-automation-more-reproducibility-mlops-python-package-v4-1-0-ba62ac1897f4"
 draft = false

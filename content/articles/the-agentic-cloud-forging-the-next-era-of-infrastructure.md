@@ -2,7 +2,7 @@
 title = "The Agentic Cloud: Forging the Next Era of Infrastructure"
 description = "Agentic Cloud: Disrupting cloud giants with AI. Learn how intelligent agents will commoditize hyperscalers \u0026 reshape infrastructure."
 date = "2025-07-18"
-tags = ["AI Agent", "Artificial Intelligence", "Cloud Computing", "Data Science", "Generative Ai Tools"]
+tags = ["Agent", "Cloud"]
 slug = "the-agentic-cloud-forging-the-next-era-of-infrastructure"
 canonical = "https://medium.com/@fmind/the-agentic-cloud-forging-the-next-era-of-infrastructure-afc053658f24"
 draft = false

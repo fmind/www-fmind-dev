@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -13,6 +14,10 @@ import (
 
 // mcpProfileURI is the stable URI of the full-portfolio MCP resource.
 const mcpProfileURI = "portfolio://profile.json"
+
+const mcpCacheTTL = 60 * 60 * 1000
+
+const mcpProtocolVersion = "2026-07-28"
 
 // noArgs is the input type for tools that take no parameters. The MCP SDK infers
 // an empty-object JSON schema from it, which the spec requires for every tool.
@@ -30,10 +35,13 @@ type Portfolio struct {
 	Specializations []templates.CertificationEntry `json:"specializations"`
 	Thesis          templates.Thesis               `json:"thesis"`
 	Papers          []templates.ResearchPaper      `json:"papers"`
-	Articles        []templates.ArticleSummary     `json:"articles"`
-	OpenSource      []templates.Project            `json:"open_source"`
-	YouTubeSeries   []templates.Playlist           `json:"youtube_series"`
-	Services        []templates.Service            `json:"services"`
+	// Tags is the closed vocabulary every article is tagged from, so a consumer
+	// can filter the article list without inferring the taxonomy from the data.
+	Tags          []templates.Tag            `json:"tags"`
+	Articles      []templates.ArticleSummary `json:"articles"`
+	OpenSource    []templates.Project        `json:"open_source"`
+	YouTubeSeries []templates.Playlist       `json:"youtube_series"`
+	Services      []templates.Service        `json:"services"`
 }
 
 // snapshot assembles the current portfolio from the templates data package.
@@ -48,6 +56,7 @@ func snapshot(articles []templates.ArticleSummary) Portfolio {
 		Specializations: templates.SPECIALIZATIONS,
 		Thesis:          templates.THESIS,
 		Papers:          templates.PAPERS,
+		Tags:            templates.TAGS,
 		Articles:        articles,
 		OpenSource:      templates.OPEN_SOURCE,
 		YouTubeSeries:   templates.YOUTUBE_SERIES,
@@ -98,13 +107,33 @@ var portfolioIcons = []mcp.Icon{{
 	Sizes:    []string{"192x192"},
 }}
 
+type mcpCardPrimitive struct {
+	Name        string `json:"name"`
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+var mcpCardTools = []mcpCardPrimitive{
+	{Name: "get_profile", Title: "Get profile", Description: "Return Fmind's identity, biography, leadership, and expertise."},
+	{Name: "list_experience", Title: "List work experience", Description: "List professional roles, companies, and skills."},
+	{Name: "list_certifications", Title: "List credentials", Description: "List certifications, badges, and specializations."},
+	{Name: "list_publications", Title: "List publications", Description: "List the thesis, papers, and hosted articles."},
+	{Name: "list_projects", Title: "List projects", Description: "List open-source projects and educational series."},
+	{Name: "get_services", Title: "Get professional services", Description: "List advisory and mentoring services."},
+}
+
+var mcpCardPrompts = []mcpCardPrimitive{
+	{Name: "assess_fit", Title: "Assess a role or project fit", Description: "Evaluate a brief against Fmind's portfolio."},
+	{Name: "brief_me", Title: "Brief me about Fmind", Description: "Create an audience-specific portfolio briefing."},
+}
+
 // newMCPServer builds the read-only MCP server exposing the portfolio as agent
 // tools plus a single JSON resource. All handlers are pure reads of static data.
 func newMCPServer(articles []templates.ArticleSummary) *mcp.Server {
 	server := mcp.NewServer(
 		&mcp.Implementation{
 			Name:       "www-fmind-dev",
-			Version:    "1.0.0",
+			Version:    buildVersion(),
 			Title:      "Médéric Hurier (Fmind) — AI Architect Portfolio",
 			WebsiteURL: templates.METADATA.SiteURL + "/",
 			Icons:      portfolioIcons,
@@ -117,9 +146,9 @@ func newMCPServer(articles []templates.ArticleSummary) *mcp.Server {
 				templates.METADATA.HeadlinePrimary,
 			),
 			Capabilities: &mcp.ServerCapabilities{},
-			GetSessionID: func() string { return "" },
 		},
 	)
+	server.AddReceivingMiddleware(cacheMCPResults)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_profile",
@@ -133,6 +162,40 @@ func newMCPServer(articles []templates.ArticleSummary) *mcp.Server {
 			Leadership: templates.LEADERSHIP,
 			Expertise:  templates.EXPERTISE,
 		}, nil
+	})
+
+	server.AddPrompt(&mcp.Prompt{
+		Name:        "assess_fit",
+		Title:       "Assess a role or project fit",
+		Description: "Evaluate a role or project brief against Fmind's profile, experience, expertise, and services.",
+		Arguments: []*mcp.PromptArgument{{
+			Name:        "brief",
+			Title:       "Role or project brief",
+			Description: "The responsibilities, outcomes, constraints, and required expertise to assess.",
+			Required:    true,
+		}},
+	}, func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		return promptResult(
+			"Assess this brief against Fmind's portfolio: "+req.Params.Arguments["brief"]+"\n\nUse get_profile, list_experience, list_certifications, and get_services. Distinguish direct evidence, transferable strengths, gaps, and concrete next steps.",
+			"A structured, evidence-based fit assessment using the portfolio tools.",
+		), nil
+	})
+
+	server.AddPrompt(&mcp.Prompt{
+		Name:        "brief_me",
+		Title:       "Brief me about Fmind",
+		Description: "Create an audience-specific introduction to Fmind from the complete portfolio.",
+		Arguments: []*mcp.PromptArgument{{
+			Name:        "audience",
+			Title:       "Audience",
+			Description: "Who will read the briefing, such as an executive, engineering leader, or conference organizer.",
+			Required:    true,
+		}},
+	}, func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		return promptResult(
+			"Brief this audience about Fmind: "+req.Params.Arguments["audience"]+". Use the portfolio resource and relevant tools. Lead with audience value, support claims with specific experience or publications, and keep the result concise.",
+			"An audience-specific briefing grounded in the full portfolio.",
+		), nil
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -187,9 +250,6 @@ func newMCPServer(articles []templates.ArticleSummary) *mcp.Server {
 		Description: "The complete portfolio (profile, leadership, experience, credentials, publications, projects, services) as a single JSON document.",
 		MIMEType:    "application/json",
 	}, func(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-		if req.Params.URI != mcpProfileURI {
-			return nil, mcp.ResourceNotFoundError(req.Params.URI)
-		}
 		data, err := json.Marshal(snapshot(articles))
 		if err != nil {
 			return nil, fmt.Errorf("marshaling portfolio: %w", err)
@@ -200,6 +260,104 @@ func newMCPServer(articles []templates.ArticleSummary) *mcp.Server {
 	})
 
 	return server
+}
+
+func promptResult(text, description string) *mcp.GetPromptResult {
+	return &mcp.GetPromptResult{
+		Description: description,
+		Messages: []*mcp.PromptMessage{{
+			Role:    "user",
+			Content: &mcp.TextContent{Text: text},
+		}},
+	}
+}
+
+// cacheMCPResults opts immutable discovery and portfolio reads into SEP-2549
+// client caching. The cache is public because every response is deploy-static.
+func cacheMCPResults(next mcp.MethodHandler) mcp.MethodHandler {
+	return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+		result, err := next(ctx, method, req)
+		if err != nil {
+			return nil, err
+		}
+		cacheable := mcp.Cacheable{TTLMs: mcpCacheTTL, CacheScope: "public"}
+		switch value := result.(type) {
+		case *mcp.DiscoverResult:
+			value.Cacheable = cacheable
+		case *mcp.ListToolsResult:
+			value.Cacheable = cacheable
+		case *mcp.ListPromptsResult:
+			value.Cacheable = cacheable
+		case *mcp.ListResourcesResult:
+			value.Cacheable = cacheable
+		case *mcp.ListResourceTemplatesResult:
+			value.Cacheable = cacheable
+		case *mcp.ReadResourceResult:
+			value.Cacheable = cacheable
+		}
+		return result, nil
+	}
+}
+
+func buildVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok || info.Main.Version == "" {
+		return "(devel)"
+	}
+	return info.Main.Version
+}
+
+func renderMCPServerCard() ([]byte, error) {
+	card := struct {
+		Schema          string                     `json:"$schema"`
+		Version         string                     `json:"version"`
+		ProtocolVersion string                     `json:"protocolVersion"`
+		ServerInfo      mcp.Implementation         `json:"serverInfo"`
+		Description     string                     `json:"description"`
+		IconURL         string                     `json:"iconUrl"`
+		Documentation   string                     `json:"documentationUrl"`
+		Transport       map[string]string          `json:"transport"`
+		Capabilities    map[string]map[string]bool `json:"capabilities"`
+		Instructions    string                     `json:"instructions"`
+		Resources       []mcpCardPrimitive         `json:"resources"`
+		Tools           []mcpCardPrimitive         `json:"tools"`
+		Prompts         []mcpCardPrimitive         `json:"prompts"`
+	}{
+		Schema:          "https://static.modelcontextprotocol.io/schemas/mcp-server-card/v1.json",
+		Version:         "1.0",
+		ProtocolVersion: mcpProtocolVersion,
+		ServerInfo: mcp.Implementation{
+			Name:       "www-fmind-dev",
+			Title:      "Médéric Hurier (Fmind) — AI Architect Portfolio",
+			Version:    buildVersion(),
+			WebsiteURL: templates.METADATA.SiteURL + "/",
+		},
+		Description:   "Read-only portfolio tools, resources, and prompts for Fmind.",
+		IconURL:       portfolioIcons[0].Source,
+		Documentation: templates.METADATA.SiteURL + "/llms.txt",
+		Transport: map[string]string{
+			"type":     "streamable-http",
+			"endpoint": templates.METADATA.SiteURL + "/mcp",
+		},
+		Capabilities: map[string]map[string]bool{
+			"tools":     {},
+			"resources": {},
+			"prompts":   {},
+		},
+		Instructions: "Use the tools for focused queries, the portfolio resource for a complete snapshot, and prompts for guided assessments.",
+		Resources: []mcpCardPrimitive{{
+			Name:        "profile",
+			Title:       "Full portfolio",
+			Description: "The complete portfolio as JSON at portfolio://profile.json.",
+		}},
+		Tools:   mcpCardTools,
+		Prompts: mcpCardPrompts,
+	}
+	data, err := json.MarshalIndent(card, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal MCP server card: %w", err)
+	}
+	return append(data, '\n'), nil
 }
 
 // newMCPHandler exposes the MCP server over the stateless Streamable HTTP

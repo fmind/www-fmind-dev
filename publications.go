@@ -1,10 +1,9 @@
 package site
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
-	"log/slog"
-	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -35,13 +34,13 @@ type atomAuthor struct {
 }
 
 type atomEntry struct {
-	Title     string      `xml:"title"`
-	ID        string      `xml:"id"`
-	Published string      `xml:"published"`
-	Updated   string      `xml:"updated"`
-	Link      atomLink    `xml:"link"`
-	Summary   atomContent `xml:"summary"`
-	Content   atomContent `xml:"content"`
+	Title     string       `xml:"title"`
+	ID        string       `xml:"id"`
+	Published string       `xml:"published"`
+	Updated   string       `xml:"updated"`
+	Link      atomLink     `xml:"link"`
+	Content   *atomContent `xml:"content,omitempty"`
+	Summary   atomContent  `xml:"summary"`
 }
 
 type atomContent struct {
@@ -60,98 +59,97 @@ type sitemapURL struct {
 	LastMod  string `xml:"lastmod,omitempty"`
 }
 
-func serveAtomFeed(articles []templates.Article) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		updated := time.Unix(0, 0).UTC()
-		if len(articles) > 0 {
-			updated = articles[0].Date
-		}
-		feed := atomFeed{
-			XMLNS:   "http://www.w3.org/2005/Atom",
-			Title:   "Fmind articles",
-			ID:      templates.METADATA.SiteURL + "/articles/",
-			Updated: atomTime(updated),
-			Links: []atomLink{
-				{Href: templates.METADATA.SiteURL + "/articles/feed.xml", Rel: "self", Type: "application/atom+xml"},
-				{Href: templates.METADATA.SiteURL + "/articles/", Rel: "alternate", Type: "text/html"},
-			},
-			Author:  atomAuthor{Name: templates.METADATA.Name, URI: templates.METADATA.SiteURL + "/"},
-			Entries: make([]atomEntry, 0, len(articles)),
-		}
-		for _, article := range articles {
-			feed.Entries = append(feed.Entries, atomEntry{
-				Title:     article.Title,
-				ID:        article.URL,
-				Published: atomTime(article.Date),
-				Updated:   atomTime(article.Date),
-				Link:      atomLink{Href: article.URL, Rel: "alternate", Type: "text/html"},
-				Summary:   atomContent{Type: "text", Body: article.Description},
-				Content:   atomContent{Type: "html", Body: absoluteArticleHTML(article.HTML)},
-			})
-		}
+const atomFullContentLimit = 15
 
-		w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
-		if _, err := w.Write([]byte(xml.Header)); err != nil {
-			slog.DebugContext(r.Context(), "write Atom declaration", "error", err)
-			return
-		}
-		if err := xml.NewEncoder(w).Encode(feed); err != nil {
-			slog.DebugContext(r.Context(), "write Atom feed", "error", err)
-		}
+func renderAtomFeed(articles []templates.Article) ([]byte, error) {
+	updated := time.Unix(0, 0).UTC()
+	feed := atomFeed{
+		XMLNS: "http://www.w3.org/2005/Atom",
+		Title: "Fmind articles",
+		ID:    templates.METADATA.SiteURL + "/articles/",
+		Links: []atomLink{
+			{Href: templates.METADATA.SiteURL + "/articles/feed.xml", Rel: "self", Type: "application/atom+xml"},
+			{Href: templates.METADATA.SiteURL + "/articles/", Rel: "alternate", Type: "text/html"},
+		},
+		Author:  atomAuthor{Name: templates.METADATA.Name, URI: templates.METADATA.SiteURL + "/"},
+		Entries: make([]atomEntry, 0, len(articles)),
 	}
+	for index, article := range articles {
+		modified := article.ModifiedDate()
+		if modified.After(updated) {
+			updated = modified
+		}
+		entry := atomEntry{
+			Title:     article.Title,
+			ID:        article.URL,
+			Published: atomTime(article.Date),
+			Updated:   atomTime(modified),
+			Link:      atomLink{Href: article.URL, Rel: "alternate", Type: "text/html"},
+			Summary:   atomContent{Type: "text", Body: article.Description},
+		}
+		if index < atomFullContentLimit {
+			entry.Content = &atomContent{Type: "html", Body: absoluteArticleHTML(article.HTML)}
+		}
+		feed.Entries = append(feed.Entries, entry)
+	}
+	feed.Updated = atomTime(updated)
+	return encodeXML(feed)
 }
 
-func serveSitemap(articles []templates.Article) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		urls := make([]sitemapURL, 0, len(articles)+2)
-		urls = append(
-			urls,
-			sitemapURL{Location: templates.METADATA.SiteURL + "/"},
-			sitemapURL{Location: templates.METADATA.SiteURL + "/articles/"},
-		)
-		for _, article := range articles {
-			urls = append(urls, sitemapURL{Location: article.URL, LastMod: article.Date.Format(time.DateOnly)})
-		}
-
-		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
-		if _, err := w.Write([]byte(xml.Header)); err != nil {
-			slog.DebugContext(r.Context(), "write sitemap declaration", "error", err)
-			return
-		}
-		if err := xml.NewEncoder(w).Encode(sitemap{
-			XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9",
-			URLs:  urls,
-		}); err != nil {
-			slog.DebugContext(r.Context(), "write sitemap", "error", err)
-		}
+func renderSitemap(articles []templates.Article) ([]byte, error) {
+	urls := []sitemapURL{
+		{Location: templates.METADATA.SiteURL + "/"},
+		{Location: templates.METADATA.SiteURL + "/articles/"},
 	}
+	for _, article := range articles {
+		// Historical Medium canonicals stay out of this sitemap. Reclaiming
+		// self-canonicals so link equity accrues here is a separate content decision.
+		if article.Canonical != "" {
+			continue
+		}
+		urls = append(urls, sitemapURL{Location: article.URL, LastMod: article.ModifiedDate().Format(time.DateOnly)})
+	}
+	return encodeXML(sitemap{XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9", URLs: urls})
 }
 
-func serveLLMSTxt(articles []templates.Article) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var body strings.Builder
-		fmt.Fprintf(&body, "# %s — %s\n\n> %s\n\n", templates.METADATA.Name, templates.METADATA.AlternateName, templates.METADATA.HeadlinePrimary)
-		body.WriteString("## Machine-readable portfolio\n\n")
-		fmt.Fprintf(&body, "- [MCP server](%s/mcp): Read-only portfolio tools and resources.\n", templates.METADATA.SiteURL)
-		fmt.Fprintf(&body, "- [JSON profile](%s/api/profile): Canonical portfolio and article index.\n\n", templates.METADATA.SiteURL)
-		body.WriteString("## Articles\n\n")
-		for _, article := range articles {
-			fmt.Fprintf(&body, "- [%s](%s) — %s\n", article.Title, article.URL, article.Description)
-		}
-		body.WriteString("\n## Research\n\n")
-		fmt.Fprintf(&body, "- [PhD thesis](%s): %s\n", templates.THESIS.URL, templates.THESIS.Title)
-		for _, paper := range templates.PAPERS {
-			fmt.Fprintf(&body, "- [%s](%s) — %s\n", paper.Title, paper.URL, paper.Venue)
-		}
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
-		if _, err := w.Write([]byte(body.String())); err != nil {
-			slog.DebugContext(r.Context(), "write llms.txt", "error", err)
-		}
+func renderLLMSTxt(articles []templates.Article) []byte {
+	var body strings.Builder
+	fmt.Fprintf(&body, "# %s — %s\n\n> %s\n\n", templates.METADATA.Name, templates.METADATA.AlternateName, templates.METADATA.HeadlinePrimary)
+	body.WriteString("## Machine-readable portfolio\n\n")
+	fmt.Fprintf(&body, "- [MCP server](%s/mcp): Read-only portfolio tools, resources, and prompts.\n", templates.METADATA.SiteURL)
+	fmt.Fprintf(&body, "- [JSON profile](%s/api/profile): Canonical portfolio and article index.\n", templates.METADATA.SiteURL)
+	fmt.Fprintf(&body, "- [Full LLM context](%s/llms-full.txt): This index plus every public article in Markdown.\n", templates.METADATA.SiteURL)
+	fmt.Fprintf(&body, "- [Atom feed](%s/articles/feed.xml): Reverse-chronological publication feed.\n", templates.METADATA.SiteURL)
+	fmt.Fprintf(&body, "- [Sitemap](%s/sitemap.xml): Canonical hosted pages.\n\n", templates.METADATA.SiteURL)
+	body.WriteString("## Articles\n\n")
+	for _, article := range articles {
+		fmt.Fprintf(&body, "- [%s](%s) — %s\n", article.Title, article.URL, article.Description)
 	}
+	body.WriteString("\n## Optional\n\n")
+	fmt.Fprintf(&body, "- [PhD thesis](%s): %s\n", templates.THESIS.URL, templates.THESIS.Title)
+	for _, paper := range templates.PAPERS {
+		fmt.Fprintf(&body, "- [%s](%s) — %s\n", paper.Title, paper.URL, paper.Venue)
+	}
+	return []byte(body.String())
+}
+
+func renderLLMSFull(index []byte, articles []templates.Article) []byte {
+	var body strings.Builder
+	body.Write(index)
+	body.WriteString("\n## Full articles\n")
+	for _, article := range articles {
+		fmt.Fprintf(&body, "\n### [%s](%s)\n\n%s\n", article.Title, article.URL, article.Markdown)
+	}
+	return []byte(body.String())
+}
+
+func encodeXML(value any) ([]byte, error) {
+	var body bytes.Buffer
+	body.WriteString(xml.Header)
+	if err := xml.NewEncoder(&body).Encode(value); err != nil {
+		return nil, fmt.Errorf("encode XML: %w", err)
+	}
+	return body.Bytes(), nil
 }
 
 func atomTime(date time.Time) string {
@@ -159,8 +157,55 @@ func atomTime(date time.Time) string {
 }
 
 func absoluteArticleHTML(body string) string {
+	// This string rewrite relies on two renderer invariants: Goldmark escapes
+	// quotes in text and code, and raw HTML stays disabled (no WithUnsafe).
 	body = strings.ReplaceAll(body, `href="/`, `href="`+templates.METADATA.SiteURL+`/`)
 	return strings.ReplaceAll(body, `src="/`, `src="`+templates.METADATA.SiteURL+`/`)
+}
+
+// relatedArticleCount bounds the "keep reading" block rendered under an article.
+const relatedArticleCount = 3
+
+// relatedArticleIndex precomputes each article's suggested next reads at startup,
+// keyed by slug, so request handlers stay allocation-free lookups.
+func relatedArticleIndex(articles []templates.Article) map[string][]templates.Article {
+	index := make(map[string][]templates.Article, len(articles))
+	for _, article := range articles {
+		index[article.Slug] = relatedArticles(article, articles)
+	}
+	return index
+}
+
+// relatedArticles ranks the rest of the collection by shared tags and then by
+// recency, returning at most relatedArticleCount entries, so every article
+// offers a next read even when it shares no tag with any other one.
+func relatedArticles(current templates.Article, articles []templates.Article) []templates.Article {
+	type candidate struct {
+		article templates.Article
+		shared  int
+	}
+	candidates := make([]candidate, 0, len(articles))
+	for _, article := range articles {
+		if article.Slug == current.Slug {
+			continue
+		}
+		shared := 0
+		for _, tag := range article.Tags {
+			if slices.Contains(current.Tags, tag) {
+				shared++
+			}
+		}
+		candidates = append(candidates, candidate{article: article, shared: shared})
+	}
+	// articles arrives reverse-chronological, so sorting stably on the shared tag
+	// count alone leaves recency as the tie-break.
+	slices.SortStableFunc(candidates, func(a, b candidate) int { return b.shared - a.shared })
+	limit := min(relatedArticleCount, len(candidates))
+	related := make([]templates.Article, 0, limit)
+	for _, candidate := range candidates[:limit] {
+		related = append(related, candidate.article)
+	}
+	return related
 }
 
 func articleIndexData(articles []templates.Article, requestedTag string) ([]templates.ArticleYear, []string, string) {
@@ -174,7 +219,9 @@ func articleIndexData(articles []templates.Article, requestedTag string) ([]temp
 	for tag := range tagSet {
 		tags = append(tags, tag)
 	}
-	slices.Sort(tags)
+	// Canonical vocabulary order, not alphabetical: the filter row then reads
+	// topic-first (Agent, LLM, RAG, …) instead of scattering related chips.
+	templates.SortTags(tags)
 
 	activeTag := ""
 	for _, tag := range tags {
@@ -186,7 +233,7 @@ func articleIndexData(articles []templates.Article, requestedTag string) ([]temp
 
 	groups := make([]templates.ArticleYear, 0)
 	for _, article := range articles {
-		if requestedTag != "" && (activeTag == "" || !slices.Contains(article.Tags, activeTag)) {
+		if activeTag != "" && !slices.Contains(article.Tags, activeTag) {
 			continue
 		}
 		year := article.Date.Year()

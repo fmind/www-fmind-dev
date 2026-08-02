@@ -2,7 +2,7 @@
 title = "Become the maestro of your MLOps abstractions"
 description = "The MLOps ecosystem is evolving into a sophisticated symphony, composed of diverse tools, methodologies, and cultures. This diversity…"
 date = "2024-01-30"
-tags = ["AI", "Design Patterns", "Development", "Machine Learning", "MLOps"]
+tags = ["MLOps", "Python"]
 slug = "become-the-maestro-of-your-mlops-abstractions"
 canonical = "https://medium.com/@fmind/become-the-maestro-of-your-mlops-abstractions-ca6e814f13f8"
 draft = false

@@ -2,7 +2,7 @@
 title = "BKFC: An Agentic Workflow for Gathering Knowledge from Google Chat"
 description = "Team collaboration often lives and breathes within chat applications like Google Chat or Slack. It’s where questions are asked, decisions…"
 date = "2025-04-08"
-tags = ["Artificial Intelligence", "Automation", "Data Science", "Generative Ai Tools", "MLOps"]
+tags = ["Agent", "Project"]
 slug = "bkfc-an-agentic-workflow-for-gathering-knowledge-from-google-chat"
 canonical = "https://medium.com/@fmind/bkfc-an-agentic-workflow-for-gathering-knowledge-from-google-chat-b521cba535d7"
 draft = false

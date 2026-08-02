@@ -2,7 +2,7 @@
 title = "A great MLOps project should start with a good Python Package 🐍"
 description = "MLOps practitioners (rightfully) point out that running notebooks in production is a bad software practice, but what are the alternatives…"
 date = "2023-06-24"
-tags = ["AI", "Machine Learning", "MLOps", "Python", "Software Development"]
+tags = ["MLOps", "Python", "Project"]
 slug = "a-great-mlops-project-should-start-with-a-good-python-package"
 canonical = "https://medium.com/@fmind/a-great-mlops-project-should-start-with-a-good-python-package-7662bdf79563"
 draft = false
