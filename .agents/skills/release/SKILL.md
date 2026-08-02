@@ -13,7 +13,7 @@ This skill defines the end-to-end process for validating, committing, releasing,
 ## Preconditions
 
 1. Working tree is clean or contains reviewed changes on `main`.
-2. Environment tools (`mise`, `go`, `git-cliff`, `gh`, `xh`, `terraform`) are initialized.
+2. Environment tools (`mise`, `go`, `git-cliff`, `gh`, `curl`, `terraform`) are initialized.
 3. Network access to GitHub and production domain (`fmind.dev` / `www.fmind.dev`) is available.
 
 ## Workflow
@@ -65,15 +65,17 @@ This skill defines the end-to-end process for validating, committing, releasing,
 
 1. **Verify Production Site Health** Perform thorough HTTP status, TLS/DNS, and content checks against the live production endpoints:
    ```bash
-   # Primary and domain redirect health
-   xh --headers GET https://fmind.dev
-   xh --headers GET https://www.fmind.dev
+   # Primary and apex domain redirects
+   curl -I https://fmind.dev
+   curl -I https://www.fmind.dev/health
+   curl -I https://www.fmind.dev/
 
-   # Discovery surfaces & metadata
-   xh --headers GET https://www.fmind.dev/llms.txt
-   xh --headers GET https://www.fmind.dev/sitemap.xml
-   xh --headers GET https://www.fmind.dev/articles/index.xml
-   xh --headers GET https://www.fmind.dev/.well-known/mcp.json
+   # Content & discovery surfaces
+   curl -I https://www.fmind.dev/articles/
+   curl -I https://www.fmind.dev/articles/feed.xml
+   curl -I https://www.fmind.dev/llms.txt
+   curl -I https://www.fmind.dev/sitemap.xml
+   curl -I https://www.fmind.dev/.well-known/mcp/server-card.json
    ```
 
 ## Gotchas & Guidelines
