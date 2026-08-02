@@ -29,6 +29,10 @@ import (
 // ServiceName labels the app in traces and the OTel resource.
 const ServiceName = "www-fmind-dev"
 
+// markdownExtension is the suffix that asks for an article's raw Markdown source
+// (`/articles/<slug>.md`) instead of its rendered page.
+const markdownExtension = ".md"
+
 //go:embed static
 var staticFS embed.FS
 
@@ -56,6 +60,11 @@ var initAssets = sync.OnceValues(func() (applicationAssets, error) {
 	return loadApplicationAssets(staticFS)
 })
 
+// initArticles parses, validates, and highlights the embedded archive once. The
+// result is immutable, so every handler built in this process shares it instead
+// of repeating the most expensive work at startup.
+var initArticles = sync.OnceValues(loadArticles)
+
 // NewAppHandler builds the root application handler: the router wrapped in the
 // security/logging middleware chain and an outer OpenTelemetry span.
 func NewAppHandler(logger *slog.Logger, cfg config.Config) (http.Handler, error) {
@@ -63,7 +72,7 @@ func NewAppHandler(logger *slog.Logger, cfg config.Config) (http.Handler, error)
 	if err != nil {
 		return nil, fmt.Errorf("initialize assets: %w", err)
 	}
-	collection, err := loadArticles()
+	collection, err := initArticles()
 	if err != nil {
 		return nil, fmt.Errorf("load articles: %w", err)
 	}
@@ -75,6 +84,11 @@ func newAppHandler(logger *slog.Logger, cfg config.Config, collection articleCol
 	pageArticles := visibleArticles(collection.all, cfg.Environment == config.Development)
 	summaries := articleSummaries(publicArticles)
 	related := relatedArticleIndex(pageArticles)
+	articleMarkdown := articleMarkdownIndex(collection.all)
+	// Two indexes rather than one shared: the rendered pages may include drafts in
+	// development, while MCP is a public surface and must never rank one.
+	pageSearch := newSearchIndex(pageArticles)
+	publicSearch := newSearchIndex(publicArticles)
 	structuredHome, err := templates.GetStructuredData(nil)
 	if err != nil {
 		return nil, fmt.Errorf("build home structured data: %w", err)
@@ -140,7 +154,7 @@ func newAppHandler(logger *slog.Logger, cfg config.Config, collection articleCol
 	mux.HandleFunc("GET /.well-known/mcp/server-card.json", serveStaticResponse(cardResponse, "public, max-age=3600, must-revalidate", true))
 	// 1 MiB is ample for any JSON-RPC call to this read-only server; larger
 	// bodies fail fast instead of being buffered whole into memory.
-	mcpHandler := MaxBody(1 << 20)(newMCPHandler(summaries))
+	mcpHandler := MaxBody(1 << 20)(newMCPHandler(summaries, publicSearch))
 	mux.Handle("/mcp", mcpHandler)
 	mux.Handle("/mcp/", mcpHandler)
 
@@ -148,14 +162,32 @@ func newAppHandler(logger *slog.Logger, cfg config.Config, collection articleCol
 	// same immutable, reverse-chronological collection.
 	mux.HandleFunc("GET /articles/feed.xml", serveStaticResponse(staticResponse{"application/atom+xml; charset=utf-8", feed}, "public, max-age=3600, must-revalidate", false))
 	mux.HandleFunc("GET /articles/{$}", func(w http.ResponseWriter, r *http.Request) {
-		groups, tags, activeTag := articleIndexData(pageArticles, r.URL.Query().Get("tag"))
+		query := r.URL.Query()
+		view := articleIndexData(pageArticles, pageSearch, query.Get("tag"), query.Get("q"))
 		renderPage(logger, w, r, http.StatusOK, templates.Layout(
-			templates.ArticleIndex(groups, tags, activeTag),
-			articleIndexMetadata(groups, structuredHome),
+			templates.ArticleIndex(view),
+			articleIndexMetadata(view, structuredHome),
 		))
 	})
+	// One route serves both "/articles/{slug}" (canonicalized to the trailing
+	// slash) and "/articles/{slug}.md": net/http patterns cannot express a suffix,
+	// and splitting them would mean two overlapping wildcards on the same segment.
 	mux.HandleFunc("GET /articles/{slug}", func(w http.ResponseWriter, r *http.Request) {
-		target := "/articles/" + url.PathEscape(r.PathValue("slug")) + "/"
+		slug := r.PathValue("slug")
+		if source, found := strings.CutSuffix(slug, markdownExtension); found {
+			article, ok := collection.bySlug[source]
+			if !ok || article.Draft && cfg.Environment == config.Production {
+				renderNotFound(logger, w, r, notFoundPage)
+				return
+			}
+			serveStaticResponse(
+				staticResponse{"text/markdown; charset=utf-8", articleMarkdown[source]},
+				"public, max-age=3600, must-revalidate",
+				true,
+			)(w, r)
+			return
+		}
+		target := "/articles/" + url.PathEscape(slug) + "/"
 		http.Redirect(w, r, target, http.StatusMovedPermanently) //nolint:gosec // G710: fixed same-origin route with one escaped segment
 	})
 	mux.HandleFunc("GET /articles/{slug}/", func(w http.ResponseWriter, r *http.Request) {
@@ -236,15 +268,24 @@ func homeMetadata(structured string) templates.PageMetadata {
 	}
 }
 
-// articleIndexMetadata builds the index head. groups carries the filtered result
-// so the first card's cover — the page's LCP image — is preloaded per filter.
-func articleIndexMetadata(groups []templates.ArticleYear, structured string) templates.PageMetadata {
+// articleIndexMetadata builds the index head. The view carries the filtered
+// result so the first card's cover — the page's LCP image — is preloaded per
+// filter, and search result pages are kept out of the index: they are a view of
+// existing articles, not content of their own.
+func articleIndexMetadata(view templates.ArticleIndexView, structured string) templates.PageMetadata {
 	preload := ""
-	if len(groups) > 0 && len(groups[0].Articles) > 0 {
-		preload = groups[0].Articles[0].CardImagePath()
+	switch {
+	case len(view.Results) > 0:
+		preload = view.Results[0].CardImagePath()
+	case len(view.Years) > 0 && len(view.Years[0].Articles) > 0:
+		preload = view.Years[0].Articles[0].CardImagePath()
+	}
+	title := "Articles | Médéric Hurier (Fmind)"
+	if view.Searching() {
+		title = "Search: " + view.Query + " | Articles | Médéric Hurier (Fmind)"
 	}
 	return templates.PageMetadata{
-		Title:          "Articles | Médéric Hurier (Fmind)",
+		Title:          title,
 		Description:    "Articles on AI agents, MLOps, cloud architecture, security, and pragmatic engineering systems.",
 		Canonical:      templates.METADATA.SiteURL + "/articles/",
 		ImageURL:       templates.METADATA.SiteURL + "/static/img/og-image.jpg",
@@ -252,21 +293,24 @@ func articleIndexMetadata(groups []templates.ArticleYear, structured string) tem
 		Kind:           "website",
 		StructuredData: structured,
 		PreloadImage:   preload,
+		NoIndex:        view.Searching(),
 	}
 }
 
 func articleMetadata(article templates.Article, structured string) templates.PageMetadata {
 	return templates.PageMetadata{
-		Title:          article.Title + " | Fmind",
-		Description:    article.Description,
-		Canonical:      article.CanonicalURL(),
-		ImageURL:       article.ImageURL,
-		ImageAlt:       article.ImageAlt,
-		Kind:           "article",
-		StructuredData: structured,
-		PreloadImage:   article.ImagePath(),
-		NoIndex:        article.Draft,
-		Article:        &article,
+		Title:              article.Title + " | Fmind",
+		Description:        article.Description,
+		Canonical:          article.CanonicalURL(),
+		ImageURL:           article.ImageURL,
+		ImageAlt:           article.ImageAlt,
+		Kind:               "article",
+		StructuredData:     structured,
+		PreloadImage:       article.ImagePath(),
+		PreloadImageSrcset: article.CoverSrcset,
+		PreloadImageSizes:  article.CoverSizes,
+		NoIndex:            article.Draft,
+		Article:            &article,
 	}
 }
 
@@ -353,9 +397,19 @@ func loadApplicationAssets(assets fs.FS) (applicationAssets, error) {
 		rootFiles[route] = staticResponse{contentType: source.contentType, body: data}
 	}
 
+	// The code theme's classes are generated from the same Chroma style that
+	// rendered the articles, so palette and markup can never drift apart.
+	if highlighterErr != nil {
+		return applicationAssets{}, fmt.Errorf("initialize code highlighter: %w", highlighterErr)
+	}
+	highlightCSS, highlightErr := highlighter.CSS()
+	if highlightErr != nil {
+		return applicationAssets{}, highlightErr
+	}
+
 	// Publish the fully validated immutable values together, so templates never
 	// observe a partially initialized asset map.
 	templates.AssetHashes = hashes
-	templates.InlineStyles = string(css)
+	templates.InlineStyles = string(css) + highlightCSS
 	return applicationAssets{rootFiles: rootFiles}, nil
 }

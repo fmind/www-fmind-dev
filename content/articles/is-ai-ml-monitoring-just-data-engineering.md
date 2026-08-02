@@ -4,7 +4,7 @@ description = "While the future of machine learning and MLOps is being debated, 
 date = "2023-07-15"
 tags = ["MLOps"]
 slug = "is-ai-ml-monitoring-just-data-engineering"
-canonical = "https://medium.com/@fmind/is-ai-ml-monitoring-just-data-engineering-10a2525a9c73"
+syndicated = "https://medium.com/@fmind/is-ai-ml-monitoring-just-data-engineering-10a2525a9c73"
 draft = false
 +++
 

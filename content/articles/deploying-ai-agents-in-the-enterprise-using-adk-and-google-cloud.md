@@ -4,7 +4,7 @@ description = "Learn to deploy AI agents in the enterprise using ADK \u0026 Goog
 date = "2025-08-10"
 tags = ["Agent", "Cloud"]
 slug = "deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud"
-canonical = "https://medium.com/@fmind/deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud-b49e7eda3b41"
+syndicated = "https://medium.com/@fmind/deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud-b49e7eda3b41"
 draft = false
 +++
 
@@ -61,23 +61,25 @@ The diagram highlights how clients (either end-users via a browser or services/o
 
 In our example we are going to deploy [a simple search agent](https://github.com/fmind/search-agent/blob/main/search_agent/agent.py) with ADK:
 
-    """A simple search agent."""
+```python
+"""A simple search agent."""
 
-    # %% IMPORTS
+# %% IMPORTS
 
-    from google.adk.agents import Agent
-    from google.adk.tools import google_search
+from google.adk.agents import Agent
+from google.adk.tools import google_search
 
-    # %% AGENTS
+# %% AGENTS
 
-    root_agent = Agent(
-        name="search_agent",
-        model="gemini-2.5-flash",
-        description="Agent to answer questions using Google Search.",
-        instruction="You are an expert researcher. You always stick to the facts.",
-        # use the builtin google_search tool from ADK
-        tools=[google_search],
-    )
+root_agent = Agent(
+    name="search_agent",
+    model="gemini-2.5-flash",
+    description="Agent to answer questions using Google Search.",
+    instruction="You are an expert researcher. You always stick to the facts.",
+    # use the builtin google_search tool from ADK
+    tools=[google_search],
+)
+```
 
 Let’s dive into the details, pros, and cons of these approaches, as well as other alternatives.
 
@@ -91,10 +93,12 @@ The easiest path is often the most dangerous. Cloud providers make it simple to 
 
 [Vertex AI Agent Engine](https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview?authuser=1) offers a managed, opinionated approach to deploying agents (Path 2 in the architecture diagram).
 
-    # deploy to agent engine
-    deploy-agent-engine:
-        uv run adk deploy agent_engine --project=$GOOGLE_CLOUD_PROJECT --region=$GOOGLE_CLOUD_LOCATION --staging_bucket=$STAGING_BUCKET --trace_to_cloud \
-            --display_name={{AGENT}} --description={{AGENT}} {{env('AGENT_ENGINE_ID', '') && "--agent_engine_id=" + env('AGENT_ENGINE_ID')}} {{AGENT}}
+```justfile
+# deploy to agent engine
+deploy-agent-engine:
+    uv run adk deploy agent_engine --project=$GOOGLE_CLOUD_PROJECT --region=$GOOGLE_CLOUD_LOCATION --staging_bucket=$STAGING_BUCKET --trace_to_cloud \
+        --display_name={{AGENT}} --description={{AGENT}} {{env('AGENT_ENGINE_ID', '') && "--agent_engine_id=" + env('AGENT_ENGINE_ID')}} {{AGENT}}
+```
 
 ![List of Agents on Vertex AI Agent Engine](/static/img/articles/deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud/04.webp)
 
@@ -122,11 +126,13 @@ Search Agent running on Vertex AI Agent Engine
 
 [Cloud Run](https://cloud.google.com/run/docs/overview/what-is-cloud-run?authuser=1) is Google Cloud’s serverless container platform, and it emerged as the best trade-off for deploying agents today (Path 1 in the architecture diagram).
 
-    # deploy to cloud run
-    deploy-cloud-run:
-        # when asked "Allow unauthenticated invocations to [search-agent] (y/N)?", answer "n"
-        adk deploy cloud_run --project=$GOOGLE_CLOUD_PROJECT --region=$GOOGLE_CLOUD_LOCATION --trace_to_cloud \
-        --service_name={{replace(AGENT, '_', '-')}} --app_name={{AGENT}} --with_ui --a2a {{AGENT}}
+```justfile
+# deploy to cloud run
+deploy-cloud-run:
+    # when asked "Allow unauthenticated invocations to [search-agent] (y/N)?", answer "n"
+    adk deploy cloud_run --project=$GOOGLE_CLOUD_PROJECT --region=$GOOGLE_CLOUD_LOCATION --trace_to_cloud \
+    --service_name={{replace(AGENT, '_', '-')}} --app_name={{AGENT}} --with_ui --a2a {{AGENT}}
+```
 
 ![List of Services deployed on Cloud Run](/static/img/articles/deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud/06.webp)
 
@@ -200,7 +206,7 @@ For [programmatic access](https://cloud.google.com/run/docs/authenticating/devel
 
 IAP validates this token (which must be signed by Google and have the correct audience — the Cloud Run URL or IAP Client ID) before allowing the request to reach the agent.
 
-This is crucial for secure A2A communication in the entreprise. Agents need to discover each other (often via an [Agent Card](https://github.com/fmind/search-agent/blob/main/search_agent/agent.json), as shown below) and communicate securely.
+This is crucial for secure A2A communication in the enterprise. Agents need to discover each other (often via an [Agent Card](https://github.com/fmind/search-agent/blob/main/search_agent/agent.json), as shown below) and communicate securely.
 
 ![Search Agent — Agent Card for the A2A Protocol](/static/img/articles/deploying-ai-agents-in-the-enterprise-using-adk-and-google-cloud/12.webp)
 
@@ -208,124 +214,126 @@ Search Agent — Agent Card for the A2A Protocol
 
 To make this work, the calling agent needs to generate a valid JWT token. Here is a Python snippet demonstrating how to achieve this when calling an IAP-protected endpoint ([from the GitHub Repository User Agent](https://github.com/fmind/search-agent/blob/main/user_agent/agent.py)):
 
-    """User-facing agent that delegates search queries to a remote A2A agent."""
+```python
+"""User-facing agent that delegates search queries to a remote A2A agent."""
 
-    # %% IMPORTS
+# %% IMPORTS
 
-    import datetime
-    import json
-    import os
+import datetime
+import json
+import os
 
-    import google.auth
-    import httpx
-    from google.adk.agents.llm_agent import Agent
-    from google.adk.agents.remote_a2a_agent import (
-        AGENT_CARD_WELL_KNOWN_PATH,
-        RemoteA2aAgent,
-    )
-    from google.cloud import iam_credentials_v1
+import google.auth
+import httpx
+from google.adk.agents.llm_agent import Agent
+from google.adk.agents.remote_a2a_agent import (
+    AGENT_CARD_WELL_KNOWN_PATH,
+    RemoteA2aAgent,
+)
+from google.cloud import iam_credentials_v1
 
-    # %% ENVIRONS
+# %% ENVIRONS
 
-    # URL to the Agent Card. See: https://google.github.io/adk-docs/a2a/quickstart-consuming/#how-it-works
-    # It's the entry point for the user-facing agent to discover and interact with the remote agent.
-    AGENT_CARD = os.getenv(
-        "AGENT_CARD", f"http://localhost:8000/a2a/search_agent{AGENT_CARD_WELL_KNOWN_PATH}"
-    )
-    # Email of the calling GCP Service Account (SA)
-    # This is used to authenticate to the remote agent.
-    AGENT_RUN_SA = os.environ["AGENT_RUN_SA"]
+# URL to the Agent Card. See: https://google.github.io/adk-docs/a2a/quickstart-consuming/#how-it-works
+# It's the entry point for the user-facing agent to discover and interact with the remote agent.
+AGENT_CARD = os.getenv(
+    "AGENT_CARD", f"http://localhost:8000/a2a/search_agent{AGENT_CARD_WELL_KNOWN_PATH}"
+)
+# Email of the calling GCP Service Account (SA)
+# This is used to authenticate to the remote agent.
+AGENT_RUN_SA = os.environ["AGENT_RUN_SA"]
 
-    # %% CLIENTS
+# %% CLIENTS
 
-    # Authenticate to Google Cloud using the default credentials.
-    # This is necessary to use the IAM Credentials API to sign JWTs.
-    credentials, project_id = google.auth.default()
-    iam_client = iam_credentials_v1.IAMCredentialsClient(credentials=credentials)
+# Authenticate to Google Cloud using the default credentials.
+# This is necessary to use the IAM Credentials API to sign JWTs.
+credentials, project_id = google.auth.default()
+iam_client = iam_credentials_v1.IAMCredentialsClient(credentials=credentials)
 
 
-    def get_auth_token(url: str, exp: int = 3600) -> str:
-        """Gets an auth token for a given URL with a expiry time (in seconds).
+def get_auth_token(url: str, exp: int = 3600) -> str:
+    """Gets an auth token for a given URL with a expiry time (in seconds).
 
-        The JWT contains the following claims:
-        - aud: The audience of the token, which is the URL of the remote agent.
-        - iss: The issuer of the token, which is the service account.
-        - sub: The subject of the token, which is also the service account.
-        - iat: The time the token was issued (issued at).
-        - exp: The time the token expires (expiration time).
+    The JWT contains the following claims:
+    - aud: The audience of the token, which is the URL of the remote agent.
+    - iss: The issuer of the token, which is the service account.
+    - sub: The subject of the token, which is also the service account.
+    - iat: The time the token was issued (issued at).
+    - exp: The time the token expires (expiration time).
+
+    Args:
+        url: The URL of the remote agent to authenticate to.
+        exp: The expiration time of the token in seconds.
+
+    Returns:
+        The signed JWT.
+    """
+    # Get the current time.
+    iat = datetime.datetime.now(tz=datetime.timezone.utc)
+    # Set the expiration time.
+    exp = iat + datetime.timedelta(seconds=exp)
+    # Create the JWT payload.
+    jwt = {
+        "aud": url,
+        "iss": AGENT_RUN_SA,
+        "sub": AGENT_RUN_SA,
+        "iat": int(iat.timestamp()),
+        "exp": int(exp.timestamp()),
+    }
+    # Convert the JWT to a JSON string.
+    payload = json.dumps(jwt)
+    # Get the full name of the service account.
+    name = iam_client.service_account_path("-", AGENT_RUN_SA)
+    # Sign the JWT using the IAM Credentials API.
+    response = iam_client.sign_jwt(name=name, payload=payload)
+    # Return the signed JWT.
+    return response.signed_jwt
+
+
+class BearerAuth(httpx.Auth):
+    """A custom httpx authentication class that uses a bearer token."""
+
+    def auth_flow(self, request):
+        """Adds the Authorization header to the request.
 
         Args:
-            url: The URL of the remote agent to authenticate to.
-            exp: The expiration time of the token in seconds.
+            request: The request to add the Authorization header to.
 
-        Returns:
-            The signed JWT.
+        Yields:
+            The request with the Authorization header.
         """
-        # Get the current time.
-        iat = datetime.datetime.now(tz=datetime.timezone.utc)
-        # Set the expiration time.
-        exp = iat + datetime.timedelta(seconds=exp)
-        # Create the JWT payload.
-        jwt = {
-            "aud": url,
-            "iss": AGENT_RUN_SA,
-            "sub": AGENT_RUN_SA,
-            "iat": int(iat.timestamp()),
-            "exp": int(exp.timestamp()),
-        }
-        # Convert the JWT to a JSON string.
-        payload = json.dumps(jwt)
-        # Get the full name of the service account.
-        name = iam_client.service_account_path("-", AGENT_RUN_SA)
-        # Sign the JWT using the IAM Credentials API.
-        response = iam_client.sign_jwt(name=name, payload=payload)
-        # Return the signed JWT.
-        return response.signed_jwt
+        # Get a new auth token for the request's URL.
+        token = get_auth_token(str(request.url))
+        # Add the Authorization header to the request.
+        request.headers["Authorization"] = f"Bearer {token}"
+        # Yield the request to httpx to be sent.
+        yield request
 
 
-    class BearerAuth(httpx.Auth):
-        """A custom httpx authentication class that uses a bearer token."""
+# Create an httpx client with the custom bearer authentication.
+httpx_client = httpx.AsyncClient(auth=BearerAuth(), timeout=600)
 
-        def auth_flow(self, request):
-            """Adds the Authorization header to the request.
-
-            Args:
-                request: The request to add the Authorization header to.
-
-            Yields:
-                The request with the Authorization header.
-            """
-            # Get a new auth token for the request's URL.
-            token = get_auth_token(str(request.url))
-            # Add the Authorization header to the request.
-            request.headers["Authorization"] = f"Bearer {token}"
-            # Yield the request to httpx to be sent.
-            yield request
+# %% AGENTS
 
 
-    # Create an httpx client with the custom bearer authentication.
-    httpx_client = httpx.AsyncClient(auth=BearerAuth(), timeout=600)
+# Create a remote A2A agent that represents the remote search agent.
+# This agent will delegate calls to the remote agent's tools.
+search_agent = RemoteA2aAgent(
+    name="search_agent",
+    agent_card=AGENT_CARD,
+    description="Google Search Agent",
+    httpx_client=httpx_client,
+)
 
-    # %% AGENTS
-
-
-    # Create a remote A2A agent that represents the remote search agent.
-    # This agent will delegate calls to the remote agent's tools.
-    search_agent = RemoteA2aAgent(
-        name="search_agent",
-        agent_card=AGENT_CARD,
-        description="Google Search Agent",
-        httpx_client=httpx_client,
-    )
-
-    # Create a root agent that orchestrates the interaction with the user.
-    # This agent will delegate search queries to the remote search agent.
-    root_agent = Agent(
-        name="root_agent",
-        model="gemini-2.5-flash",
-        instruction="You are a nice and polite agent. Deleguate search query to the search_agent.",
-        sub_agents=[search_agent],
-    )
+# Create a root agent that orchestrates the interaction with the user.
+# This agent will delegate search queries to the remote search agent.
+root_agent = Agent(
+    name="root_agent",
+    model="gemini-2.5-flash",
+    instruction="You are a nice and polite agent. Deleguate search query to the search_agent.",
+    sub_agents=[search_agent],
+)
+```
 
 _Note: The JWT token works only for a specific audience (URL/Client ID), ensuring that a token generated for one service cannot be reused for another._
 

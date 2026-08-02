@@ -17,10 +17,23 @@ resource "google_artifact_registry_repository_iam_member" "repo_writer" {
   member     = "serviceAccount:${google_service_account.github_actions_sa.email}"
 }
 
-# Deploy new Cloud Run revisions.
-resource "google_project_iam_member" "github_actions_run_developer" {
+# Deploy new revisions of this one service. Binding roles/run.developer on the
+# service instead of the project means CI cannot create, delete, or SSH into any
+# other Cloud Run service, job, or worker pool here.
+resource "google_cloud_run_v2_service_iam_member" "github_actions_run_developer" {
+  location = google_cloud_run_v2_service.web.location
+  name     = google_cloud_run_v2_service.web.name
+  role     = "roles/run.developer"
+  member   = "serviceAccount:${google_service_account.github_actions_sa.email}"
+}
+
+# Each deploy returns a long-running operation, and operations are project-scoped
+# resources that a service-level binding cannot reach. roles/run.viewer is
+# read-only, so it restores the polling permission (run.operations.get) without
+# handing back any mutating access at the project level.
+resource "google_project_iam_member" "github_actions_run_viewer" {
   project = var.project_id
-  role    = "roles/run.developer"
+  role    = "roles/run.viewer"
   member  = "serviceAccount:${google_service_account.github_actions_sa.email}"
 }
 

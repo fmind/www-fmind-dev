@@ -2,9 +2,9 @@
 title = "The 5xP Framework: Steering AI Coding Agents from Chaos to Success"
 description = "AI Coding — or Spec-Driven Development — is a recent trend that amazes as much as it scares IT engineers. We now have access to powerful…"
 date = "2026-02-28"
-tags = ["Agent", "Guide"]
+tags = ["Coding", "Guide"]
 slug = "the-5xp-framework-steering-ai-coding-agents-from-chaos-to-success"
-canonical = "https://medium.com/@fmind/the-5xp-framework-steering-ai-coding-agents-from-chaos-to-success-83fbdb318b2b"
+syndicated = "https://medium.com/@fmind/the-5xp-framework-steering-ai-coding-agents-from-chaos-to-success-83fbdb318b2b"
 draft = false
 +++
 
@@ -41,58 +41,63 @@ I have experimented with several approaches to provide context, and each comes w
 
 I found that the most sustainable strategy to steer an AI Coding Agent is to use flat, readable Markdown files. I organize them using what I call the **5xP Framework**: Product, Platform, Process, Profile, and Principle.
 
-Here is how to break it down. While you can customize it, the default template provides 4 files directly under a context/ directory:
+Here is how to break it down. While you can customize it, the default template provides 4 files directly under a `context/` directory:
 
-1. [**PRODUCT.md**](https://github.com/fmind/ai-coding-5xp-template/blob/main/context/PRODUCT.md): The objective. What are we building? Who are the users? What is the business logic? This prevents the AI from over-engineering features that don’t align with the goals.
-2. [**PLATFORM.md**](https://github.com/fmind/ai-coding-5xp-template/blob/main/context/PLATFORM.md): The technical stack. What tools, environment, frameworks, and architectural patterns are we strictly adhering to?
-3. [**PROCESS.md**](https://github.com/fmind/ai-coding-5xp-template/blob/main/context/PROCESS.md): The workflow. How exactly should the AI collaborate with you? What are the quality assurance standards and AI engagement rules?
-4. [**PROFILE.md**](https://github.com/fmind/ai-coding-5xp-template/blob/main/context/PROFILE.md) _(Optional but recommended)_: Who are you? Explaining your background, communication style, and expertise prevents the agent from making wrong assumptions.
+1. [**`PRODUCT.md`**](https://github.com/fmind/ai-coding-5xp-template/blob/main/context/PRODUCT.md): The objective. What are we building? Who are the users? What is the business logic? This prevents the AI from over-engineering features that don’t align with the goals.
+2. [**`PLATFORM.md`**](https://github.com/fmind/ai-coding-5xp-template/blob/main/context/PLATFORM.md): The technical stack. What tools, environment, frameworks, and architectural patterns are we strictly adhering to?
+3. [**`PROCESS.md`**](https://github.com/fmind/ai-coding-5xp-template/blob/main/context/PROCESS.md): The workflow. How exactly should the AI collaborate with you? What are the quality assurance standards and AI engagement rules?
+4. [**`PROFILE.md`**](https://github.com/fmind/ai-coding-5xp-template/blob/main/context/PROFILE.md) _(Optional but recommended)_: Who are you? Explaining your background, communication style, and expertise prevents the agent from making wrong assumptions.
 
-The **5th xP** is the most important: **Principle**. These are your Ten Commandments, and you should put this information in an [AGENTS.md](https://github.com/fmind/ai-coding-5xp-template/blob/main/AGENTS.md) file at the root of your project. Acting as the master entry point for the AI, the principles sit at the top, and the file then links to the other 4xPs, explicitly instructing the agent to read them when necessary.
+The **5th xP** is the most important: **Principle**. These are your Ten Commandments, and you should put this information in an [`AGENTS.md`](https://github.com/fmind/ai-coding-5xp-template/blob/main/AGENTS.md) file at the root of your project. Acting as the master entry point for the AI, the principles sit at the top, and the file then links to the other 4xPs, explicitly instructing the agent to read them when necessary.
 
-**Rule of Thumb:** Keep each file to **1 page maximum**. You should not have to scroll to read the content. This forces you to be concise, avoiding information overload for both you and the LLM.
+> **Rule of Thumb:** Keep each file to **1 page maximum**. You should not have to scroll to read the content. This forces you to be concise, avoiding information overload for both you and the LLM.
 
 ### Example Project Structure
 
-Let’s look at a fictional project — an open-source AI task manager called TaskBrain — and see how this structure is applied in practice based on the template.
+Let’s look at a fictional project — an open-source AI task manager called `TaskBrain` — and see how this structure is applied in practice based on the template.
 
 The repository structure looks like this:
 
-    taskbrain/
-    ├── src/
-    ├── tests/
-    ├── context/
-    │ ├── PLATFORM.md
-    │ ├── PROCESS.md
-    │ ├── PRODUCT.md
-    │ └── PROFILE.md
-    └── AGENTS.md
+```text
+taskbrain/
+├── src/
+├── tests/
+├── context/
+│   ├── PLATFORM.md
+│   ├── PROCESS.md
+│   ├── PRODUCT.md
+│   └── PROFILE.md
+└── AGENTS.md
+```
 
-Here is exactly how you would wire the [AGENTS.md](https://github.com/fmind/ai-coding-5xp-template/blob/main/AGENTS.md) file to act as the master prompt:
+Here is exactly how you would wire the [`AGENTS.md`](https://github.com/fmind/ai-coding-5xp-template/blob/main/AGENTS.md) file to act as the master prompt:
 
-    # Agent Guidelines
+```markdown
+# Agent Guidelines
 
-    Assume the persona of an expert AI Coding Assistant dedicated to this project.
+Assume the persona of an expert AI Coding Assistant dedicated to this project.
 
-    ## Principles
+## Principles
 
-    1. **Simplicity First**: Keep dependencies minimal and favor straightforward, readable solutions over complex alternatives.
-    2. **Proactive Partnership**: Anticipate potential issues and challenge decisions that contradict the project's constitution.
-    3. **Maintainable Code**: Prioritize code clarity, clean architecture, and consistent formatting across the entire codebase.
-    4. **Contextual Awareness**: Adhere to the guidelines established in the context files to ensure all contributions align with them.
-    5. **Security by Design**: Identify and mitigate security issues proactively. Treat data privacy and secrets handling as fundamental requirements.
+1. **Simplicity First**: Keep dependencies minimal and favor straightforward, readable solutions over complex alternatives.
+2. **Proactive Partnership**: Anticipate potential issues and challenge decisions that contradict the project's constitution.
+3. **Maintainable Code**: Prioritize code clarity, clean architecture, and consistent formatting across the entire codebase.
+4. **Contextual Awareness**: Adhere to the guidelines established in the context files to ensure all contributions align with them.
+5. **Security by Design**: Identify and mitigate security issues proactively. Treat data privacy and secrets handling as fundamental requirements.
 
-    ## Context Navigation
+## Context Navigation
 
-    Read the following context files as needed to understand the project's core rules and guidelines.
-    Suggest to the user to update the context files as needed to reflect the project's current state.
+Read the following context files as needed to understand the project's core rules and guidelines.
 
-    - **[context/PROFILE.md](context/PROFILE.md)** (Who): My background, communication style, and expertise.
-    - **[context/PRODUCT.md](context/PRODUCT.md)** (What): Core objectives, target audience, and business logic.
-    - **[context/PLATFORM.md](context/PLATFORM.md)** (Where): Technology stack, infrastructure, and architectural principles.
-    - **[context/PROCESS.md](context/PROCESS.md)** (How): Workflows, AI engagement rules, and quality assurance standards.
+Suggest to the user to update the context files as needed to reflect the project's current state.
 
-By keeping the root [AGENTS.md](https://github.com/fmind/ai-coding-5xp-template/blob/main/AGENTS.md) file short and linking to specific sub-files in a context/ directory, the AI agent can dynamically lazy-load exactly what it needs, precisely when it needs it.
+- **[context/PROFILE.md](context/PROFILE.md)** (Who): My background, communication style, and expertise.
+- **[context/PRODUCT.md](context/PRODUCT.md)** (What): Core objectives, target audience, and business logic.
+- **[context/PLATFORM.md](context/PLATFORM.md)** (Where): Technology stack, infrastructure, and architectural principles.
+- **[context/PROCESS.md](context/PROCESS.md)** (How): Workflows, AI engagement rules, and quality assurance standards.
+```
+
+By keeping the root [`AGENTS.md`](https://github.com/fmind/ai-coding-5xp-template/blob/main/AGENTS.md) file short and linking to specific sub-files in a `context/` directory, the AI agent can dynamically lazy-load exactly what it needs, precisely when it needs it.
 
 ### Field-Tested Results
 
@@ -100,7 +105,7 @@ I have thoroughly tested this framework on two distinct projects: [completely re
 
 The true power of this framework lies in its **human-friendliness**: the files are simple, focused, and I can quickly steer the model in a new direction just by tweaking a few bullet points in a Markdown file.
 
-Furthermore, it does not bloat the LLM. By providing what essentially acts as a “table of contents” in the root [AGENTS.md](https://github.com/fmind/ai-coding-5xp-template/blob/main/AGENTS.md) (similar to exposing agent skills), the model only pulls the context it needs for the task at hand. This naturally enforces a healthy rhythm: you spend **20% of your time thinking** and structuring the context, allowing the AI to smoothly handle the **80% implementation** burden.
+Furthermore, it does not bloat the LLM. By providing what essentially acts as a “table of contents” in the root [`AGENTS.md`](https://github.com/fmind/ai-coding-5xp-template/blob/main/AGENTS.md) (similar to exposing agent skills), the model only pulls the context it needs for the task at hand. This naturally enforces a healthy rhythm: you spend **20% of your time thinking** and structuring the context, allowing the AI to smoothly handle the **80% implementation** burden.
 
 ### Conclusion
 

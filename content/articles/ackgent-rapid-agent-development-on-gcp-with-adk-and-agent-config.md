@@ -4,7 +4,7 @@ description = "Speed up AI agent development on GCP with Ackgent. Build, deploy,
 date = "2025-09-14"
 tags = ["Agent", "Cloud", "Project"]
 slug = "ackgent-rapid-agent-development-on-gcp-with-adk-and-agent-config"
-canonical = "https://medium.com/@fmind/ackgent-rapid-agent-development-on-gcp-with-adk-and-agent-config-3712dd1cd9dd"
+syndicated = "https://medium.com/@fmind/ackgent-rapid-agent-development-on-gcp-with-adk-and-agent-config-3712dd1cd9dd"
 draft = false
 +++
 
@@ -36,18 +36,20 @@ The central insight here is that **config helps you focus on the use case, not t
 
 &nbsp;
 
-    # yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
-    agent_class: LlmAgent
-    model: gemini-2.5-flash
-    name: prime_agent
-    description: Handles checking if numbers are prime.
-    instruction: |
-      You are responsible for checking whether numbers are prime.
-      When asked to check primes, you must call the check_prime tool with a list of integers.
-      Never attempt to determine prime numbers manually.
-      Return the prime number results to the root agent.
-    tools:
-      - name: ma_llm.check_prime
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+agent_class: LlmAgent
+model: gemini-2.5-flash
+name: prime_agent
+description: Handles checking if numbers are prime.
+instruction: |
+  You are responsible for checking whether numbers are prime.
+  When asked to check primes, you must call the check_prime tool with a list of integers.
+  Never attempt to determine prime numbers manually.
+  Return the prime number results to the root agent.
+tools:
+  - name: ma_llm.check_prime
+```
 
 ### Introducing Ackgent: The Agent Config Starter Kit
 
@@ -94,79 +96,85 @@ Let’s look at how this works in practice. The Ackgent repository showcases thr
 
 The [datetime agent](https://github.com/fmind/ackgent/blob/main/agent/datetime_agent.yaml) demonstrates how to extend an agent with external tools tools. The agent can access the current date and time defined in the [`tools.py`](https://github.com/fmind/ackgent/blob/main/agent/tools.py) of the repository, which are defined as simple functions.
 
-    # yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
-    name: datetime_agent
-    model: gemini-2.5-flash
-    description: A helpful assistant for datetime questions.
-    instruction: Return the current date or time based on the user's request.
-    generate_content_config:
-      temperature: 0.0
-    tools:
-      - name: agent.tools.now
-      - name: agent.tools.today
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+name: datetime_agent
+model: gemini-2.5-flash
+description: A helpful assistant for datetime questions.
+instruction: Return the current date or time based on the user's request.
+generate_content_config:
+  temperature: 0.0
+tools:
+  - name: agent.tools.now
+  - name: agent.tools.today
 
-    """Tools for agents."""
+"""Tools for agents."""
 
-    # %% IMPORTS
+# %% IMPORTS
 
-    import datetime
+import datetime
 
-    # %% TOOLS
+# %% TOOLS
 
-    def now() -> str:
-        """Returns the current time.
+def now() -> str:
+    """Returns the current time.
 
-        Returns:
-            str: The current time in 'HH:MM' format.
-        """
-        return datetime.datetime.now().strftime("%H:%M")
+    Returns:
+        str: The current time in 'HH:MM' format.
+    """
+    return datetime.datetime.now().strftime("%H:%M")
 
 
-    def today() -> str:
-        """Returns the current date.
+def today() -> str:
+    """Returns the current date.
 
-        Returns:
-            str: The current date in 'YYYY-MM-DD' format.
-        """
-        return str(datetime.date.today())
+    Returns:
+        str: The current date in 'YYYY-MM-DD' format.
+    """
+    return str(datetime.date.today())
+```
 
 #### 2. The Internet Agent (Search Tools)
 
 The [Internet agent](https://github.com/fmind/ackgent/blob/main/agent/internet_agent.yaml) is configured to access an external MCP Server. In this case, we are using [markdown-mcp](https://github.com/microsoft/markitdown?tab=readme-ov-file), a server developed by Microsoft to quickly retrieve any source into a markdown, including external links. The MCP is started as a STDIO server, with a timeout of 10 seconds.
 
-    # yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
-    name: internet_agent
-    model: gemini-2.5-flash
-    description: A helpful assistant for answering questions from the Internet.
-    instruction: Return the answer to questions using the user provided link.
-    generate_content_config:
-      temperature: 0.0
-    tools:
-    - name: MCPToolset
-      args:
-        stdio_connection_params:
-          server_params:
-            command: "markitdown-mcp"
-          timeout: 10
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+name: internet_agent
+model: gemini-2.5-flash
+description: A helpful assistant for answering questions from the Internet.
+instruction: Return the answer to questions using the user provided link.
+generate_content_config:
+  temperature: 0.0
+tools:
+  - name: MCPToolset
+    args:
+      stdio_connection_params:
+        server_params:
+          command: "markitdown-mcp"
+        timeout: 10
+```
 
 #### 3. The Root Agent (Coordination and Routing)
 
 The [root agent](https://github.com/fmind/ackgent/blob/main/agent/root_agent.yaml) acts as the main entry point. It doesn't perform tasks itself; instead, its primary function is orchestration. It analyzes the user's intent and intelligently delegates the task to the most appropriate specialized agent using the `sub_agents` configuration. This pattern enables a scalable and modular multi-agent system.
 
-    # yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
-    name: root_agent
-    model: gemini-2.5-flash
-    description: A helpful assistant for user questions.
-    instruction: |
-      You are a helpful assistant that can answer questions about anything.
-      Use the following sub-agents to answer questions: `datetime_agent` and `internet_agent`.
-    generate_content_config:
-      temperature: 0.0
-    after_model_callbacks:
-      - name: agent.callbacks.after_model_callback
-    sub_agents:
-      - config_path: datetime_agent.yaml
-      - config_path: internet_agent.yaml
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+name: root_agent
+model: gemini-2.5-flash
+description: A helpful assistant for user questions.
+instruction: |
+  You are a helpful assistant that can answer questions about anything.
+  Use the following sub-agents to answer questions: `datetime_agent` and `internet_agent`.
+generate_content_config:
+  temperature: 0.0
+after_model_callbacks:
+  - name: agent.callbacks.after_model_callback
+sub_agents:
+  - config_path: datetime_agent.yaml
+  - config_path: internet_agent.yaml
+```
 
 ### Current Limitations
 
@@ -174,11 +182,13 @@ While Agent Config is a great helper for quickly building agents, it’s importa
 
 One notable limitation today involves mixing different types of capabilities within a single agent definition. Currently, you cannot configure an agent that simultaneously uses “Built-In Search Tools” with `google_search` or `VertexAiSearchTool` alongside "Non-Search Tools" (like the custom Python functions) or "Sub-Agents" (like the `root` agent uses).
 
-    tools: # multiple tools are supported only when they are all search tools!
-      - name: google_search
-      - name: VertexAiSearchTool
-       args:
-         data_store_id: "projects/ackgent/locations/us/collections/default_collection/dataStores/reports_123..."
+```yaml
+tools: # multiple tools are supported only when they are all search tools!
+  - name: google_search
+  - name: VertexAiSearchTool
+   args:
+     data_store_id: "projects/ackgent/locations/us/collections/default_collection/dataStores/reports_123..."
+```
 
 The ADK team is actively working on enhancing this flexibility. For now, the recommended architecture — as demonstrated in the Ackgent repository — is either to separate concerns into specialized agents, or create custom search tools (e.g., like the `markitdown-mcp` server).
 

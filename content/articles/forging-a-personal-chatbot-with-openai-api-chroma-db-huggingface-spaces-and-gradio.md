@@ -4,7 +4,7 @@ description = "If you have checked the Internet in 2023, you’re likely familia
 date = "2023-10-24"
 tags = ["LLM", "RAG", "Demo"]
 slug = "forging-a-personal-chatbot-with-openai-api-chroma-db-huggingface-spaces-and-gradio"
-canonical = "https://medium.com/@fmind/forging-a-personal-chatbot-with-openai-api-chroma-db-huggingface-spaces-and-gradio-bc50e7a93071"
+syndicated = "https://medium.com/@fmind/forging-a-personal-chatbot-with-openai-api-chroma-db-huggingface-spaces-and-gradio-bc50e7a93071"
 draft = false
 +++
 
@@ -53,71 +53,81 @@ My public profile on LinkedIn: [https://www.linkedin.com/in/fmind-dev/](https://
 
 HTML is a well-structured yet verbose and cluttered format, rife with attributes and styles. To streamline the content, I first converted the HTML file into a plain text file using [Pandoc](https://pandoc.org/). Subsequently, I manually transformed this text file into Markdown to enhance both its format and content.
 
-    pandoc --to=plain --from=html --output=files/linkedin.txt files/linkedin.html
+```bash
+pandoc --to=plain --from=html --output=files/linkedin.txt files/linkedin.html
+```
 
 **Through my experimentation, I’ve found that data quality is pivotal in optimizing the performance of a language model**. Given the limited control one has over the flow of an LLM, ensuring that the data is correctly formatted and relevant significantly aids in validating the model’s behavior.
 
-    # Profile
+```markdown
+# Profile
 
-    ## Overview
+## Overview
 
-    - First name: Médéric
-    - Last name: HURIER
-    - Pseudo: Fmind
-    - Followers: 4K
-    - Location: Luxembourg, Luxembourg
-    - Education: University of Luxembourg
-    - Current position: Decathlon Technology
-    - Public URL: www.linkedin.com/in/fmind-dev
-    - Industry: Technology, Information and Internet
-    - Address: 28 Avenue François Clément, 5612 Mondorf-les-Bains, Luxembourg
-    - Headline: Freelancer | AI/ML/MLOps Engineer | Data Scientist | MLOps Community Organizer | OpenClassrooms Mentor | Hacker | PhD
+- First name: Médéric
+- Last name: HURIER
+- Pseudo: Fmind
+- Followers: 4K
+- Location: Luxembourg, Luxembourg
+- Education: University of Luxembourg
+- Current position: Decathlon Technology
+- Public URL: www.linkedin.com/in/fmind-dev
+- Industry: Technology, Information and Internet
+- Address: 28 Avenue François Clément, 5612 Mondorf-les-Bains, Luxembourg
+- Headline: Freelancer | AI/ML/MLOps Engineer | Data Scientist | MLOps Community Organizer | OpenClassrooms Mentor | Hacker | PhD
+```
 
 #### Chunking and Importing Data to Chroma DB 🛢
 
 **One of the primary constraints of Large Language Models is their context size**. As of October 2023, OpenAI’s [GPT-3.5 models](https://developers.openai.com/api/docs/models) support context sizes ranging from 4k to 16k tokens, while [GPT-4 models](https://platform.openai.com/docs/models/gpt-4) extend this range from 8k to 32k tokens. **In my evaluation, the cost-to-benefit ratio was more favorable for GPT-3.5 than for GPT-4.**
 
-    | Technical name     | Model family | Price per 1000 tokens    | Max tokens |
-    |--------------------|--------------|--------------------------|------------|
-    | gpt-4-32k          | GPT-4        | USD 0.0600 (prompt)      | 32768      |
-    |                    |              | USD 0.1200 (completion)  |            |
-    | gpt-4              | GPT-4        | USD 0.0300 (prompt)      | 8192       |
-    |                    |              | USD 0.0600 (completion)  |            |
-    | gpt-3.5-turbo-16k  | GPT-3.5      | USD 0.0030 (prompt)      | 16384      |
-    |                    |              | USD 0.0040 (completion)  |            |
-    | gpt-3.5-turbo      | GPT-3.5      | USD 0.0015 (prompt)      | 4096       |
-    |                    |              | USD 0.0020 (completion)  |            |
+```markdown
+| Technical name    | Model family | Price per 1000 tokens   | Max tokens |
+| ----------------- | ------------ | ----------------------- | ---------- |
+| gpt-4-32k         | GPT-4        | USD 0.0600 (prompt)     | 32768      |
+|                   |              | USD 0.1200 (completion) |            |
+| gpt-4             | GPT-4        | USD 0.0300 (prompt)     | 8192       |
+|                   |              | USD 0.0600 (completion) |            |
+| gpt-3.5-turbo-16k | GPT-3.5      | USD 0.0030 (prompt)     | 16384      |
+|                   |              | USD 0.0040 (completion) |            |
+| gpt-3.5-turbo     | GPT-3.5      | USD 0.0015 (prompt)     | 4096       |
+|                   |              | USD 0.0020 (completion) |            |
+```
 
 To divide my Markdown document into manageable chunks, I developed a Python function that segments content based on header levels, easily achieved through regular expressions:
 
-    def segment_text(text: str, pattern: str) -> T.Iterator[tuple[str, str]]:
-        """Segment the text in title and content pair by pattern."""
-        splits = re.split(pattern, text, flags=re.MULTILINE)
-        pairs = zip(splits[1::2], splits[2::2])
-        return pairs
+```python
+def segment_text(text: str, pattern: str) -> T.Iterator[tuple[str, str]]:
+    """Segment the text in title and content pair by pattern."""
+    splits = re.split(pattern, text, flags=re.MULTILINE)
+    pairs = zip(splits[1::2], splits[2::2])
+    return pairs
 
-    segments_h1 = segment_text(text=text, pattern=r"^# (.+)")
-    segments_h2 = segment_text(text=h1_text, pattern=r"^## (.+)")
+segments_h1 = segment_text(text=text, pattern=r"^# (.+)")
+segments_h2 = segment_text(text=h1_text, pattern=r"^## (.+)")
+```
 
 Subsequently, I crafted another function to import these chunks into Chroma DB. [**Chroma DB**](https://www.trychroma.com/) **is particularly useful for straightforward applications, given its in-memory operation and simplicity**. The following code snippet outlines how to prepare the document, metadata, and identifiers for ingestion into a collection:
 
-    def import_file(
-        file: T.TextIO,
-        collection: lib.Collection,
-        encoding_function: T.Callable,
-        max_output_tokens: int = lib.ENCODING_OUTPUT_LIMIT,
-    ):
-        """Import a markdown file to a database collection."""
-        text = file.read()
-        filename = file.name
-        segments_h1 = segment_text(text=text, pattern=r"^# (.+)")
-        for h1, h1_text in segments_h1:
-            segments_h2 = segment_text(text=h1_text, pattern=r"^## (.+)")
-            for h2, content in segments_h2:
-                id_ = f"{filename} # {h1} ## {h2}"  # unique doc id
-                document = f"# {h1}\n\n## {h2}\n\n{content.strip()}"
-                metadata = {"filename": filename, "h1": h1, "h2": h2}
-                collection.add(ids=id_, documents=document, metadatas=metadata)
+```python
+def import_file(
+    file: T.TextIO,
+    collection: lib.Collection,
+    encoding_function: T.Callable,
+    max_output_tokens: int = lib.ENCODING_OUTPUT_LIMIT,
+):
+    """Import a markdown file to a database collection."""
+    text = file.read()
+    filename = file.name
+    segments_h1 = segment_text(text=text, pattern=r"^# (.+)")
+    for h1, h1_text in segments_h1:
+        segments_h2 = segment_text(text=h1_text, pattern=r"^## (.+)")
+        for h2, content in segments_h2:
+            id_ = f"{filename} # {h1} ## {h2}"  # unique doc id
+            document = f"# {h1}\n\n## {h2}\n\n{content.strip()}"
+            metadata = {"filename": filename, "h1": h1, "h2": h2}
+            collection.add(ids=id_, documents=document, metadatas=metadata)
+```
 
 ### Building, Hosting, and Integrating a Chatbot 👨‍💻
 
@@ -127,50 +137,52 @@ The chatbot function serves as the system’s core. It is responsible for crafti
 
 Once the responses are formulated, they are sent to the Large Language Model for processing. **In my case, I utilized** [**OpenAI’s GPT-3.5 16k model**](https://developers.openai.com/api/docs/models) **, as it offered the most favorable balance among model performance, context size, and cost per token**. The model’s output can then be displayed directly to the user:
 
-    PROMPT_CONTEXT = """
-    You are Fmind Chatbot, specialized in providing information regarding Médéric Hurier's (known as Fmind) professional background.
-    Médéric is an MLOps engineer based in Luxembourg. He is currently working at Decathlon. His calendar is booked until the conclusion of 2024.
-    Your responses should be succinct and maintain a professional tone. If inquiries deviate from Médéric's professional sphere, courteously decline to engage.
+```python
+PROMPT_CONTEXT = """
+You are Fmind Chatbot, specialized in providing information regarding Médéric Hurier's (known as Fmind) professional background.
+Médéric is an MLOps engineer based in Luxembourg. He is currently working at Decathlon. His calendar is booked until the conclusion of 2024.
+Your responses should be succinct and maintain a professional tone. If inquiries deviate from Médéric's professional sphere, courteously decline to engage.
 
-    You may find more information about Médéric below (markdown format):
-    """
+You may find more information about Médéric below (markdown format):
+"""
 
-    def answer(message: str, history: list[str]) -> str:
-        """Answer questions about my resume."""
-        # counters
-        n_tokens = 0
-        # messages
-        messages = []
-        # - context
-        n_tokens += len(ENCODING(PROMPT_CONTEXT))
-        messages += [{"role": "system", "content": PROMPT_CONTEXT}]
-        # - history
-        for user_content, assistant_content in history:
-            n_tokens += len(ENCODING(user_content))
-            n_tokens += len(ENCODING(assistant_content))
-            messages += [{"role": "user", "content": user_content}]
-            messages += [{"role": "assistant", "content": assistant_content}]
-        # - message
-        n_tokens += len(ENCODING(message))
-        messages += [{"role": "user", "content": message}]
-        # database
-        results = COLLECTION.query(query_texts=message, n_results=QUERY_N_RESULTS)
-        distances, documents = results["distances"][0], results["documents"][0]
-        for distance, document in zip(distances, documents):
-            # - distance
-            if distance > QUERY_MAX_DISTANCE:
-                break
-            # - document
-            n_document_tokens = len(ENCODING(document))
-            if (n_tokens + n_document_tokens) >= PROMPT_MAX_TOKENS:
-                break
-            n_tokens += n_document_tokens
-            messages[0]["content"] += document
-        # response
-        api_response = MODEL(messages=messages)
-        content = api_response["choices"][0]["message"]["content"]
-        # return
-        return content
+def answer(message: str, history: list[str]) -> str:
+    """Answer questions about my resume."""
+    # counters
+    n_tokens = 0
+    # messages
+    messages = []
+    # - context
+    n_tokens += len(ENCODING(PROMPT_CONTEXT))
+    messages += [{"role": "system", "content": PROMPT_CONTEXT}]
+    # - history
+    for user_content, assistant_content in history:
+        n_tokens += len(ENCODING(user_content))
+        n_tokens += len(ENCODING(assistant_content))
+        messages += [{"role": "user", "content": user_content}]
+        messages += [{"role": "assistant", "content": assistant_content}]
+    # - message
+    n_tokens += len(ENCODING(message))
+    messages += [{"role": "user", "content": message}]
+    # database
+    results = COLLECTION.query(query_texts=message, n_results=QUERY_N_RESULTS)
+    distances, documents = results["distances"][0], results["documents"][0]
+    for distance, document in zip(distances, documents):
+        # - distance
+        if distance > QUERY_MAX_DISTANCE:
+            break
+        # - document
+        n_document_tokens = len(ENCODING(document))
+        if (n_tokens + n_document_tokens) >= PROMPT_MAX_TOKENS:
+            break
+        n_tokens += n_document_tokens
+        messages[0]["content"] += document
+    # response
+    api_response = MODEL(messages=messages)
+    content = api_response["choices"][0]["message"]["content"]
+    # return
+    return content
+```
 
 #### Chatbot Interface: Gradio 🖼️
 
@@ -178,15 +190,17 @@ Multiple avenues are available for constructing a chat interface, ranging from d
 
 Despite its simplicity, [Gradio](https://www.gradio.app/) offers ample room for customization. I was able to fine-tune the interface by eliminating extraneous buttons, selecting an appropriate theme, and showcasing example interactions to the end user.
 
-    interface = gr.ChatInterface(
-        fn=answer,
-        theme=THEME,
-        title="glass",
-        examples=EXAMPLES,
-        clear_btn=None,
-        retry_btn=None,
-        undo_btn=None,
-    )
+```python
+interface = gr.ChatInterface(
+    fn=answer,
+    theme=THEME,
+    title="glass",
+    examples=EXAMPLES,
+    clear_btn=None,
+    retry_btn=None,
+    undo_btn=None,
+)
+```
 
 #### Chatbot Hosting: HuggingFace Spaces 🗄️
 
@@ -200,12 +214,14 @@ Hosting on HuggingFace Spaces: [https://huggingface.co/spaces/fmind/resume](http
 
 The final stage involved integrating the chatbot into my website. This task was exceptionally straightforward, as [HuggingFace Spaces](https://huggingface.co/spaces) allows for the creation of a web component — an HTML snippet that can be seamlessly added to any site.
 
-    <script
-     type="module"
-     src="https://gradio.s3-us-west-2.amazonaws.com/3.46.0/gradio.js"
-    ></script>
+```html
+<script
+ type="module"
+ src="https://gradio.s3-us-west-2.amazonaws.com/3.46.0/gradio.js"
+></script>
 
-    <gradio-app src="https://fmind-resume.hf.space"></gradio-app>
+<gradio-app src="https://fmind-resume.hf.space"></gradio-app>
+```
 
 And there you have it! [A personal chatbot is now integrated into my website, ready to field your questions](https://www.fmind.dev/).
 

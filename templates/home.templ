@@ -18,7 +18,7 @@ templ HeroSection() {
 	<div class="hero min-h-screen bg-base-200 relative overflow-hidden flex items-center justify-center">
 		<div class="hero-content text-center z-10 relative px-4">
 			<div class="max-w-5xl">
-				<!-- Avatar -->
+				// Avatar
 				<div class="avatar mb-8">
 					<div class="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 shadow-2xl overflow-hidden mx-auto">
 						<img
@@ -33,14 +33,14 @@ templ HeroSection() {
 						/>
 					</div>
 				</div>
-				<!-- Headline -->
+				// Headline
 				<h1 class="text-5xl md:text-7xl font-heading font-black mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 select-text">
 					{ METADATA.Name }
 				</h1>
 				<h2 class="text-xl md:text-3xl font-heading font-medium text-base-content/90 mb-10 max-w-5xl mx-auto leading-relaxed text-balance select-text">
 					{ METADATA.HeadlinePrimary }
 				</h2>
-				<!-- Actions -->
+				// Actions
 				<div class="flex flex-wrap justify-center gap-4 md:gap-8">
 					<a
 						class="btn btn-lg bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-transform hover:shadow-xl hover:shadow-primary/10 px-6 py-3 font-semibold"
@@ -57,7 +57,7 @@ templ HeroSection() {
 						Book a Session
 					</a>
 				</div>
-				<!-- Scroll Down -->
+				// Scroll Down
 				<div class="mt-16 animate-bounce flex justify-center">
 					<a class="text-primary hover:text-primary-focus transition-colors duration-300" href="#about" aria-label="Scroll to About section">
 						@Icon("arrow_down", "h-10 w-10")
@@ -71,7 +71,7 @@ templ HeroSection() {
 templ AboutSection() {
 	<section class="py-16 md:py-24 bg-base-100 overflow-hidden px-4" id="about">
 		<div class="container mx-auto">
-			<!-- Section Header -->
+			// Section Header
 			<div class="text-center mb-12">
 				<h2 class="text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content">
 					About <span class="text-primary">Me</span>
@@ -80,7 +80,7 @@ templ AboutSection() {
 					Transforming AI/ML initiatives into secure, scalable, and high-impact solutions.
 				</p>
 			</div>
-			<!-- Biography -->
+			// Biography
 			<div class="grid md:grid-cols-12 gap-8 mb-14">
 				<div class="md:col-span-10 md:col-start-2 space-y-6">
 					<div class="prose prose-lg text-base-content/80 mx-auto leading-loose [&_p]:leading-loose space-y-6 select-text">
@@ -92,12 +92,12 @@ templ AboutSection() {
 					</div>
 				</div>
 			</div>
-			<!-- Core Expertise Divider -->
+			// Core Expertise Divider
 			<h3 class="text-xl font-bold mb-10 flex items-center justify-center gap-2">
 				<span class="w-2 h-8 bg-primary rounded-full"></span>
 				Core Expertise & Skills
 			</h3>
-			<!-- Cards Grid -->
+			// Cards Grid
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 max-w-6xl mx-auto">
 				for i, card := range EXPERTISE {
 					<div class="card bg-base-200/50 backdrop-blur-sm hover:bg-base-200 transition-all duration-300 hover:-translate-y-2 border border-base-300 hover:border-primary/30 overflow-hidden h-full shadow-xl hover:shadow-2xl group">
@@ -119,7 +119,7 @@ templ AboutSection() {
 templ WorkExperienceSection() {
 	<section class="py-16 md:py-24 bg-base-200 px-4" id="work-experience">
 		<div class="container mx-auto">
-			<!-- Section Header -->
+			// Section Header
 			<div class="text-center mb-10 md:mb-16">
 				<h2 class="text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content">
 					Work <span class="text-primary">Experience</span>
@@ -128,12 +128,12 @@ templ WorkExperienceSection() {
 					A track record of engineering scale, reliability, and security for industry-leading institutions.
 				</p>
 			</div>
-			<!-- Experience Timeline Grid -->
+			// Experience Timeline Grid
 			<ul class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 max-w-6xl mx-auto">
 				for _, item := range EXPERIENCES {
 					<li class="h-full">
 						<div class="card card-side bg-base-100 shadow-xl border-l-4 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 h-full flex flex-col sm:flex-row overflow-hidden group" data-company={ item.Company }>
-							<!-- Logo Figure Container (Left side) -->
+							// Logo Figure Container (Left side)
 							<figure class="w-full sm:w-1/3 p-4 sm:p-6 shrink-0 flex items-center justify-center min-h-24 sm:min-h-[150px] bg-slate-50 border-r border-base-200">
 								<div class="rounded-lg p-2 flex items-center justify-center w-full h-full max-h-24 max-w-[150px]">
 									<img
@@ -147,7 +147,7 @@ templ WorkExperienceSection() {
 									/>
 								</div>
 							</figure>
-							<!-- Experience Info (Right side) -->
+							// Experience Info (Right side)
 							<div class="card-body w-full sm:w-2/3 p-6 flex flex-col justify-between">
 								<div>
 									<h3 class="card-title text-lg md:text-xl font-bold leading-tight text-base-content select-text">
@@ -158,7 +158,7 @@ templ WorkExperienceSection() {
 										{ item.Description }
 									</p>
 								</div>
-								<!-- Tag Badges -->
+								// Tag Badges
 								<div class="card-actions justify-start gap-1.5 mt-6">
 									for _, tag := range item.Tags {
 										<div class="badge badge-outline text-xs border-base-content/25 py-2 px-2.5 font-medium select-none">
@@ -171,7 +171,7 @@ templ WorkExperienceSection() {
 					</li>
 				}
 			</ul>
-			<!-- Current leadership and community roles -->
+			// Current leadership and community roles
 			<h3 class="text-xl font-bold mb-8 mt-14 md:mt-20 flex items-center justify-center gap-2">
 				<span class="w-2 h-8 bg-primary rounded-full"></span>
 				Leadership & Community
@@ -204,14 +204,14 @@ templ WorkExperienceSection() {
 templ CertificationsSection() {
 	<section class="py-16 md:py-24 bg-base-100 px-4" id="certifications">
 		<div class="container mx-auto">
-			<!-- Section Header -->
+			// Section Header
 			<div class="text-center mb-10 md:mb-16">
 				<h2 class="text-4xl md:text-5xl font-heading font-bold mb-4 text-primary">Certifications</h2>
 				<p class="text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance">
 					Validated capabilities from leading foundations, cloud providers, and academic networks.
 				</p>
 			</div>
-			<!-- Credentials Badges Grid -->
+			// Credentials Badges Grid
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center max-w-6xl mx-auto mb-16">
 				for _, badge := range BADGES {
 					<a
@@ -220,7 +220,7 @@ templ CertificationsSection() {
 						target="_blank"
 						rel="noopener noreferrer"
 					>
-						<!-- Logo Container -->
+						// Logo Container
 						<div class="p-2.5 rounded-xl group-hover:bg-base-300 transition-colors shrink-0 flex items-center justify-center w-16 h-16 bg-slate-50 border border-base-200">
 							<img
 								class="w-11 h-11 object-contain"
@@ -232,7 +232,7 @@ templ CertificationsSection() {
 								decoding="async"
 							/>
 						</div>
-						<!-- Content Info -->
+						// Content Info
 						<div class="flex-1 min-w-0">
 							<h3 class={ "font-bold text-base md:text-md leading-tight line-clamp-2 transition-colors select-text", templ.KV("text-primary", badge.Active), templ.KV("text-base-content group-hover:text-accent", !badge.Active) }>
 								{ badge.Title }
@@ -241,7 +241,7 @@ templ CertificationsSection() {
 								{ badge.Issuer } • { badge.CertID }
 							</p>
 						</div>
-						<!-- Link Indicator Icon -->
+						// Link Indicator Icon
 						if badge.Active {
 							@Icon("external_link", "w-4 h-4 transition-opacity shrink-0 text-primary opacity-50 group-hover:opacity-100")
 						} else {
@@ -250,7 +250,7 @@ templ CertificationsSection() {
 					</a>
 				}
 			</div>
-			<!-- Specializations & Foundations Divider -->
+			// Specializations & Foundations Divider
 			<div class="relative py-8 max-w-6xl mx-auto">
 				<div class="absolute inset-0 flex items-center" aria-hidden="true">
 					<div class="w-full border-t border-base-300"></div>
@@ -261,7 +261,7 @@ templ CertificationsSection() {
 					</span>
 				</div>
 			</div>
-			<!-- Specializations Entry Grid -->
+			// Specializations Entry Grid
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto mt-6">
 				for _, entry := range SPECIALIZATIONS {
 					<a
@@ -300,15 +300,15 @@ const HOME_ARTICLE_COUNT = 6
 templ ArticlesSection(articles []Article) {
 	<section class="py-16 md:py-24 bg-base-200 px-4" id="articles">
 		<div class="container mx-auto">
-			<!-- Section Header -->
+			// Section Header
 			<div class="text-center mb-10 md:mb-16">
 				<h2 class="text-4xl md:text-5xl font-heading font-bold mb-4 text-primary">Articles</h2>
 				<p class="text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance">
 					Field notes on AI agents, MLOps, cloud architecture, and security — written from delivery, not theory.
 				</p>
 			</div>
-			<!-- Recent articles: the same card component the index uses, so both
-			     surfaces stay identical as the article model evolves. -->
+			// Recent articles: the same card component the index uses, so both
+			// surfaces stay identical as the article model evolves.
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
 				for i, article := range articles {
 					if i < HOME_ARTICLE_COUNT {
@@ -332,14 +332,14 @@ templ ArticlesSection(articles []Article) {
 templ ProjectsSection() {
 	<section class="py-16 md:py-24 bg-base-200 px-4" id="projects">
 		<div class="container mx-auto">
-			<!-- Section Header -->
+			// Section Header
 			<div class="text-center mb-10 md:mb-16">
 				<h2 class="text-4xl md:text-5xl font-heading font-bold mb-4 text-primary">Projects</h2>
 				<p class="text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance">
 					Open-source repositories and educational deep dives created to upskill engineers worldwide.
 				</p>
 			</div>
-			<!-- Open Source Projects Section -->
+			// Open Source Projects Section
 			<div class="mb-16 max-w-6xl mx-auto">
 				<h3 class="text-2xl font-bold mb-6 text-base-content">
 					<a
@@ -356,7 +356,7 @@ templ ProjectsSection() {
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 					for _, project := range OPEN_SOURCE {
 						<div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-base-300 hover:border-primary/30 group overflow-hidden">
-							<!-- Top Gradient Accent line -->
+							// Top Gradient Accent line
 							<div class="h-0.5 bg-gradient-to-r from-primary to-blue-400"></div>
 							<div class="card-body p-6 flex flex-col justify-between">
 								<div>
@@ -404,7 +404,7 @@ templ ProjectsSection() {
 					}
 				</div>
 			</div>
-			<!-- YouTube Series Section -->
+			// YouTube Series Section
 			<div class="max-w-6xl mx-auto">
 				<h3 class="text-2xl font-bold mb-6 text-base-content">
 					<a
@@ -426,7 +426,7 @@ templ ProjectsSection() {
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							<!-- Top Gradient Accent line -->
+							// Top Gradient Accent line
 							<div class="h-0.5 bg-gradient-to-r from-primary to-blue-400"></div>
 							<div class="card-body p-6">
 								<h3 class="card-title text-base-content group-hover:text-primary transition-colors flex items-center gap-1.5 select-none">
@@ -454,7 +454,7 @@ templ ProjectsSection() {
 templ ServicesSection() {
 	<section class="py-16 md:py-24 bg-base-100 overflow-hidden relative px-4" id="services">
 		<div class="container mx-auto">
-			<!-- Section Header -->
+			// Section Header
 			<div class="text-center mb-10 md:mb-16">
 				<h2 class="text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content">
 					My <span class="text-primary">Services</span>
@@ -463,12 +463,12 @@ templ ServicesSection() {
 					Bring deep AI architecture, MLOps, and security expertise to your next high-impact initiative.
 				</p>
 			</div>
-			<!-- Services Cards Grid -->
+			// Services Cards Grid
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
 				for _, service := range GetServices() {
 					<div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-primary group rounded-2xl overflow-hidden">
 						<div class="card-body p-8 items-center text-center">
-							<!-- Large Icon -->
+							// Large Icon
 							<span class="text-6xl mb-4 inline-block group-hover:scale-110 transition-transform duration-300 select-none" aria-hidden="true">
 								{ service.Icon }
 							</span>
@@ -481,7 +481,7 @@ templ ServicesSection() {
 							<div class={ "badge gap-1 mt-6 font-semibold py-3 px-4 select-none", fmt.Sprintf("badge-%s text-%s-content", service.BadgeType, service.BadgeType) }>
 								{ service.Badge }
 							</div>
-							<!-- CTA Button -->
+							// CTA Button
 							<div class="card-actions mt-8 w-full justify-center">
 								if strings.HasPrefix(service.CTAURL, "mailto:") {
 									<a

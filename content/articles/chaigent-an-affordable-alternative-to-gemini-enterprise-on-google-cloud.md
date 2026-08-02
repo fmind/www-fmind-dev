@@ -4,7 +4,7 @@ description = "Build a cost-effective, private AI Agent solution on Google Cloud
 date = "2026-02-06"
 tags = ["Agent", "Cloud", "Project"]
 slug = "chaigent-an-affordable-alternative-to-gemini-enterprise-on-google-cloud"
-canonical = "https://medium.com/@fmind/chaigent-an-affordable-alternative-to-gemini-enterprise-on-google-cloud-292c8de08478"
+syndicated = "https://medium.com/@fmind/chaigent-an-affordable-alternative-to-gemini-enterprise-on-google-cloud-292c8de08478"
 draft = false
 +++
 
@@ -53,7 +53,7 @@ Gemini Enterprise provides a managed, “batteries-included” platform with bui
 - **No Visual Builder**: You define agents in code, not a drag-and-drop UI.
 - **Manual Governance**: You must implement your own permission logic per agent.
 - **Ops Overhead**: You are responsible for deploying, securing, and updating the application.
-- **Enterpise Features**: Advanced features like Model Armor ([**Prompt Security**](https://cloud.google.com/security/products/model-armor)) and integrated Knowledge Search ([**RAG**](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/rag-engine/rag-overview)) require manual implementation.
+- **Enterprise Features**: Advanced features like Model Armor ([**Prompt Security**](https://cloud.google.com/security/products/model-armor)) and integrated Knowledge Search ([**RAG**](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/rag-engine/rag-overview)) require manual implementation.
 
 ### Implementation Highlights
 
@@ -63,43 +63,47 @@ Chaigent is surprisingly simple to set up. Here is a glimpse of the code.
 
 The agent is defined declaratively using the [**Google ADK**](https://github.com/google/adk-python). It’s just a Python object specifying the model and tools.
 
-    # chaigent/agent.py
-    root_agent = agent(
-        name="chaigent",
-        model="gemini-2.5-flash",
-        description="answer questions with google search.",
-        instruction="you are an expert researcher. you always stick to the facts.",
-        tools=[google_search],
-    )
+```python
+# chaigent/agent.py
+root_agent = agent(
+    name="chaigent",
+    model="gemini-2.5-flash",
+    description="answer questions with google search.",
+    instruction="you are an expert researcher. you always stick to the facts.",
+    tools=[google_search],
+)
+```
 
 ### 2. The Bridge (Chainlit Adapter)
 
-The app.py acts as the bridge. It connects the user’s chat session to the Vertex AI Agent Engine, handling the streaming response seamlessly.
+The `app.py` acts as the bridge. It connects the user’s chat session to the Vertex AI Agent Engine, handling the streaming response seamlessly.
 
-    # app.py
+```python
+# app.py
 
-    @cl.on_message
-    async def on_message(message: cl.Message):
-        # Initialize response message
-        answer = cl.Message(content="")
-        await answer.send()
+@cl.on_message
+async def on_message(message: cl.Message):
+    # Initialize response message
+    answer = cl.Message(content="")
+    await answer.send()
 
-        # Retrieve session
-        session = cl.user_session.get("session")
-        user_id, session_id = session["userId"], session["id"]
+    # Retrieve session
+    session = cl.user_session.get("session")
+    user_id, session_id = session["userId"], session["id"]
 
-        # Stream the query to Vertex AI
-        response_stream = engine.async_stream_query(
-            user_id=user_id, message=message.content, session_id=session_id
-        )
+    # Stream the query to Vertex AI
+    response_stream = engine.async_stream_query(
+        user_id=user_id, message=message.content, session_id=session_id
+    )
 
-        # Stream back the tokens
-        async for chunk in response_stream:
-            for part in chunk.get("content", {}).get("parts", []):
-                text = part.get("text", "")
-                if text:
-                    await answer.stream_token(text)
-                    await answer.update()
+    # Stream back the tokens
+    async for chunk in response_stream:
+        for part in chunk.get("content", {}).get("parts", []):
+            text = part.get("text", "")
+            if text:
+                await answer.stream_token(text)
+                await answer.update()
+```
 
 ### User Experience
 

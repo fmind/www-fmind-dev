@@ -4,7 +4,7 @@ description = "Build \u0026 deploy a RAG app in minutes! Use Vertex AI Studio \u
 date = "2025-05-11"
 tags = ["RAG", "Cloud", "Demo"]
 slug = "hackathon-speedrun-build-deploy-a-rag-app-in-minutes-with-vertex-ai-studio-vertex-ai-search"
-canonical = "https://medium.com/@fmind/hackathon-speedrun-build-deploy-a-rag-app-in-minutes-with-vertex-ai-studio-vertex-ai-search-f1687be7e6b4"
+syndicated = "https://medium.com/@fmind/hackathon-speedrun-build-deploy-a-rag-app-in-minutes-with-vertex-ai-studio-vertex-ai-search-f1687be7e6b4"
 draft = false
 +++
 
@@ -45,69 +45,73 @@ Creation of the Cloud Storage Bucket
 
 &nbsp;
 
-    # %% IMPORTS
+```python
+# %% IMPORTS
 
-    import os
-    import json
-    from pathlib import Path
+import os
+import json
+from pathlib import Path
 
-    # %% CONFIGS
+# %% CONFIGS
 
-    PROJECT = Path(__file__).parent.parent
-    FOLDERS = [
-        PROJECT / 'A2A',
-        PROJECT / 'modelcontextprotocol',
-    ]
-    BUCKET = "gs://agentoc-data-sources"
-    BUCKET_DATA = f"{BUCKET}/data"
-    OUTPUTS = PROJECT / 'outputs'
-    METADATA = PROJECT / 'metadata.jsonlines'
+PROJECT = Path(__file__).parent.parent
+FOLDERS = [
+    PROJECT / 'A2A',
+    PROJECT / 'modelcontextprotocol',
+]
+BUCKET = "gs://agentoc-data-sources"
+BUCKET_DATA = f"{BUCKET}/data"
+OUTPUTS = PROJECT / 'outputs'
+METADATA = PROJECT / 'metadata.jsonlines'
 
-    # %% PROCESSING
+# %% PROCESSING
 
-    with open(METADATA, 'w') as f:
-        for folder in FOLDERS:
-            for path in folder.rglob('*'):
-                try:
-                    if not path.is_file(): # skip non files
-                        continue
-                    if path.stat().st_size == 0: # skip empty files
-                        continue
-                    # output
-                    output = OUTPUTS / str(path.relative_to(PROJECT)).replace('/', '__')
-                    output = output.with_suffix(output.suffix + '.txt')
-                    output.write_text(path.read_text())
-                    print("File:", output)
-                    # metadata
-                    metadata = {
-                        'id': output.name.replace('.txt', '').replace('.', '--'),
-                        "structData": {
-                            "source": folder.name,
-                            "path": str(path.relative_to(folder)),
-                        },
-                        "content": {
-                            "mimeType": "text/plain",
-                            "uri": f"{BUCKET_DATA}/{output.name}"
-                        }
+with open(METADATA, 'w') as f:
+    for folder in FOLDERS:
+        for path in folder.rglob('*'):
+            try:
+                if not path.is_file(): # skip non files
+                    continue
+                if path.stat().st_size == 0: # skip empty files
+                    continue
+                # output
+                output = OUTPUTS / str(path.relative_to(PROJECT)).replace('/', '__')
+                output = output.with_suffix(output.suffix + '.txt')
+                output.write_text(path.read_text())
+                print("File:", output)
+                # metadata
+                metadata = {
+                    'id': output.name.replace('.txt', '').replace('.', '--'),
+                    "structData": {
+                        "source": folder.name,
+                        "path": str(path.relative_to(folder)),
+                    },
+                    "content": {
+                        "mimeType": "text/plain",
+                        "uri": f"{BUCKET_DATA}/{output.name}"
                     }
-                    jsondata = json.dumps(metadata)
-                    f.write(jsondata + '\n')
-                except Exception as error:
-                    print(f"Error: {path} - {error}")
+                }
+                jsondata = json.dumps(metadata)
+                f.write(jsondata + '\n')
+            except Exception as error:
+                print(f"Error: {path} - {error}")
 
-    # %% UPLOADS
+# %% UPLOADS
 
-    os.system(f"gcloud storage cp {METADATA} {BUCKET}")
-    os.system(f"gcloud storage cp -r {OUTPUTS}/* {BUCKET_DATA}")
+os.system(f"gcloud storage cp {METADATA} {BUCKET}")
+os.system(f"gcloud storage cp -r {OUTPUTS}/* {BUCKET_DATA}")
+```
 
 - The resulting [metadata.jsonlines](https://github.com/fmind/agentoc/blob/main/metadata.jsonlines) file looked something like this (each document on a new line):
 
 &nbsp;
 
-    {"id": "A2A__docs__community--md", "structData": {"source": "A2A", "path": "docs/community.md"}, "content": {"mimeType": "text/plain", "uri": "gs://agentoc-data-sources/data/A2A__docs__community.md.txt"}}
-    {"id": "A2A__docs__documentation--md", "structData": {"source": "A2A", "path": "docs/documentation.md"}, "content": {"mimeType": "text/plain", "uri": "gs://agentoc-data-sources/data/A2A__docs__documentation.md.txt"}}
-    {"id": "A2A__docs__index--md", "structData": {"source": "A2A", "path": "docs/index.md"}, "content": {"mimeType": "text/plain", "uri": "gs://agentoc-data-sources/data/A2A__docs__index.md.txt"}}
-    ...
+```json
+{"id": "A2A__docs__community--md", "structData": {"source": "A2A", "path": "docs/community.md"}, "content": {"mimeType": "text/plain", "uri": "gs://agentoc-data-sources/data/A2A__docs__community.md.txt"}}
+{"id": "A2A__docs__documentation--md", "structData": {"source": "A2A", "path": "docs/documentation.md"}, "content": {"mimeType": "text/plain", "uri": "gs://agentoc-data-sources/data/A2A__docs__documentation.md.txt"}}
+{"id": "A2A__docs__index--md", "structData": {"source": "A2A", "path": "docs/index.md"}, "content": {"mimeType": "text/plain", "uri": "gs://agentoc-data-sources/data/A2A__docs__index.md.txt"}}
+...
+```
 
 - Make sure the URI points to the actual files (txt, pdf, html etc.) also uploaded to your bucket. I uploaded my metadata.jsonlines and the referenced documents into my **agentoc-data-sources** bucket.
 

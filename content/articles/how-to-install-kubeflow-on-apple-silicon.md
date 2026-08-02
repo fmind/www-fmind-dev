@@ -4,7 +4,7 @@ description = "Kubeflow Pipelines (KFP) is a powerful platform for building mach
 date = "2022-09-24"
 tags = ["Cloud", "Guide"]
 slug = "how-to-install-kubeflow-on-apple-silicon"
-canonical = "https://medium.com/@fmind/how-to-install-kubeflow-on-apple-silicon-3565db8773f3"
+syndicated = "https://medium.com/@fmind/how-to-install-kubeflow-on-apple-silicon-3565db8773f3"
 draft = false
 +++
 
@@ -37,18 +37,22 @@ You need to make two choices for installing Kubeflow Pipelines:
 
 &nbsp;
 
-    # set the variables for the installation
-    KFP_PLATFORM=platform-agnostic-emissary
-    KFP_VERSION=2.0.0b4
+```bash
+# set the variables for the installation
+KFP_PLATFORM=platform-agnostic-emissary
+KFP_VERSION=2.0.0b4
 
-    # start the installation using kubectl apply
-    kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/cluster-scoped-resources?ref=$KFP_VERSION"
-    kubectl wait --for condition=established --timeout=60s crd/applications.app.k8s.io
-    kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/$KFP_PLATFORM?ref=$KFP_VERSION"
+# start the installation using kubectl apply
+kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/cluster-scoped-resources?ref=$KFP_VERSION"
+kubectl wait --for condition=established --timeout=60s crd/applications.app.k8s.io
+kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/$KFP_PLATFORM?ref=$KFP_VERSION"
+```
 
 The last command may take several minutes to complete, as Kubernetes needs to download the required container images and create the pods for Kubeflow Pipelines. You can monitor the deployment happening in the `kubeflow` namespace using this command:
 
-    kubectl get pods -n kubeflow --watch
+```bash
+kubectl get pods -n kubeflow --watch
+```
 
 **Once all Kubeflow Pipelines Pods have the RUNNING Status, you can move to the next step**.
 
@@ -58,7 +62,9 @@ The last command may take several minutes to complete, as Kubernetes needs to do
 
 **We need to forward the port of KFP UI to your system to access the main dashboard from your browser.** To do so, set a port forward from the `ml-pipeline-ui` Pod to a port on your machine (e.g., 8443 in the example below).
 
-    kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8443:80
+```bash
+kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8443:80
+```
 
 **You should now be able to access Kubeflow Pipelines at this address:** [**http://localhost:8443/#/pipelines**](http://localhost:8443/#/pipelines)
 
@@ -87,10 +93,12 @@ This guide was written after many trials and errors. You can find below the issu
 
 &nbsp;
 
-    # open a shell to the node executing your pods
-    rdctl shell
-    # install the required container images manually
-    docker pull ...
+```bash
+# open a shell to the node executing your pods
+rdctl shell
+# install the required container images manually
+docker pull ...
+```
 
 - **Slow UI with Rancher Desktop port forwarding**: Rancher Desktop provides a GUI to set up port forwarding. However, the KFP UI was not responsive when I follow this method.
 

@@ -4,7 +4,7 @@ description = "This article dives deep into the essential tools and practices fo
 date = "2024-07-28"
 tags = ["MLOps", "Guide"]
 slug = "mlops-coding-course-mastering-observability-for-reliable-ml"
-canonical = "https://medium.com/@fmind/mlops-coding-course-mastering-observability-for-reliable-ml-f36eb7802865"
+syndicated = "https://medium.com/@fmind/mlops-coding-course-mastering-observability-for-reliable-ml-f36eb7802865"
 draft = false
 +++
 
@@ -37,14 +37,16 @@ Standardize the way you package your ML code, dependencies, and environment conf
 
 [**MLproject file**](https://github.com/fmind/mlops-python-package/blob/main/MLproject) **:**
 
-    # Define the structure of your MLflow project
-    name: bikes
-    python_env: python_env.yaml
-    entry_points:
-      main:
-        parameters:
-          conf_file: path
-        command: "PYTHONPATH=src python -m bikes {conf_file}"
+```yaml
+# Define the structure of your MLflow project
+name: bikes
+python_env: python_env.yaml
+entry_points:
+  main:
+    parameters:
+      conf_file: path
+    command: "PYTHONPATH=src python -m bikes {conf_file}"
+```
 
 **2. Shine a Light on** [**Model Monitoring**](https://mlops-coding-course.fmind.dev/7.%20Observability/7.1.%20Monitoring.html) **with** [**MLflow Model Evaluation**](https://mlflow.org/docs/latest/model-evaluation/index.html) **:**
 
@@ -52,16 +54,18 @@ Employ [MLflow’s evaluate API](https://mlflow.org/docs/latest/model-evaluation
 
 [**Evaluation Job file**](https://github.com/fmind/mlops-python-package/blob/main/src/bikes/jobs/evaluations.py) **:**
 
-    from bikes.core import metrics as metrics_
-    # Define the metrics to track
-    metrics = [
-        metrics_.SklearnMetric(name="mean_squared_error", greater_is_better=False),
-        metrics_.SklearnMetric(name="r2_score", greater_is_better=True),
-    ]
-    # Define thresholds for specific metrics (optional)
-    thresholds = {
-        "r2_score": metrics_.Threshold(threshold=0.5, greater_is_better=True) # Alert if R-squared drops below 0.5
-    }
+```python
+from bikes.core import metrics as metrics_
+# Define the metrics to track
+metrics = [
+    metrics_.SklearnMetric(name="mean_squared_error", greater_is_better=False),
+    metrics_.SklearnMetric(name="r2_score", greater_is_better=True),
+]
+# Define thresholds for specific metrics (optional)
+thresholds = {
+    "r2_score": metrics_.Threshold(threshold=0.5, greater_is_better=True) # Alert if R-squared drops below 0.5
+}
+```
 
 ![Model Monitoring with MLflow Model Evaluation](/static/img/articles/mlops-coding-course-mastering-observability-for-reliable-ml/02.webp)
 
@@ -71,20 +75,22 @@ Model Monitoring with [MLflow Model Evaluation](https://mlflow.org/docs/latest/m
 
 [**Evidently Example**](https://docs.evidentlyai.com/examples/introduction) **:**
 
-    import pandas as pd
-    from evidently.report import Report
-    from evidently.metric_preset import DataDriftPreset
+```python
+import pandas as pd
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset
 
-    # Load reference data (data used for training)
-    reference_data = pd.read_csv('reference.csv')
-    # Load current data (data the model is currently predicting on)
-    current_data = pd.read_csv('current.csv')
-    # Generate an Evidently report for data drift detection
-    report = Report(metrics=[DataDriftPreset()])
-    report.run(reference_data=reference_data, current_data=current_data)
-    report.show()  # Display the interactive report in a web browser
-    # or
-    # report.save_html('my_report.html')  # Save the report as an HTML file
+# Load reference data (data used for training)
+reference_data = pd.read_csv('reference.csv')
+# Load current data (data the model is currently predicting on)
+current_data = pd.read_csv('current.csv')
+# Generate an Evidently report for data drift detection
+report = Report(metrics=[DataDriftPreset()])
+report.run(reference_data=reference_data, current_data=current_data)
+report.show()  # Display the interactive report in a web browser
+# or
+# report.save_html('my_report.html')  # Save the report as an HTML file
+```
 
 **3. Set up** [**Alerting**](https://mlops-coding-course.fmind.dev/7.%20Observability/7.2.%20Alerting.html) **for Timely Interventions:**
 
@@ -92,12 +98,14 @@ During development, utilize a simple alerting service based on the [Plyer](https
 
 [**Alerting Service file**](https://github.com/fmind/mlops-python-package/blob/main/src/bikes/io/services.py) **:**
 
-    from bikes.io import services
+```python
+from bikes.io import services
 
-    # Initialize the alerting service, enable notifications, and set application name and timeout
-    alerts_service = services.AlertsService(enable=True, app_name="Bikes", timeout=5)
-    # Within a job's run() method, send a notification when a task completes
-    self.alerts_service.notify(title="Training Complete", message=f"Model version: {model_version.version}")
+# Initialize the alerting service, enable notifications, and set application name and timeout
+alerts_service = services.AlertsService(enable=True, app_name="Bikes", timeout=5)
+# Within a job's run() method, send a notification when a task completes
+self.alerts_service.notify(title="Training Complete", message=f"Model version: {model_version.version}")
+```
 
 For production environments, integrate with powerful platforms like [Datadog](https://www.datadoghq.com/). Datadog offers comprehensive dashboards, customizable alerts, and flexible notification channels to keep you informed.
 
@@ -107,13 +115,15 @@ Employ [MLflow Data API](https://mlflow.org/docs/latest/tracking/data-api.html) 
 
 [**Lineage in Training Job file**](https://github.com/fmind/mlops-python-package/blob/main/src/bikes/jobs/training.py) **:**
 
-    import mlflow.data.pandas_dataset as lineage
+```python
+import mlflow.data.pandas_dataset as lineage
 
-    # Within a job's run() method
-    inputs_lineage = lineage.from_pandas(
-      df=data, name=name, source=self.path, targets=targets, predictions=predictions
-    )
-    mlflow.log_input(dataset=inputs_lineage, context=self.run_config.name)
+# Within a job's run() method
+inputs_lineage = lineage.from_pandas(
+  df=data, name=name, source=self.path, targets=targets, predictions=predictions
+)
+mlflow.log_input(dataset=inputs_lineage, context=self.run_config.name)
+```
 
 ![Data Lineage information gathered with MLflow Data API](/static/img/articles/mlops-coding-course-mastering-observability-for-reliable-ml/03.webp)
 
@@ -133,25 +143,27 @@ Integrate [SHAP (SHapley Additive exPlanations)](https://shap.readthedocs.io/en/
 
 [**Explain samples from Models file**](https://github.com/fmind/mlops-python-package/blob/main/src/bikes/core/models.py) **:**
 
-    @T.override
-    def explain_samples(self, inputs: schemas.Inputs) -> schemas.SHAPValues:
-        """Explain model outputs on input samples.
+```python
+@T.override
+def explain_samples(self, inputs: schemas.Inputs) -> schemas.SHAPValues:
+    """Explain model outputs on input samples.
 
-        Args:
-            inputs (schemas.Inputs): The input data samples.
-        Returns:
-            schemas.SHAPValues: A dataframe containing the SHAP values for each feature.
-        """
-        model = self.get_internal_model()
-        regressor = model.named_steps["regressor"]
-        transformer = model.named_steps["transformer"]
-        transformed = transformer.transform(X=inputs)
-        explainer = shap.TreeExplainer(model=regressor)
-        shap_values = schemas.SHAPValues(
-            data=explainer.shap_values(X=transformed),
-            columns=transformer.get_feature_names_out(),
-        )
-        return shap_values
+    Args:
+        inputs (schemas.Inputs): The input data samples.
+    Returns:
+        schemas.SHAPValues: A dataframe containing the SHAP values for each feature.
+    """
+    model = self.get_internal_model()
+    regressor = model.named_steps["regressor"]
+    transformer = model.named_steps["transformer"]
+    transformed = transformer.transform(X=inputs)
+    explainer = shap.TreeExplainer(model=regressor)
+    shap_values = schemas.SHAPValues(
+        data=explainer.shap_values(X=transformed),
+        columns=transformer.get_feature_names_out(),
+    )
+    return shap_values
+```
 
 ![SHAP Values for explaining feature influences on data samples](/static/img/articles/mlops-coding-course-mastering-observability-for-reliable-ml/05.webp)
 

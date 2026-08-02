@@ -68,12 +68,12 @@ func TestArticleIndexUnknownTagFallsBackToAllArticles(t *testing.T) {
 		article("first", 2, "AI"),
 		article("second", 1, "Cloud"),
 	}
-	groups, _, activeTag := articleIndexData(articles, "not-a-real-tag")
-	if activeTag != "" {
-		t.Errorf("active tag = %q, want empty", activeTag)
+	view := articleIndexData(articles, newSearchIndex(articles), "not-a-real-tag", "")
+	if view.ActiveTag != "" {
+		t.Errorf("active tag = %q, want empty", view.ActiveTag)
 	}
 	count := 0
-	for _, group := range groups {
+	for _, group := range view.Years {
 		count += len(group.Articles)
 	}
 	if count != len(articles) {

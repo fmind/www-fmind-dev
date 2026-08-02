@@ -4,7 +4,7 @@ description = "Large Language Model (LLM) is such an exciting topic. Since the r
 date = "2023-05-08"
 tags = ["LLM", "MLOps", "Demo"]
 slug = "fixing-the-mlops-survey-on-llms-with-chatgpt-api-lessons-learned"
-canonical = "https://medium.com/@fmind/fixing-the-mlops-survey-on-llms-with-chatgpt-api-lessons-learned-62d90e721331"
+syndicated = "https://medium.com/@fmind/fixing-the-mlops-survey-on-llms-with-chatgpt-api-lessons-learned-62d90e721331"
 draft = false
 +++
 
@@ -83,76 +83,82 @@ I used [Google Colab](https://colab.research.google.com/) to clean up the survey
 
 The code snippet below shows the [Open AI model](https://platform.openai.com/docs/api-reference/models) used for this experiment. The [“gpt-3.5-turbo” corresponds to the same model used by the ChatGPT application](https://zapier.com/blog/chatgpt-vs-gpt/). The [ChatGPT API](https://platform.openai.com/docs/api-reference/chat) exposed [a single endpoint to create chat completions from user messages](https://platform.openai.com/docs/api-reference/chat) (i.e., POST [https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)).
 
+```json
+{
+  "created": 1677610602,
+  "id": "gpt-3.5-turbo",
+  "object": "model",
+  "owned_by": "openai",
+  "parent": null,
+  "permission": [
     {
-      "created": 1677610602,
-      "id": "gpt-3.5-turbo",
-      "object": "model",
-      "owned_by": "openai",
-      "parent": null,
-      "permission": [
-        {
-          "allow_create_engine": false,
-          "allow_fine_tuning": false,
-          "allow_logprobs": true,
-          "allow_sampling": true,
-          "allow_search_indices": false,
-          "allow_view": true,
-          "created": 1683391732,
-          "group": null,
-          "id": "modelperm-Kch774kyIWxK1SMaTV7JKoho",
-          "is_blocking": false,
-          "object": "model_permission",
-          "organization": "*"
-        }
-      ],
-      "root": "gpt-3.5-turbo"
+      "allow_create_engine": false,
+      "allow_fine_tuning": false,
+      "allow_logprobs": true,
+      "allow_sampling": true,
+      "allow_search_indices": false,
+      "allow_view": true,
+      "created": 1683391732,
+      "group": null,
+      "id": "modelperm-Kch774kyIWxK1SMaTV7JKoho",
+      "is_blocking": false,
+      "object": "model_permission",
+      "organization": "*"
     }
+  ],
+  "root": "gpt-3.5-turbo"
+}
+```
 
 I used the following function to associate the user inputs with the model outputs. The function takes as arguments 1) the ChatGPT model, 2) the instructions to perform the task in natural language, 3) the user inputs from a single column, and 4) the size of the batch (i.e., how many user inputs are processed at a time). The function then converts the instructions and input batch to [ChatGPT messages and sends them to the API endpoint](https://platform.openai.com/docs/api-reference/chat). Finally, the model output is parsed to Python data structures and combined into a dataframe.
 
-    def associate(model, instructions: str, inputs: pd.Series, batch_size: int = 20, limit: int | None = None, **kwargs) -> pd.DataFrame:
-        """Associate the user inputs to the model outputs with the given instructions."""
-        # avoid wasting requests
-        requests = inputs.dropna()
-        # apply the limit (optional)
-        if limit is not None:
-            requests = requests[:limit]
-        print('- Inputs:', len(inputs))
-        # iterate on the requests by batch
-        dataframes = [] # store partial results
-        for i, subset in batch(requests, batch_size):
-            print('- batch:', i, '->', len(subset))
-            # query the model and extract the records
-            messages = chat(instructions, subset.tolist())
-            content = query(model, messages=messages)
-            records = from_jsonlines(content)
-            # handle the case where lengths are different
-            if len(records) != len(subset):
-                print(f'Warning! Got: {len(records)}, expected: {len(subset)}')
-                records = records + [{} for i in range(len(subset) - len(records))] 
-            # convert the records to an indexed dataframe
-            df = pd.DataFrame(records, index=subset.index)
-            dataframes.append(df)
-        # combine the results with the inputs
-        outputs = pd.concat(dataframes, axis='index')
-        reviews = pd.concat([inputs, outputs], axis='columns')
-        return reviews
+```python
+def associate(model, instructions: str, inputs: pd.Series, batch_size: int = 20, limit: int | None = None, **kwargs) -> pd.DataFrame:
+    """Associate the user inputs to the model outputs with the given instructions."""
+    # avoid wasting requests
+    requests = inputs.dropna()
+    # apply the limit (optional)
+    if limit is not None:
+        requests = requests[:limit]
+    print('- Inputs:', len(inputs))
+    # iterate on the requests by batch
+    dataframes = [] # store partial results
+    for i, subset in batch(requests, batch_size):
+        print('- batch:', i, '->', len(subset))
+        # query the model and extract the records
+        messages = chat(instructions, subset.tolist())
+        content = query(model, messages=messages)
+        records = from_jsonlines(content)
+        # handle the case where lengths are different
+        if len(records) != len(subset):
+            print(f'Warning! Got: {len(records)}, expected: {len(subset)}')
+            records = records + [{} for i in range(len(subset) - len(records))]
+        # convert the records to an indexed dataframe
+        df = pd.DataFrame(records, index=subset.index)
+        dataframes.append(df)
+    # combine the results with the inputs
+    outputs = pd.concat(dataframes, axis='index')
+    reviews = pd.concat([inputs, outputs], axis='columns')
+    return reviews
+```
 
 The text snippet below shows the prompt associated with Question 3: “What is your use case/use cases?”. The first four sentences described the task to be done by ChatGPT. The next two instructions explain the output format for the model. For simplicity's sake, I choose to use [JSON lines](https://jsonlines.org/) (i.e., JSON records separated by newlines) to easily parse the output with Python. Ultimately, the last sentences give an example of the expected input and output of the model.
 
 Here we can see that the task is quite complex, as the model needs to understand both the fields associated with the answer (e.g., analyze logs -\> Computer Security) and find common NLP tasks from the inputs (e.g., question and classify text -\> Questions Answering, Text Classification).
 
-    I received answers from an MLOps survey about Large Language Models (LLMs).
-    Your task is to extract all the Natural Language Processing (NLP) tasks and industry fields from each answer.
-    You should use common NLP tasks and industry fields whenever possible to avoid synonyms and acronyms.
-    If no tasks or fields are mentioned, you should use an empty string as a placeholder.
-    You should output these information in the JSON lines format.
-    You should generate one JSON line per answer.
-    Here's an example of an answer:
-    - analyze logs to answer questions and classify text
-    Here's an example of the expected output:
-    {"fields": "Computer Security", "tasks": "Question Answering, Text Classification"}
-    Answers:
+```text
+I received answers from an MLOps survey about Large Language Models (LLMs).
+Your task is to extract all the Natural Language Processing (NLP) tasks and industry fields from each answer.
+You should use common NLP tasks and industry fields whenever possible to avoid synonyms and acronyms.
+If no tasks or fields are mentioned, you should use an empty string as a placeholder.
+You should output these information in the JSON lines format.
+You should generate one JSON line per answer.
+Here's an example of an answer:
+- analyze logs to answer questions and classify text
+Here's an example of the expected output:
+{"fields": "Computer Security", "tasks": "Question Answering, Text Classification"}
+Answers:
+```
 
 #### Lessons Learned:
 

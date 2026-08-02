@@ -4,7 +4,7 @@ description = "Building AI applications is incredibly exciting. But let’s be h
 date = "2025-03-29"
 tags = ["MLOps", "Guide"]
 slug = "framework-template-or-example-choosing-the-right-ai-starter-kit-for-your-team"
-canonical = "https://medium.com/@fmind/framework-template-or-example-choosing-the-right-ai-starter-kit-for-your-team-c16fd2e9b6b8"
+syndicated = "https://medium.com/@fmind/framework-template-or-example-choosing-the-right-ai-starter-kit-for-your-team-c16fd2e9b6b8"
 draft = false
 +++
 
@@ -74,28 +74,30 @@ Let’s dive in and unpack each one:
 
 **Examples:** [cookiecutter-pypackage](https://github.com/audreyfeldroy/cookiecutter-pypackage) (Python), [cookiecutter-flask](https://github.com/cookiecutter-flask/cookiecutter-flask) (Web), [cookiecutter-mlops-package](https://github.com/fmind/cookiecutter-mlops-package) (MLOps)
 
-    {
-        "user": "fmind",
-        "name": "MLOps Project",
-        "repository": "{{cookiecutter.name.lower().replace(' ', '-')}}",
-        "package": "{{cookiecutter.repository.replace('-', '_')}}",
-        "license": "MIT",
-        "version": "0.1.0",
-        "description": "TODO",
-        "python_version": "3.13",
-        "mlflow_version": "2.20.3",
-        "__prompts__": {
-            "user": "GitHub User",
-            "name": "Project Name",
-            "repository": "GitHub Repository",
-            "package": "Python Package",
-            "license": "Project License",
-            "version": "Project Version",
-            "description": "Project Description",
-            "python_version": "Python Version",
-            "mlflow_version": "MLflow Version"
-        }
-    }
+```json
+{
+  "user": "fmind",
+  "name": "MLOps Project",
+  "repository": "{{cookiecutter.name.lower().replace(' ', '-')}}",
+  "package": "{{cookiecutter.repository.replace('-', '_')}}",
+  "license": "MIT",
+  "version": "0.1.0",
+  "description": "TODO",
+  "python_version": "3.13",
+  "mlflow_version": "2.20.3",
+  "__prompts__": {
+    "user": "GitHub User",
+    "name": "Project Name",
+    "repository": "GitHub Repository",
+    "package": "Python Package",
+    "license": "Project License",
+    "version": "Project Version",
+    "description": "Project Description",
+    "python_version": "Python Version",
+    "mlflow_version": "MLflow Version"
+  }
+}
+```
 
 ### 3. Code Examples: The Concrete Illustration ✨
 

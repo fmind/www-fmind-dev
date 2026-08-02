@@ -27,6 +27,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 
@@ -43,14 +44,20 @@ var (
 	articleFS embed.FS
 
 	articleSlugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
-	bodyImagePattern   = regexp.MustCompile(`<img src="(/static/img/articles/[^"]+)"`)
-	bodyVideoPattern   = regexp.MustCompile(`<img src="(/static/img/articles/[^"]+\.mp4)" alt="([^"]*)">`)
-	articleMarkdown    = goldmark.New(
+	// highlighter is built once and shared: it is stateless after construction and
+	// only ever reads its formatter and style.
+	highlighter, highlighterErr = newCodeHighlighter()
+	bodyImagePattern            = regexp.MustCompile(`<img src="(/static/img/articles/[^"]+)"`)
+	bodyVideoPattern            = regexp.MustCompile(`<img src="(/static/img/articles/[^"]+\.mp4)" alt="([^"]*)">`)
+	articleMarkdown             = goldmark.New(
 		goldmark.WithExtensions(extension.GFM, extension.Footnote, extension.Typographer),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(util.Prioritized(headingNormalizer{}, 100)),
 		),
+		// Priority 1 beats goldmark's own code block renderers, so highlighted
+		// markup is produced once at startup instead of by a script in the browser.
+		goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(highlighter, 1))),
 	)
 )
 
@@ -94,6 +101,7 @@ type articleFrontmatter struct {
 	Updated     string   `toml:"updated"`
 	Slug        string   `toml:"slug"`
 	Canonical   string   `toml:"canonical"`
+	Syndicated  string   `toml:"syndicated"`
 	Tags        []string `toml:"tags"`
 	Draft       bool     `toml:"draft"`
 }
@@ -104,6 +112,9 @@ type articleCollection struct {
 }
 
 func loadArticles() (articleCollection, error) {
+	if highlighterErr != nil {
+		return articleCollection{}, fmt.Errorf("initialize code highlighter: %w", highlighterErr)
+	}
 	names, err := fs.Glob(articleFS, articleContentPattern)
 	if err != nil {
 		return articleCollection{}, fmt.Errorf("list embedded articles: %w", err)
@@ -183,7 +194,7 @@ func parseArticle(name string, data []byte, assets fs.FS) (templates.Article, er
 	if renderErr := articleMarkdown.Convert(markdown, &rendered); renderErr != nil {
 		return templates.Article{}, fmt.Errorf("render %q: %w", name, renderErr)
 	}
-	body, err := enhanceBodyImages(rendered.String(), assets)
+	body, lead, err := enhanceBodyImages(rendered.String(), assets)
 	if err != nil {
 		return templates.Article{}, fmt.Errorf("parse %q: %w", name, err)
 	}
@@ -199,10 +210,13 @@ func parseArticle(name string, data []byte, assets fs.FS) (templates.Article, er
 		Tags:           metadata.Tags,
 		Slug:           metadata.Slug,
 		Canonical:      metadata.Canonical,
+		Syndicated:     metadata.Syndicated,
 		Draft:          metadata.Draft,
 		URL:            articleURL,
 		ImageURL:       templates.METADATA.SiteURL + "/" + imagePath,
 		CardImageURL:   templates.METADATA.SiteURL + "/" + cardImagePath,
+		CoverSrcset:    lead.srcset,
+		CoverSizes:     lead.sizes,
 		ImageAlt:       metadata.Title,
 		ReadingMinutes: readingMinutes,
 		Markdown:       string(markdown),
@@ -210,36 +224,51 @@ func parseArticle(name string, data []byte, assets fs.FS) (templates.Article, er
 	}, nil
 }
 
+// leadImage describes the first body image — the page's LCP element — so the
+// <head> preload can name exactly the candidates the layout will paint.
+type leadImage struct {
+	srcset string
+	sizes  string
+}
+
 // enhanceBodyImages gives every rendered body image what Markdown cannot express:
 // intrinsic dimensions, so the layout reserves the space before the bytes arrive.
 // The first image is prioritized as the page LCP element; later figures load
 // lazily so a long article never fetches them ahead of its text. Raw HTML never
-// survives rendering, so every <img> here comes from the renderer.
-func enhanceBodyImages(body string, assets fs.FS) (string, error) {
+// survives rendering, so every <img> here comes from the renderer. It also reports
+// the lead image's responsive candidates rather than having the caller decode the
+// cover a second time to rediscover them.
+func enhanceBodyImages(body string, assets fs.FS) (string, leadImage, error) {
 	// A Markdown image whose source is MP4 is the repository's explicit, safe video
 	// syntax. Raw HTML stays disabled, so imported content cannot inject elements.
 	body = bodyVideoPattern.ReplaceAllString(body, `<video muted loop playsinline autoplay controls aria-label="$2"><source src="$1" type="video/mp4">Your browser does not support embedded video.</video>`)
 	matches := bodyImagePattern.FindAllStringSubmatchIndex(body, -1)
 	if len(matches) == 0 {
-		return body, nil
+		return body, leadImage{}, nil
 	}
 
+	var lead leadImage
 	var enhanced strings.Builder
 	end := 0
 	for index, match := range matches {
 		source := body[match[2]:match[3]]
 		config, err := imageConfig(assets, strings.TrimPrefix(source, "/"))
 		if err != nil {
-			return "", err
+			return "", leadImage{}, err
 		}
 		enhanced.WriteString(body[end:match[0]])
 		loading := ` loading="lazy"`
 		priority := ""
+		srcset, sizes := coverSourceSet(assets, source, config.Width)
 		if index == 0 {
 			loading = ""
 			priority = ` fetchpriority="high"`
+			lead = leadImage{srcset: srcset, sizes: sizes}
 		}
-		responsive := responsiveImageAttributes(assets, source, config.Width)
+		responsive := ""
+		if srcset != "" {
+			responsive = fmt.Sprintf(` srcset="%s" sizes="%s"`, srcset, sizes)
+		}
 		fmt.Fprintf(
 			&enhanced,
 			`<img%s%s decoding="async" width="%d" height="%d"%s src="%s"`,
@@ -248,24 +277,34 @@ func enhanceBodyImages(body string, assets fs.FS) (string, error) {
 		end = match[1]
 	}
 	enhanced.WriteString(body[end:])
-	return enhanced.String(), nil
+	return enhanced.String(), lead, nil
 }
 
-func responsiveImageAttributes(assets fs.FS, source string, sourceWidth int) string {
-	if path.Base(source) != "cover.webp" || sourceWidth <= templates.CardCoverWidth {
-		return ""
+// coverSizes describes the rendered cover's layout width at every breakpoint. The
+// <img> and its <head> preload must quote it identically, or the preload scanner
+// resolves the srcset against a different width than the layout does.
+const coverSizes = "(max-width: 896px) 100vw, 896px"
+
+// coverSourceSet returns the responsive candidates for an article cover, shared by
+// the rendered <img> and the preload in <head>. Returning the pair rather than
+// formatted markup is what keeps the two in step: a preload that names the
+// full-size cover while the srcset paints the 800px derivative makes every phone
+// download the cover twice.
+func coverSourceSet(assets fs.FS, source string, sourceWidth int) (string, string) {
+	// Match the cover by stem, not by full filename: articleCover accepts any of
+	// .webp/.gif/.png/.jpg, and `pub export` ships the reviewed cover as PNG. Keying
+	// on "cover.webp" silently dropped the srcset for every other format, leaving the
+	// full-size original as the LCP image on phones.
+	name := path.Base(source)
+	if strings.TrimSuffix(name, path.Ext(name)) != "cover" || sourceWidth <= templates.CardCoverWidth {
+		return "", ""
 	}
 	derivative := path.Join(path.Dir(source), fmt.Sprintf("cover-%d.webp", templates.CardCoverWidth))
 	if _, err := fs.Stat(assets, strings.TrimPrefix(derivative, "/")); err != nil {
-		return ""
+		return "", ""
 	}
-	return fmt.Sprintf(
-		` srcset="%s %dw, %s %dw" sizes="(max-width: 896px) 100vw, 896px"`,
-		derivative,
-		templates.CardCoverWidth,
-		source,
-		sourceWidth,
-	)
+	srcset := fmt.Sprintf("%s %dw, %s %dw", derivative, templates.CardCoverWidth, source, sourceWidth)
+	return srcset, coverSizes
 }
 
 // imageConfig reads an embedded image's header for its intrinsic dimensions.
@@ -334,10 +373,19 @@ func validateArticleMetadata(name string, metadata articleFrontmatter) error {
 	if filename := strings.TrimSuffix(path.Base(name), path.Ext(name)); filename != metadata.Slug {
 		return fmt.Errorf("parse %q: filename must match slug %q", name, metadata.Slug)
 	}
-	if metadata.Canonical != "" {
-		canonical, err := url.ParseRequestURI(metadata.Canonical)
-		if err != nil || canonical.Scheme != "https" || canonical.Host == "" {
-			return fmt.Errorf("parse %q: canonical must be an absolute HTTPS URL", name)
+	// canonical hands ranking to another site; syndicated only records where a
+	// copy also lives. Both must be absolute HTTPS, and canonical must not point
+	// back here — a self-canonical would silently drop the article from the sitemap.
+	for field, value := range map[string]string{"canonical": metadata.Canonical, "syndicated": metadata.Syndicated} {
+		if value == "" {
+			continue
+		}
+		parsed, err := url.ParseRequestURI(value)
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			return fmt.Errorf("parse %q: %s must be an absolute HTTPS URL", name, field)
+		}
+		if field == "canonical" && strings.HasPrefix(value, templates.METADATA.SiteURL) {
+			return fmt.Errorf("parse %q: canonical must not point at this site (omit it instead)", name)
 		}
 	}
 	if len(metadata.Tags) == 0 {

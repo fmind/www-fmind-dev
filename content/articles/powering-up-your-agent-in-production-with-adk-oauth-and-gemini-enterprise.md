@@ -4,7 +4,7 @@ description = "Power up your AI agent in production. Learn to deploy a secure â€
 date = "2025-11-01"
 tags = ["Agent", "Cloud"]
 slug = "powering-up-your-agent-in-production-with-adk-oauth-and-gemini-enterprise"
-canonical = "https://medium.com/@fmind/powering-up-your-agent-in-production-with-adk-oauth-and-gemini-enterprise-a52b0716fcba"
+syndicated = "https://medium.com/@fmind/powering-up-your-agent-in-production-with-adk-oauth-and-gemini-enterprise-a52b0716fcba"
 draft = false
 +++
 
@@ -75,114 +75,118 @@ ADK simplifies the OAuth flow significantly. We define the authentication config
 
 Here is a snippet demonstrating the core authentication mechanism in the agent code:
 
-    """Authentication for the tools."""
+```python
+"""Authentication for the tools."""
 
-    # %% IMPORTS
+# %% IMPORTS
 
-    from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
-    from google.adk.auth.auth_credential import AuthCredential, AuthCredentialTypes, OAuth2Auth
-    from google.adk.auth.auth_tool import AuthConfig
+from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
+from google.adk.auth.auth_credential import AuthCredential, AuthCredentialTypes, OAuth2Auth
+from google.adk.auth.auth_tool import AuthConfig
 
-    from slides_translator_agent import configs
+from slides_translator_agent import configs
 
-    # %% CONFIGS
+# %% CONFIGS
 
-    AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/auth"
-    TOKEN_URL = "https://oauth2.googleapis.com/token"
-    SCOPES = {
-        "https://www.googleapis.com/auth/drive": "Google Drive API",
-        "https://www.googleapis.com/auth/presentations": "Google Slides API",
-    }
+AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/auth"
+TOKEN_URL = "https://oauth2.googleapis.com/token"
+SCOPES = {
+    "https://www.googleapis.com/auth/drive": "Google Drive API",
+    "https://www.googleapis.com/auth/presentations": "Google Slides API",
+}
 
-    # %% AUTHENTICATIONS
+# %% AUTHENTICATIONS
 
-    AUTH_SCHEME = OAuth2(
-        flows=OAuthFlows(
-            authorizationCode=OAuthFlowAuthorizationCode(
-                authorizationUrl=AUTHORIZATION_URL,
-                tokenUrl=TOKEN_URL,
-                scopes=SCOPES,
-            )
+AUTH_SCHEME = OAuth2(
+    flows=OAuthFlows(
+        authorizationCode=OAuthFlowAuthorizationCode(
+            authorizationUrl=AUTHORIZATION_URL,
+            tokenUrl=TOKEN_URL,
+            scopes=SCOPES,
         )
     )
-    AUTH_CREDENTIAL = AuthCredential(
-        auth_type=AuthCredentialTypes.OAUTH2,
-        oauth2=OAuth2Auth(
-            client_id=configs.AUTHENTICATION_CLIENT_ID,
-            client_secret=configs.AUTHENTICATION_CLIENT_SECRET,
-        ),
-    )
-    AUTH_CONFIG = AuthConfig(
-        auth_scheme=AUTH_SCHEME,
-        raw_auth_credential=AUTH_CREDENTIAL,
-    )
+)
+AUTH_CREDENTIAL = AuthCredential(
+    auth_type=AuthCredentialTypes.OAUTH2,
+    oauth2=OAuth2Auth(
+        client_id=configs.AUTHENTICATION_CLIENT_ID,
+        client_secret=configs.AUTHENTICATION_CLIENT_SECRET,
+    ),
+)
+AUTH_CONFIG = AuthConfig(
+    auth_scheme=AUTH_SCHEME,
+    raw_auth_credential=AUTH_CREDENTIAL,
+)
+```
 
 When the `translate_presentation` tool is invoked, the `negotiate_creds` function ensures that a valid token exists. If not, ADK automatically pauses the agent execution and initiates the OAuth flow with the user.
 
-    """Tools for the agents."""
+```python
+"""Tools for the agents."""
 
-    import json
+import json
 
-    from google.auth.transport.requests import Request
-    from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 
-    from slides_translator_agent import auths
+from slides_translator_agent import auths
 
-    def negotiate_creds(tool_context: ToolContext) -> Credentials | dict:
-        """Handle the OAuth 2.0 flow to get valid credentials."""
-        logger.info("Negotiating credentials using oauth 2.0")
-        # Check for cached credentials in the tool state
-        if cached_token := tool_context.state.get(configs.TOKEN_CACHE_KEY):
-            logger.debug("Found cached token in tool context state")
-            if isinstance(cached_token, dict):
-                logger.debug("Cached token is a dictionary, treating as AuthCredential.")
-                try:
-                    creds = Credentials.from_authorized_user_info(
-                        cached_token, list(auths.SCOPES.keys())
-                    )
-                    if creds.valid:
-                        logger.debug("Cached credentials are valid, returning credentials")
-                        return creds
-                    if creds.expired and creds.refresh_token:
-                        logger.debug("Cached credentials expired, attempting refresh")
-                        creds.refresh(Request())
-                        tool_context.state[configs.TOKEN_CACHE_KEY] = json.loads(creds.to_json())
-                        logger.debug("Credentials refreshed and cached successfully")
-                        return creds
-                except Exception as error:
-                    logger.error(f"Error loading/refreshing cached credentials: {error}")
-                    tool_context.state[configs.TOKEN_CACHE_KEY] = None  # reset cache
-            elif isinstance(cached_token, str):
-                logger.debug("Found raw access token in tool context state.")
-                # This creates a temporary credential object from the token
-                # Note: This credential will not be refreshed if it expires
-                return Credentials(token=cached_token)
-            else:
-                raise ValueError(
-                    f"Invalid cached token type. Expected dict or str, got {type(cached_token)}"
+def negotiate_creds(tool_context: ToolContext) -> Credentials | dict:
+    """Handle the OAuth 2.0 flow to get valid credentials."""
+    logger.info("Negotiating credentials using oauth 2.0")
+    # Check for cached credentials in the tool state
+    if cached_token := tool_context.state.get(configs.TOKEN_CACHE_KEY):
+        logger.debug("Found cached token in tool context state")
+        if isinstance(cached_token, dict):
+            logger.debug("Cached token is a dictionary, treating as AuthCredential.")
+            try:
+                creds = Credentials.from_authorized_user_info(
+                    cached_token, list(auths.SCOPES.keys())
                 )
-        # If no valid cached credentials, check for auth response
-        logger.debug("No valid cached token. Checking for auth response")
-        if exchanged_creds := tool_context.get_auth_response(auths.AUTH_CONFIG):
-            logger.debug("Received auth response, creating credentials")
-            auth_scheme = auths.AUTH_CONFIG.auth_scheme
-            auth_credential = auths.AUTH_CONFIG.raw_auth_credential
-            creds = Credentials(
-                token=exchanged_creds.oauth2.access_token,
-                refresh_token=exchanged_creds.oauth2.refresh_token,
-                token_uri=auth_scheme.flows.authorizationCode.tokenUrl,
-                client_id=auth_credential.oauth2.client_id,
-                client_secret=auth_credential.oauth2.client_secret,
-                scopes=list(auth_scheme.flows.authorizationCode.scopes.keys()),
+                if creds.valid:
+                    logger.debug("Cached credentials are valid, returning credentials")
+                    return creds
+                if creds.expired and creds.refresh_token:
+                    logger.debug("Cached credentials expired, attempting refresh")
+                    creds.refresh(Request())
+                    tool_context.state[configs.TOKEN_CACHE_KEY] = json.loads(creds.to_json())
+                    logger.debug("Credentials refreshed and cached successfully")
+                    return creds
+            except Exception as error:
+                logger.error(f"Error loading/refreshing cached credentials: {error}")
+                tool_context.state[configs.TOKEN_CACHE_KEY] = None  # reset cache
+        elif isinstance(cached_token, str):
+            logger.debug("Found raw access token in tool context state.")
+            # This creates a temporary credential object from the token
+            # Note: This credential will not be refreshed if it expires
+            return Credentials(token=cached_token)
+        else:
+            raise ValueError(
+                f"Invalid cached token type. Expected dict or str, got {type(cached_token)}"
             )
-            tool_context.state[configs.TOKEN_CACHE_KEY] = json.loads(creds.to_json())
-            logger.debug("New credentials created and cached successfully")
-            return creds
-        # If no auth response, initiate auth request
-        logger.debug("No credentials available. Requesting user authentication")
-        tool_context.request_credential(auths.AUTH_CONFIG)
-        logger.info("Awaiting user authentication")
-        return {"pending": True, "message": "Awaiting user authentication"}
+    # If no valid cached credentials, check for auth response
+    logger.debug("No valid cached token. Checking for auth response")
+    if exchanged_creds := tool_context.get_auth_response(auths.AUTH_CONFIG):
+        logger.debug("Received auth response, creating credentials")
+        auth_scheme = auths.AUTH_CONFIG.auth_scheme
+        auth_credential = auths.AUTH_CONFIG.raw_auth_credential
+        creds = Credentials(
+            token=exchanged_creds.oauth2.access_token,
+            refresh_token=exchanged_creds.oauth2.refresh_token,
+            token_uri=auth_scheme.flows.authorizationCode.tokenUrl,
+            client_id=auth_credential.oauth2.client_id,
+            client_secret=auth_credential.oauth2.client_secret,
+            scopes=list(auth_scheme.flows.authorizationCode.scopes.keys()),
+        )
+        tool_context.state[configs.TOKEN_CACHE_KEY] = json.loads(creds.to_json())
+        logger.debug("New credentials created and cached successfully")
+        return creds
+    # If no auth response, initiate auth request
+    logger.debug("No credentials available. Requesting user authentication")
+    tool_context.request_credential(auths.AUTH_CONFIG)
+    logger.info("Awaiting user authentication")
+    return {"pending": True, "message": "Awaiting user authentication"}
+```
 
 This ensures the user explicitly consents to the agent accessing their files before any action is taken.
 
@@ -198,14 +202,16 @@ Once the agent is developed and tested, the next step is deploying it to product
 
 Before deploying the agent code, we need to register the OAuth configuration with the production environment. I used the following script to set this up:
 
-    ./as.py create-auth \
-      --auth-id slides-translator-auth \
-      --client-id ... \
-      --client-secret ... \
-      --auth-uri "https://accounts.google.com/o/oauth2/auth?include_granted_scopes=true&response_type=code&access_type=offline&prompt=consent" \
-      --token-uri "https://oauth2.googleapis.com/token" \
-      --scope "https://www.googleapis.com/auth/drive" \
-      --scope "https://www.googleapis.com/auth/presentations"
+```bash
+./as.py create-auth \
+  --auth-id slides-translator-auth \
+  --client-id ... \
+  --client-secret ... \
+  --auth-uri "https://accounts.google.com/o/oauth2/auth?include_granted_scopes=true&response_type=code&access_type=offline&prompt=consent" \
+  --token-uri "https://oauth2.googleapis.com/token" \
+  --scope "https://www.googleapis.com/auth/drive" \
+  --scope "https://www.googleapis.com/auth/presentations"
+```
 
 This command links the `slides-translator-auth` ID (referenced in the Python code above as `configs.TOKEN_CACHE_KEY`) with the actual Client ID, Secret, and the required scopes.
 

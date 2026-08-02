@@ -4,7 +4,7 @@ description = "Build a personal AI assistant using Google Cloud Run, Vertex AI, 
 date = "2026-02-05"
 tags = ["Agent", "Cloud", "Project"]
 slug = "maidai-building-a-personal-assistant-with-google-cloud-and-vertex-ai"
-canonical = "https://medium.com/@fmind/maidai-building-a-personal-assistant-with-google-cloud-and-vertex-ai-a136aa73656b"
+syndicated = "https://medium.com/@fmind/maidai-building-a-personal-assistant-with-google-cloud-and-vertex-ai-a136aa73656b"
 draft = false
 +++
 
@@ -36,9 +36,9 @@ Standard team bots are great, but they are generic. They lack the _specific_ con
 
 mAIdAI is designed around three core interaction types:
 
-1. **Context-Aware Chat**: A conversational flow grounded in a personal context.md file effective “system instructions”.
+1. **Context-Aware Chat**: A conversational flow grounded in a personal `context.md` file effective “system instructions”.
 2. **Quick Commands**: Instant helpers that return static values (like commonly used links or snippets) without invoking the LLM.
-3. **Slash Commands**: specialized triggers that wrap user input in a predefined prompt template (e.g., /fix to debug code).
+3. **Slash Commands**: specialized triggers that wrap user input in a predefined prompt template (e.g., `/fix` to debug code).
 
 ![Demo of mAIdAI on Google Chat (Generic Version)](/static/img/articles/maidai-building-a-personal-assistant-with-google-cloud-and-vertex-ai/02.webp)
 
@@ -65,61 +65,66 @@ Architecture Diagram of mAIdAI (Source: Fmind.dev)
 
 ### Deep Dive: The Code
 
-The implementation is surprisingly minimal, thanks to the **Google GenAI SDK** and **FastAPI**. The entire core logic resides in a single main.py file.
+The implementation is surprisingly minimal, thanks to the **Google GenAI SDK** and **FastAPI**. The entire core logic resides in a single `main.py` file.
 
 ### 1. The Setup
 
 We initialize the GenAI client using standard environment variables. This keeps the code portable and secure.
 
-    # main.py
-    client = genai.Client(
-      project=os.environ["GOOGLE_CLOUD_PROJECT"],
-      location=os.environ["GOOGLE_CLOUD_LOCATION"],
-      vertexai=True,
-    )
-    # Loading the Second Brain
-    MODEL_CONTEXT = (ROOT_FOLDER / "context.md").read_text()
-    config = types.GenerateContentConfig(
-      system_instruction=MODEL_CONTEXT,
-      max_output_tokens=5000,
-    )
+```python
+# main.py
+client = genai.Client(
+    project=os.environ["GOOGLE_CLOUD_PROJECT"],
+    location=os.environ["GOOGLE_CLOUD_LOCATION"],
+    vertexai=True,
+)
 
-By reading context.md at startup and injecting it as the system_instruction, we ensure every interaction is grounded in my specific reality.
+# Loading the Second Brain
+MODEL_CONTEXT = (ROOT_FOLDER / "context.md").read_text()
+config = types.GenerateContentConfig(
+    system_instruction=MODEL_CONTEXT,
+    max_output_tokens=5000,
+)
+```
+
+By reading `context.md` at startup and injecting it as the `system_instruction`, we ensure every interaction is grounded in my specific reality.
 
 ### 2. Handling Interaction Types
 
 The core router handles the distinction between simple commands and AI interactions. This is crucial for latency and cost — not every interaction needs a round-trip to an LLM.
 
-    @app.post("/")
-    async def index(request: Request) -> dict:
-        event = await request.json()
-        # ... extraction logic ...
+```python
+@app.post("/")
+async def index(request: Request) -> dict:
+    event = await request.json()
+    # ... extraction logic ...
 
-        if command_id := app_command_metadata.get("appCommandId"):
-            # Handle Slash and Quick Commands
-            if command_type == "QUICK_COMMAND":
-                return respond(command_text)
+    if command_id := app_command_metadata.get("appCommandId"):
+        # Handle Slash and Quick Commands
+        if command_type == "QUICK_COMMAND":
+            return respond(command_text)
 
-            if command_type == "SLASH_COMMAND":
-                # Contextualize the prompt
-                prompt = f"{command_text}. USER INPUT: {user_input}"
-                return respond(await chat(prompt))
+        if command_type == "SLASH_COMMAND":
+            # Contextualize the prompt
+            prompt = f"{command_text}. USER INPUT: {user_input}"
+            return respond(await chat(prompt))
 
-        # Fallback to standard chat
-        return respond(await chat(user_input))
+    # Fallback to standard chat
+    return respond(await chat(user_input))
+```
 
-This pattern allows me to have a /links command that returns immediately (0 latency, 0 cost), while a /rewrite command leverages Gemin 2.0 Flash for creative work.
+This pattern allows me to have a `/links` command that returns immediately (0 latency, 0 cost), while a `/rewrite` command leverages Gemin 2.0 Flash for creative work.
 
 ### 3. Asynchrony by Default
 
-Using async def and client.aio.models.generate_content ensures the Cloud Run container can handle multiple concurrent requests efficiently, even with a single instance.
+Using `async def` and `client.aio.models.generate_content` ensures the Cloud Run container can handle multiple concurrent requests efficiently, even with a single instance.
 
 ### Deployment Strategy
 
 Simplicity was the primary constraint. I didn’t want to manage infrastructure for a personal tool.
 
 - **Runtime**: Cloud Run (fully managed, scales to zero, low-cost serving).
-- **Configuration**: Environment variables for model selection (gemini-3-flash) and project details.
+- **Configuration**: Environment variables for model selection (`gemini-3-flash`) and project details.
 - **Security**: IAM-based authentication ensures only verified chat events reach the service.
 
 ### Why Build This Locally?
@@ -127,7 +132,7 @@ Simplicity was the primary constraint. I didn’t want to manage infrastructure 
 You might ask, “Why not use a standard consumer AI chat?”
 
 1. **Privacy**: Data stays within my Google Cloud project.
-2. **Context**: I control the system prompt (context.md) explicitly.
+2. **Context**: I control the system prompt (`context.md`) explicitly.
 3. **Workflow Integration**: It lives where I work — in Google Chat — not a separate browser tab.
 
 ### Conclusion

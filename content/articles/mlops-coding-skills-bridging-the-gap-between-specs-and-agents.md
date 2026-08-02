@@ -2,9 +2,9 @@
 title = "MLOps Coding Skills: Bridging the Gap Between Specs and Agents"
 description = "Bridge the gap between engineering specs and AI agents using Agent Skills. Learn to inject ‘Senior Engineer’ context for production MLOps."
 date = "2026-01-28"
-tags = ["Agent", "MLOps", "Guide"]
+tags = ["Coding", "MLOps", "Guide"]
 slug = "mlops-coding-skills-bridging-the-gap-between-specs-and-agents"
-canonical = "https://medium.com/@fmind/mlops-coding-skills-bridging-the-gap-between-specs-and-agents-4c8170570eba"
+syndicated = "https://medium.com/@fmind/mlops-coding-skills-bridging-the-gap-between-specs-and-agents-4c8170570eba"
 draft = false
 +++
 
@@ -36,43 +36,46 @@ I didn’t just want another wiki page. I wanted to make these best practices **
 
 ### The Logic: How to “Skillify” Knowledge
 
-The beauty of an Agent Skill lies in its simplicity. It is essentially a markdown file (SKILL.md) that functions as a context injection module. It gives the agent “muscle memory” for a specific topic.
+The beauty of an Agent Skill lies in its simplicity. It is essentially a markdown file (`SKILL.md`) that functions as a context injection module. It gives the agent “muscle memory” for a specific topic.
 
 My methodology for building the **MLOps Coding Skills** repo was straightforward:
 
 1. **Isolate a Chapter**: Take a specific section of the course (e.g., _Automation_ or _Observability_).
 2. **Extract Patterns**: Use an LLM to distill the generic engineering standards from the educational content.
-3. **Standardize**: Format it into a SKILL.md that an agent can ingest.
+3. **Standardize**: Format it into a `SKILL.md` that an agent can ingest.
 
 ### A Concrete Example: Automating Ops
 
 Let’s look at the [**mlops-automation**](https://github.com/MLOps-Courses/mlops-coding-skills/tree/main/mlops-automation) skill.
 
-In our course, we have strong opinions: we use just for command running and [docker](https://www.docker.com/) for containerization, with very specific layer caching strategies.
+In our course, we have strong opinions: we use `just` for command running and [docker](https://www.docker.com/) for containerization, with very specific layer caching strategies.
 
 Here is what the skill looks like “on the wire”:
 
-    # MLOps Automation
+```markdown
+# MLOps Automation
 
-    ## Goal
+## Goal
 
-    To elevate the codebase to production standards by adding Task Automation (just), Containerization ([docker](https://www.docker.com/)), CI/CD ([github-actions](https://github.com/features/actions)), and Experiment Tracking ([mlflow](https://mlflow.org/)).
+To elevate the codebase to production standards by adding Task Automation (just), Containerization ([docker](https://www.docker.com/)), CI/CD ([github-actions](https://github.com/features/actions)), and Experiment Tracking ([mlflow](https://mlflow.org/)).
 
-    ## Instructions
+## Instructions
 
-    ### 1. Task Automation
+### 1. Task Automation
 
-    Replace manual commands with a `justfile`.
-    1. **Tool**: `just` (modern alternative to Make).
-    2. **Organization**: Split tasks into `tasks/*.just` modules.
-    3. **Core Tasks**:
-    - `check`: Run all linters and tests.
-    - `package`: Build wheels.
+Replace manual commands with a `justfile`.
 
-    ### 2. Containerization
+1. **Tool**: `just` (modern alternative to Make).
+2. **Organization**: Split tasks into `tasks/*.just` modules.
+3. **Core Tasks**:
+   - `check`: Run all linters and tests.
+   - `package`: Build wheels.
 
-    1. **Tool**: `docker`.
-    2. **Base Image**: Use `ghcr.io/astral-sh/uv:python3.1X-bookworm-slim` for minimal size.
+### 2. Containerization
+
+1. **Tool**: `docker`.
+2. **Base Image**: Use `ghcr.io/astral-sh/uv:python3.1X-bookworm-slim` for minimal size.
+```
 
 When I load this skill, my agent stops guessing. It doesn’t offer me a Makefile. It doesn’t suggest a bloated Ubuntu image. It acts like a senior engineer who has been on the team for years.
 
@@ -90,8 +93,8 @@ I now use these skills for every new project I touch. I don’t spend an hour se
 
 Of course, no solution is perfect. There are still rough edges in this workflow:
 
-- **Local-First Friction**: Currently, skills often sit in a local .agent/skills folder. It works, but copying them around feels archaic.
-- **The Context Stack**: We are seeing a fragmentation of context. We have MCP servers for tools, AGENTS.md for persona, and Skills for tasks. Managing this “Context Stack” is becoming a new engineering discipline.
+- **Local-First Friction**: Currently, skills often sit in a local `.agent/skills` folder. It works, but copying them around feels archaic.
+- **The Context Stack**: We are seeing a fragmentation of context. We have MCP servers for tools, `AGENTS.md` for persona, and Skills for tasks. Managing this “Context Stack” is becoming a new engineering discipline.
 - **Integration gaps**: I love how the **Gemini CLI** handles this via extensions, but I’m eager to see this standardized across VS Code Copilot, Cursor, and other IDEs.
 
 ### Conclusion

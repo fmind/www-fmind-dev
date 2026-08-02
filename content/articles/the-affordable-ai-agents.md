@@ -4,7 +4,7 @@ description = "As AI agents transition from isolated developer experiments into 
 date = "2026-06-25"
 tags = ["Agent", "LLM"]
 slug = "the-affordable-ai-agents"
-canonical = "https://medium.com/@fmind/the-affordable-ai-agents-26d1d071d00b"
+syndicated = "https://medium.com/@fmind/the-affordable-ai-agents-26d1d071d00b"
 draft = false
 +++
 

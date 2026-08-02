@@ -4,7 +4,7 @@ description = "The Cookiecutter MLOps Package offers a powerful code template to
 date = "2024-08-05"
 tags = ["MLOps", "Python", "Project"]
 slug = "mlops-package-template-turbocharge-the-creation-of-ai-ml-projects"
-canonical = "https://medium.com/@fmind/mlops-package-template-turbocharge-the-creation-of-ai-ml-projects-587dd2ef43e7"
+syndicated = "https://medium.com/@fmind/mlops-package-template-turbocharge-the-creation-of-ai-ml-projects-587dd2ef43e7"
 draft = false
 +++
 
@@ -49,25 +49,31 @@ The [**Cookiecutter MLOps Package**](https://github.com/fmind/cookiecutter-mlops
 
 To get started, install [Cookiecutter](https://cookiecutter.readthedocs.io/) and generate your MLOps project:
 
-    pip install cookiecutter
-    cookiecutter gh:fmind/cookiecutter-mlops-package
+```bash
+pip install cookiecutter
+cookiecutter gh:fmind/cookiecutter-mlops-package
+```
 
 You’ll be prompted to provide values for the following variables:
 
-    user = "your-github-username"
-    name = "Your Project Name"
-    repository = "your-project-repository"
-    package = "your_project_package"
-    license = "MIT"
-    version = "0.1.0"
-    description = "A brief description of your project"
-    python_version = "3.12"
-    mlflow_version = "2.14.3"
+```toml
+user = "your-github-username"
+name = "Your Project Name"
+repository = "your-project-repository"
+package = "your_project_package"
+license = "MIT"
+version = "0.1.0"
+description = "A brief description of your project"
+python_version = "3.12"
+mlflow_version = "2.14.3"
+```
 
 Then, initialize a git repository and activate the [GitHub pages workflow](https://pages.github.com/):
 
-    cd your-project-repository
-    git init
+```bash
+cd your-project-repository
+git init
+```
 
 ### Showcasing Automated Tasks ✨
 
@@ -77,37 +83,49 @@ The [**Cookiecutter MLOps Package**](https://github.com/fmind/cookiecutter-mlops
 
 [This task](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/installs.py) installs all project dependencies using [Poetry](https://python-poetry.org/) and sets up [pre-commit hooks](https://pre-commit.com/).
 
-    invoke installs
+```bash
+invoke installs
+```
 
 [**Format Code**](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/formats.py) **:**
 
 [This task](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/formats.py) automatically formats your code using [Ruff](https://docs.astral.sh/ruff/), ensuring consistent style.
 
-    invoke formats
+```bash
+invoke formats
+```
 
 [**Run Tests and Checks**](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/checks.py) **:**
 
 [This task](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/checks.py) runs unit tests with [Pytest](https://docs.pytest.org/en/stable/), lints your code with [Ruff](https://docs.astral.sh/ruff/), performs type checks with [Mypy](https://mypy.readthedocs.io/en/stable/index.html), analyzes code security with [Bandit](https://bandit.readthedocs.io/en/latest/), and generates a code coverage report with [Coverage](https://coverage.readthedocs.io/).
 
-    invoke checks
+```bash
+invoke checks
+```
 
 [**Build Python Package**](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/packages.py) **:**
 
 [This task](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/packages.py) builds your Python package as a [wheel file](https://pythonwheels.com/), ready for distribution.
 
-    invoke packages
+```bash
+invoke packages
+```
 
 [**Run an MLflow Project**](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/projects.py) **:**
 
 [This task](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/projects.py) executes your [MLflow project](https://mlflow.org/docs/latest/projects.html), as defined in your [MLproject](https://github.com/fmind/cookiecutter-mlops-package/blob/main/%7B%7Bcookiecutter.repository%7D%7D/MLproject) file.
 
-    invoke projects
+```bash
+invoke projects
+```
 
 [**Build and Run Docker Image**](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/containers.py) **:**
 
 [This task](https://github.com/fmind/cookiecutter-mlops-package/blob/v1.0.0/%7B%7Bcookiecutter.repository%7D%7D/tasks/containers.py) builds your Docker image based on your [Dockerfile](https://github.com/fmind/cookiecutter-mlops-package/blob/main/%7B%7Bcookiecutter.repository%7D%7D/Dockerfile) and runs it in a container.
 
-    invoke containers
+```bash
+invoke containers
+```
 
 ### The Power of Templates: Embrace Efficiency and Quality 💪
 

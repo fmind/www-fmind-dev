@@ -4,7 +4,7 @@
 @plugin "@tailwindcss/typography";
 @plugin "daisyui" {
   themes: light, dark;
-  include: button, card, navbar, menu, hero, avatar, badge, footer, typography;
+  include: button, card, navbar, menu, hero, avatar, badge, footer, input, typography;
 }
 
 @source "../../templates/**/*.templ";
@@ -66,6 +66,15 @@
   src: url('/static/fonts/Outfit-Variable.woff2') format('woff2');
   font-weight: 100 900;
   font-display: swap;
+}
+
+/* A theme swap repaints every color at once: animating it makes the navbar and
+   links visibly trail the rest of the page. The head script sets this class for
+   one frame around the swap so only genuine hover/focus changes transition. */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
 }
 
 .theme-icon-moon {
@@ -174,6 +183,10 @@ a.tag:hover {
   --tag: oklch(60.6% 0.25 292.717);
 }
 
+[data-tag='Coding'] {
+  --tag: oklch(71.5% 0.143 215.221);
+}
+
 [data-tag='LLM'] {
   --tag: oklch(66.7% 0.295 322.15);
 }
@@ -192,10 +205,6 @@ a.tag:hover {
 
 [data-tag='Python'] {
   --tag: oklch(76.9% 0.188 70.08);
-}
-
-[data-tag='Go'] {
-  --tag: oklch(71.5% 0.143 215.221);
 }
 
 [data-tag='Project'] {

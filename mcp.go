@@ -3,6 +3,7 @@ package site
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -18,6 +19,13 @@ const mcpProfileURI = "portfolio://profile.json"
 const mcpCacheTTL = 60 * 60 * 1000
 
 const mcpProtocolVersion = "2026-07-28"
+
+// Result bounds for search_articles: enough for an agent to reason over, capped
+// so one call can never return the whole archive as tool output.
+const (
+	defaultSearchResults = 10
+	maximumSearchResults = 50
+)
 
 // noArgs is the input type for tools that take no parameters. The MCP SDK infers
 // an empty-object JSON schema from it, which the spec requires for every tool.
@@ -96,6 +104,19 @@ type servicesResult struct {
 	Services []templates.Service `json:"services"`
 }
 
+// searchArticlesArgs is the only tool input on this server. Limit is optional:
+// agents that omit it get a useful default instead of an error.
+type searchArticlesArgs struct {
+	Query string `json:"query" jsonschema:"words to search for across article titles, tags, descriptions, and full text"`
+	Limit int    `json:"limit,omitempty" jsonschema:"maximum number of results to return (default 10, maximum 50)"`
+}
+
+type searchArticlesResult struct {
+	Query    string                     `json:"query"`
+	Articles []templates.ArticleSummary `json:"articles"`
+	Total    int                        `json:"total"`
+}
+
 // readOnly marks every tool as non-mutating and closed-world: handlers only read
 // the portfolio compiled into this binary and never call an external system.
 // Go 1.26's new(expr) keeps the optional false hint concise and unambiguous.
@@ -118,6 +139,7 @@ var mcpCardTools = []mcpCardPrimitive{
 	{Name: "list_experience", Title: "List work experience", Description: "List professional roles, companies, and skills."},
 	{Name: "list_certifications", Title: "List credentials", Description: "List certifications, badges, and specializations."},
 	{Name: "list_publications", Title: "List publications", Description: "List the thesis, papers, and hosted articles."},
+	{Name: "search_articles", Title: "Search articles", Description: "Rank Fmind's articles by relevance to a query."},
 	{Name: "list_projects", Title: "List projects", Description: "List open-source projects and educational series."},
 	{Name: "get_services", Title: "Get professional services", Description: "List advisory and mentoring services."},
 }
@@ -129,7 +151,7 @@ var mcpCardPrompts = []mcpCardPrimitive{
 
 // newMCPServer builds the read-only MCP server exposing the portfolio as agent
 // tools plus a single JSON resource. All handlers are pure reads of static data.
-func newMCPServer(articles []templates.ArticleSummary) *mcp.Server {
+func newMCPServer(articles []templates.ArticleSummary, index *searchIndex) *mcp.Server {
 	server := mcp.NewServer(
 		&mcp.Implementation{
 			Name:       "www-fmind-dev",
@@ -223,6 +245,30 @@ func newMCPServer(articles []templates.ArticleSummary) *mcp.Server {
 		Annotations: readOnly,
 	}, func(context.Context, *mcp.CallToolRequest, noArgs) (*mcp.CallToolResult, publicationsResult, error) {
 		return nil, publicationsResult{Thesis: templates.THESIS, Papers: templates.PAPERS, Articles: articles}, nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "search_articles",
+		Title:       "Search articles",
+		Description: "Search the hosted articles by relevance (BM25 over titles, tags, descriptions, and full text) and return the best matches. Use it to answer what Fmind has written about a topic instead of listing every publication.",
+		Annotations: readOnly,
+	}, func(_ context.Context, _ *mcp.CallToolRequest, args searchArticlesArgs) (*mcp.CallToolResult, searchArticlesResult, error) {
+		query := normalizeSearchQuery(args.Query)
+		if query == "" {
+			return nil, searchArticlesResult{}, errors.New("query must not be empty")
+		}
+		limit := args.Limit
+		if limit <= 0 {
+			limit = defaultSearchResults
+		}
+		limit = min(limit, maximumSearchResults)
+
+		ranked := index.Search(query)
+		matches := make([]templates.ArticleSummary, 0, min(limit, len(ranked)))
+		for _, article := range ranked[:min(limit, len(ranked))] {
+			matches = append(matches, article.Summary())
+		}
+		return nil, searchArticlesResult{Query: query, Total: len(ranked), Articles: matches}, nil
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -364,8 +410,8 @@ func renderMCPServerCard() ([]byte, error) {
 // transport as a plain http.Handler, mounted by the router at /mcp. JSONResponse
 // keeps responses as application/json (no SSE), which is simplest behind the
 // Gateway proxy for a read-only, horizontally-scaled service.
-func newMCPHandler(articles []templates.ArticleSummary) http.Handler {
-	server := newMCPServer(articles)
+func newMCPHandler(articles []templates.ArticleSummary, index *searchIndex) http.Handler {
+	server := newMCPServer(articles, index)
 	handler := mcp.NewStreamableHTTPHandler(
 		func(*http.Request) *mcp.Server { return server },
 		&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true},

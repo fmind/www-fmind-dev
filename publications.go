@@ -102,8 +102,9 @@ func renderSitemap(articles []templates.Article) ([]byte, error) {
 		{Location: templates.METADATA.SiteURL + "/articles/"},
 	}
 	for _, article := range articles {
-		// Historical Medium canonicals stay out of this sitemap. Reclaiming
-		// self-canonicals so link equity accrues here is a separate content decision.
+		// This site is canonical for everything it publishes, so the whole archive
+		// belongs in the sitemap. The guard remains for an article that ever
+		// genuinely belongs to another site.
 		if article.Canonical != "" {
 			continue
 		}
@@ -119,11 +120,12 @@ func renderLLMSTxt(articles []templates.Article) []byte {
 	fmt.Fprintf(&body, "- [MCP server](%s/mcp): Read-only portfolio tools, resources, and prompts.\n", templates.METADATA.SiteURL)
 	fmt.Fprintf(&body, "- [JSON profile](%s/api/profile): Canonical portfolio and article index.\n", templates.METADATA.SiteURL)
 	fmt.Fprintf(&body, "- [Full LLM context](%s/llms-full.txt): This index plus every public article in Markdown.\n", templates.METADATA.SiteURL)
+	fmt.Fprintf(&body, "- Article source: append `.md` to any article slug (%s/articles/<slug>.md) for its raw Markdown.\n", templates.METADATA.SiteURL)
 	fmt.Fprintf(&body, "- [Atom feed](%s/articles/feed.xml): Reverse-chronological publication feed.\n", templates.METADATA.SiteURL)
 	fmt.Fprintf(&body, "- [Sitemap](%s/sitemap.xml): Canonical hosted pages.\n\n", templates.METADATA.SiteURL)
 	body.WriteString("## Articles\n\n")
 	for _, article := range articles {
-		fmt.Fprintf(&body, "- [%s](%s) — %s\n", article.Title, article.URL, article.Description)
+		fmt.Fprintf(&body, "- [%s](%s) — %s ([Markdown](%s))\n", article.Title, article.URL, article.Description, article.MarkdownURL())
 	}
 	body.WriteString("\n## Optional\n\n")
 	fmt.Fprintf(&body, "- [PhD thesis](%s): %s\n", templates.THESIS.URL, templates.THESIS.Title)
@@ -208,7 +210,10 @@ func relatedArticles(current templates.Article, articles []templates.Article) []
 	return related
 }
 
-func articleIndexData(articles []templates.Article, requestedTag string) ([]templates.ArticleYear, []string, string) {
+// articleIndexData resolves one request's index view. A query switches the page
+// from the year-grouped archive to relevance-ranked results; the tag filter
+// applies in both modes, so the two narrow the same list instead of competing.
+func articleIndexData(articles []templates.Article, index *searchIndex, requestedTag, requestedQuery string) templates.ArticleIndexView {
 	tagSet := make(map[string]bool)
 	for _, article := range articles {
 		for _, tag := range article.Tags {
@@ -220,7 +225,7 @@ func articleIndexData(articles []templates.Article, requestedTag string) ([]temp
 		tags = append(tags, tag)
 	}
 	// Canonical vocabulary order, not alphabetical: the filter row then reads
-	// topic-first (Agent, LLM, RAG, …) instead of scattering related chips.
+	// topic-first (Agent, Coding, LLM, …) instead of scattering related chips.
 	templates.SortTags(tags)
 
 	activeTag := ""
@@ -230,17 +235,72 @@ func articleIndexData(articles []templates.Article, requestedTag string) ([]temp
 			break
 		}
 	}
+	matchesTag := func(article templates.Article) bool {
+		return activeTag == "" || slices.Contains(article.Tags, activeTag)
+	}
 
-	groups := make([]templates.ArticleYear, 0)
+	view := templates.ArticleIndexView{Query: normalizeSearchQuery(requestedQuery), ActiveTag: activeTag, Tags: tags}
+	if view.Searching() {
+		view.Results = make([]templates.Article, 0)
+		for _, article := range index.Search(view.Query) {
+			if matchesTag(article) {
+				view.Results = append(view.Results, article)
+			}
+		}
+		return view
+	}
+
+	view.Years = make([]templates.ArticleYear, 0)
 	for _, article := range articles {
-		if activeTag != "" && !slices.Contains(article.Tags, activeTag) {
+		if !matchesTag(article) {
 			continue
 		}
 		year := article.Date.Year()
-		if len(groups) == 0 || groups[len(groups)-1].Year != year {
-			groups = append(groups, templates.ArticleYear{Year: year})
+		if len(view.Years) == 0 || view.Years[len(view.Years)-1].Year != year {
+			view.Years = append(view.Years, templates.ArticleYear{Year: year})
 		}
-		groups[len(groups)-1].Articles = append(groups[len(groups)-1].Articles, article)
+		view.Years[len(view.Years)-1].Articles = append(view.Years[len(view.Years)-1].Articles, article)
 	}
-	return groups, tags, activeTag
+	return view
+}
+
+// renderArticleMarkdown emits the agent-facing source of one article: the body
+// the HTML page renders, prefixed with the metadata needed to cite it. TOML
+// frontmatter stays out (it is repository syntax, not a published contract) and
+// root-relative links are absolutized so the document stands alone off-site.
+func renderArticleMarkdown(article templates.Article) []byte {
+	var body strings.Builder
+	fmt.Fprintf(&body, "# %s\n\n> %s\n\n", article.Title, article.Description)
+	fmt.Fprintf(&body, "- Published: %s\n", article.Date.Format(time.DateOnly))
+	if article.ModifiedDate().After(article.Date) {
+		fmt.Fprintf(&body, "- Updated: %s\n", article.ModifiedDate().Format(time.DateOnly))
+	}
+	fmt.Fprintf(&body, "- Reading time: %d min\n", article.ReadingMinutes)
+	fmt.Fprintf(&body, "- Tags: %s\n", strings.Join(article.Tags, ", "))
+	fmt.Fprintf(&body, "- URL: %s\n", article.URL)
+	if article.Canonical != "" {
+		fmt.Fprintf(&body, "- Canonical: %s\n", article.Canonical)
+	}
+	if article.Syndicated != "" {
+		fmt.Fprintf(&body, "- Also published at: %s\n", article.Syndicated)
+	}
+	fmt.Fprintf(&body, "\n%s\n", absoluteMarkdownLinks(article.Markdown))
+	return []byte(body.String())
+}
+
+// absoluteMarkdownLinks rewrites root-relative Markdown links and images to the
+// site origin. It relies on the same renderer invariant as absoluteArticleHTML:
+// bodies are validated Markdown, so "](/" only ever opens a link destination.
+func absoluteMarkdownLinks(markdown string) string {
+	return strings.ReplaceAll(markdown, "](/", "]("+templates.METADATA.SiteURL+"/")
+}
+
+// articleMarkdownIndex precomputes every article's Markdown surface at startup,
+// keyed by slug, so the route stays a map lookup and a write.
+func articleMarkdownIndex(articles []templates.Article) map[string][]byte {
+	index := make(map[string][]byte, len(articles))
+	for _, article := range articles {
+		index[article.Slug] = renderArticleMarkdown(article)
+	}
+	return index
 }

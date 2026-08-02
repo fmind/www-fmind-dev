@@ -4,7 +4,7 @@ description = "A guide to creating conversational AI with Gemini. Generate custo
 date = "2025-07-20"
 tags = ["LLM", "Demo"]
 slug = "its-not-artificial-recreating-a-conversational-format-with-gemini-s-multi-speaker-text-to-speech"
-canonical = "https://medium.com/@fmind/its-not-artificial-recreating-a-conversational-format-with-gemini-s-multi-speaker-text-to-speech-5e836feadab7"
+syndicated = "https://medium.com/@fmind/its-not-artificial-recreating-a-conversational-format-with-gemini-s-multi-speaker-text-to-speech-5e836feadab7"
 draft = false
 +++
 
@@ -48,72 +48,78 @@ The process is orchestrated within a Python script utilizing the [Google GenAI S
 
 The initial step involves generating an audio script. Rather than manual composition, a Gemini model is prompted to create a transcript. The effectiveness of this step hinges on precise prompt engineering, which defines the speaker roles, tone, topic, and target audience.
 
-    TRANSCRIPT_PROMPT = f"""
-    Generate a {MINUTES} minutes transcript in {LANG} about {THEME} for a {AGE}-year-old.
-    The speaker names are {SPEAKER_1_NAME} and {SPEAKER_2_NAME}.
-    - {SPEAKER_1_NAME} has a curious mind and ask questions.
-    - {SPEAKER_2_NAME} is an expert and answer questions.
-    Follow strictly the format below for the transcript (e.g., no extra sounds, no markdown, ...):
-    {SPEAKER_1_NAME}: So... what's on the agenda today?
-    {SPEAKER_2_NAME}: You're never going to guess!
-    {SPEAKER_1_NAME}: Black holes?
-    {SPEAKER_2_NAME}: Yes!
-    """
-    transcript = client.models.generate_content(
-        model=TRANSCRIPT_MODEL,
-        contents=TRANSCRIPT_PROMPT,
-        # ... configuration ...
-    ).text
+```python
+TRANSCRIPT_PROMPT = f"""
+Generate a {MINUTES} minutes transcript in {LANG} about {THEME} for a {AGE}-year-old.
+The speaker names are {SPEAKER_1_NAME} and {SPEAKER_2_NAME}.
+- {SPEAKER_1_NAME} has a curious mind and ask questions.
+- {SPEAKER_2_NAME} is an expert and answer questions.
+Follow strictly the format below for the transcript (e.g., no extra sounds, no markdown, ...):
+{SPEAKER_1_NAME}: So... what's on the agenda today?
+{SPEAKER_2_NAME}: You're never going to guess!
+{SPEAKER_1_NAME}: Black holes?
+{SPEAKER_2_NAME}: Yes!
+"""
+transcript = client.models.generate_content(
+    model=TRANSCRIPT_MODEL,
+    contents=TRANSCRIPT_PROMPT,
+    # ... configuration ...
+).text
+```
 
 By specifying the roles of the speakers, the model generates a natural-sounding conversation that flows logically.
 
-    Fred: So... what's on the agenda today?
-    Jamy: Today, we're talking about something super smart!
-    Fred: Ooh, like an owl? Or a dolphin?
-    Jamy: Even smarter, in a way. We're talking about Artificial Intelligence.
-    Fred: Arty-fish-all... what now?
-    Jamy: Artificial Intelligence. Let's call it AI for short. It's like giving a computer or a robot a special brain so it can learn and think.
-    Fred: A robot brain? Cool! So it can think just like me?
-    Jamy: Almost! It can think and solve problems, but in a different way. Imagine you have a toy robot. AI is like the magic that makes the robot smart enough to play a game with you.
-    Fred: It can play games? Like checkers?
-    Jamy: Exactly! Or it can play chess or even video games. Some AI are so good they can beat the best players in the world.
-    Fred: Wow! What else can this AI brain do?
-    Jamy: Lots of things! Do you ever talk to a grown-up's phone or a smart speaker and ask it to play a song or tell you a joke?
-    ...
+```text
+Fred: So... what's on the agenda today?
+Jamy: Today, we're talking about something super smart!
+Fred: Ooh, like an owl? Or a dolphin?
+Jamy: Even smarter, in a way. We're talking about Artificial Intelligence.
+Fred: Arty-fish-all... what now?
+Jamy: Artificial Intelligence. Let's call it AI for short. It's like giving a computer or a robot a special brain so it can learn and think.
+Fred: A robot brain? Cool! So it can think just like me?
+Jamy: Almost! It can think and solve problems, but in a different way. Imagine you have a toy robot. AI is like the magic that makes the robot smart enough to play a game with you.
+Fred: It can play games? Like checkers?
+Jamy: Exactly! Or it can play chess or even video games. Some AI are so good they can beat the best players in the world.
+Fred: Wow! What else can this AI brain do?
+Jamy: Lots of things! Do you ever talk to a grown-up's phone or a smart speaker and ask it to play a song or tell you a joke?
+...
+```
 
 ### Part 2: Bringing the Script to Life with Multiple Voices
 
 This is the core of the implementation. The latest Gemini models can [generate audio with multiple, distinct speakers](https://ai.google.dev/gemini-api/docs/speech-generation#multi-speaker) from a single API call. The configuration involves defining the speakers and assigning a pre-built voice to each.
 
-    response = client.models.generate_content(
-       model=TEXT_TO_SPEECH_MODEL,
-       contents=f"Read this in {LANG} with a style interesting for a {AGE}-year-old:\n\n{transcript}",
-       config=types.GenerateContentConfig(
-            response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(
-                multi_speaker_voice_config=types.MultiSpeakerVoiceConfig(
-                    speaker_voice_configs=[
-                        types.SpeakerVoiceConfig(
-                            speaker=SPEAKER_1_NAME,
-                            voice_config=types.VoiceConfig(
-                                prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                                    voice_name=SPEAKER_1_VOICE,
-                                )
-                            ),
+```python
+response = client.models.generate_content(
+   model=TEXT_TO_SPEECH_MODEL,
+   contents=f"Read this in {LANG} with a style interesting for a {AGE}-year-old:\n\n{transcript}",
+   config=types.GenerateContentConfig(
+        response_modalities=["AUDIO"],
+        speech_config=types.SpeechConfig(
+            multi_speaker_voice_config=types.MultiSpeakerVoiceConfig(
+                speaker_voice_configs=[
+                    types.SpeakerVoiceConfig(
+                        speaker=SPEAKER_1_NAME,
+                        voice_config=types.VoiceConfig(
+                            prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                voice_name=SPEAKER_1_VOICE,
+                            )
                         ),
-                        types.SpeakerVoiceConfig(
-                            speaker=SPEAKER_2_NAME,
-                            voice_config=types.VoiceConfig(
-                                prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                                    voice_name=SPEAKER_2_VOICE,
-                                )
-                            ),
+                    ),
+                    types.SpeakerVoiceConfig(
+                        speaker=SPEAKER_2_NAME,
+                        voice_config=types.VoiceConfig(
+                            prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                voice_name=SPEAKER_2_VOICE,
+                            )
                         ),
-                    ]
-                ),
-            )
-       )
-    )
+                    ),
+                ]
+            ),
+        )
+   )
+)
+```
 
 The model parses the transcript, identifies the speaker tags (e.g., `Fred:` or `Jamy:)`, and applies the designated voice to the corresponding lines of dialogue. This produces a seamless, conversational audio file without the need for manual audio editing or splicing.
 

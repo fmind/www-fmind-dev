@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"net/url"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -32,6 +33,31 @@ func StaticURL(p string) string {
 		return p + "?v=" + h
 	}
 	return p
+}
+
+// ArticleFilterURL builds an article-index URL that keeps the other active
+// filter, so clicking a tag while searching narrows the results instead of
+// silently discarding the query (and vice versa).
+func ArticleFilterURL(tag, query string) string {
+	values := url.Values{}
+	if tag != "" {
+		values.Set("tag", tag)
+	}
+	if query != "" {
+		values.Set("q", query)
+	}
+	if len(values) == 0 {
+		return "/articles/"
+	}
+	return "/articles/?" + values.Encode()
+}
+
+// plural returns the suffix that makes a counted noun read naturally.
+func plural(count int) string {
+	if count == 1 {
+		return ""
+	}
+	return "s"
 }
 
 // MarkdownToHTML converts trusted Markdown content to embeddable HTML. If
@@ -129,8 +155,8 @@ func GetStructuredData(article *Article) (string, error) {
 	website := map[string]any{
 		"@id":           websiteID,
 		"@type":         "WebSite",
-		"name":          "www.fmind.dev",
-		"alternateName": []string{METADATA.AlternateName},
+		"name":          METADATA.SiteName,
+		"alternateName": []string{strings.TrimPrefix(METADATA.SiteURL, "https://")},
 		"url":           METADATA.SiteURL,
 		"description":   METADATA.Description,
 		"author": map[string]any{

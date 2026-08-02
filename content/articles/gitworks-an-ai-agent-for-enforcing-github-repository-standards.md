@@ -1,10 +1,10 @@
 +++
 title = "GitWorks: an AI Agent for Enforcing GitHub Repository Standards"
-description = "Maintaining consistency and quality across software projects, especially in collaborative environments, is a significant challenge. As projects grow and teams evolve, ensuring adherence to…"
+description = "A Python notebook agent that reviews GitHub repositories against your own guidelines automatically, using Google Colab, the GitHub API, and Gemini models."
 date = "2025-04-14"
-tags = ["Agent", "Project"]
+tags = ["Coding", "Project"]
 slug = "gitworks-an-ai-agent-for-enforcing-github-repository-standards"
-canonical = "https://medium.com/@fmind/gitworks-an-ai-agent-for-enforcing-github-repository-standards-e0193f60981d"
+syndicated = "https://medium.com/@fmind/gitworks-an-ai-agent-for-enforcing-github-repository-standards-e0193f60981d"
 draft = false
 +++
 
@@ -35,87 +35,97 @@ GitWorks operates through a clear agentic process: **Define -\> Fetch -\> Analyz
 
 **Define Guidelines (Configuration):** The core of GitWorks is _your_ set of guidelines. You define these in a clear text format (e.g., the MLOps Code Repository Checklist provided in the notebook ). This tells the agent _what_ to look for.
 
-    ## MLOps Code Repository Checklist
+```markdown
+## MLOps Code Repository Checklist
 
-    This checklist helps assess the maturity of an MLOps project based on artifacts and configurations found within its GitHub repository.
+This checklist helps assess the maturity of an MLOps project based on artifacts and configurations found within its GitHub repository.
 
-    ---
+---
 
-    ### Level 1: Prototype
+### Level 1: Prototype
 
-    _Focus: Basic functionality, primarily for project actors._
+_Focus: Basic functionality, primarily for project actors._
 
-    - **Repository Initialization:** `.git` directory exists, indicating version control is used.
-    - **Basic Code Structure:** Source code files exist (e.g., `.py` files or notebooks).
-    - **Initial README:** A basic `README.md` file exists, perhaps with a project title and brief description.
-    - **Environment/Dependency Listing (Basic):** A `requirements.txt` or initial `pyproject.toml` might exist, listing key dependencies.
+- **Repository Initialization:** `.git` directory exists, indicating version control is used.
+- **Basic Code Structure:** Source code files exist (e.g., `.py` files or notebooks).
+- **Initial README:** A basic `README.md` file exists, perhaps with a project title and brief description.
+- **Environment/Dependency Listing (Basic):** A `requirements.txt` or initial `pyproject.toml` might exist, listing key dependencies.
 
-    ---
+---
+```
 
 **Setup & Authentication:** Standard setup involves obtaining API keys/tokens for GitHub and Gemini. These are securely stored using Colab’s secrets management. The script uses the `PyGithub` library for GitHub interactions and `google-genai` for Gemini.
 
-    # GitHub
-    github_auth = gh.Auth.Token(GITHUB_ACCESS_TOKEN)
-    github = gh.Github(auth=github_auth)
-    # Gemini
-    genai_client = genai.Client(api_key=GEMINI_API_KEY)
+```python
+# GitHub
+github_auth = gh.Auth.Token(GITHUB_ACCESS_TOKEN)
+github = gh.Github(auth=github_auth)
+# Gemini
+genai_client = genai.Client(api_key=GEMINI_API_KEY)
+```
 
 **Fetch Repository Contents (Perception):** The agent connects to the specified GitHub repository using the provided token. It recursively fetches the content of all files in the repository, handling potential decoding errors. All file contents are concatenated into a single string context.
 
-    repository = github.get_repo(REPOSITORY)
-    contents = []
-    stack = repository.get_contents("")
-    while stack:
-        content = stack.pop(0)
-        if content.type == "dir":
-            new_contents = repository.get_contents(content.path)
-            stack.extend(new_contents)
-        else:
-            contents.append(content)
+```python
+repository = github.get_repo(REPOSITORY)
+contents = []
+stack = repository.get_contents("")
+while stack:
+    content = stack.pop(0)
+    if content.type == "dir":
+        new_contents = repository.get_contents(content.path)
+        stack.extend(new_contents)
+    else:
+        contents.append(content)
 
-    string = io.StringIO()
-    for content in contents:
-        path = content.path
-        try:
-            text = content.decoded_content.decode()
-            part = f"--- file: {path} ---\n{text}\n"
-            string.write(part)
-        except Exception as error:
-            print(f'[ERROR] Path: "{path}", Error: {error}')
-    string = string.getvalue()
+string = io.StringIO()
+for content in contents:
+    path = content.path
+    try:
+        text = content.decoded_content.decode()
+        part = f"--- file: {path} ---\n{text}\n"
+        string.write(part)
+    except Exception as error:
+        print(f'[ERROR] Path: "{path}", Error: {error}')
+string = string.getvalue()
+```
 
 **Analyze Contents (Reasoning & Action):** This is where Gemini comes in. The concatenated repository content is sent to the Gemini model (`gemini-2.0-flash` is a suitable choice) along with a system prompt instructing it to act as a Senior Software Engineer and review the code against the provided guidelines. Crucially, the prompt asks for a structured output: a summary of the review and a list of specific guidelines needing improvement, with suggestions for fixes. The desired output format is defined using a Pydantic model (`GitHubIssue`) to ensure the response is structured JSON containing a `title` and `body`.
 
-    class GitHubIssue(pdt.BaseModel):
-        """GitHub Issue."""
-        title: str
-        body: str
+```python
+class GitHubIssue(pdt.BaseModel):
+    """GitHub Issue."""
+    title: str
+    body: str
 
-    instructions = f"""
-    You are a Senior Software Engineer.
-    Given the following guidelines, give a detailed review the repository content.
-    Provide a general summary, and then lists the guidelines that need improvements and how to fix it.
+instructions = f"""
+You are a Senior Software Engineer.
+Given the following guidelines, give a detailed review the repository content.
+Provide a general summary, and then lists the guidelines that need improvements and how to fix it.
 
-    {guidelines}
-    """
+{guidelines}
+"""
 
-    review = genai_client.models.generate_content(
-        model=MODEL,
-        contents=string,
-        config=gt.GenerateContentConfig(
-            temperature=TEMPERATURE,
-            max_output_tokens=MAX_OUTPUT_TOKENS,
-            system_instruction=instructions,
-            response_mime_type='application/json',
-            response_schema=GitHubIssue,
-        ),
-    )
+review = genai_client.models.generate_content(
+    model=MODEL,
+    contents=string,
+    config=gt.GenerateContentConfig(
+        temperature=TEMPERATURE,
+        max_output_tokens=MAX_OUTPUT_TOKENS,
+        system_instruction=instructions,
+        response_mime_type='application/json',
+        response_schema=GitHubIssue,
+    ),
+)
+```
 
 **Report Results (Output):** The structured JSON response from Gemini is parsed back into the Pydantic object. The review (`title` and `body`) is displayed in Markdown format within Colab. Optionally, if `CREATE_ISSUE` is set to `True`, the agent uses the GitHub API to automatically create a new issue in the target repository containing the review title and body.
 
-    if CREATE_ISSUE:
-        issue = repository.create_issue(title=review.parsed.title, body=review.parsed.body)
-        print('Issue created:', issue.html_url)
+```python
+if CREATE_ISSUE:
+    issue = repository.create_issue(title=review.parsed.title, body=review.parsed.body)
+    print('Issue created:', issue.html_url)
+```
 
 ### The Value Proposition: Why Use GitWorks?
 

@@ -4,7 +4,7 @@ description = "Visual Studio Code is a remarkable application. In the past, deve
 date = "2023-11-23"
 tags = ["Python", "Guide"]
 slug = "how-to-configure-vs-code-for-ai-ml-and-mlops-development-in-python"
-canonical = "https://medium.com/@fmind/how-to-configure-vs-code-for-ai-ml-and-mlops-development-in-python-%EF%B8%8F%EF%B8%8F-8582d8c6ea54"
+syndicated = "https://medium.com/@fmind/how-to-configure-vs-code-for-ai-ml-and-mlops-development-in-python-%EF%B8%8F%EF%B8%8F-8582d8c6ea54"
 draft = false
 +++
 

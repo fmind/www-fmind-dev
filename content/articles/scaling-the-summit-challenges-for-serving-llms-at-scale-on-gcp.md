@@ -4,7 +4,7 @@ description = "Navigate the challenges of scaling LLMs on GCP and get benchmark 
 date = "2025-07-17"
 tags = ["LLM", "Cloud"]
 slug = "scaling-the-summit-challenges-for-serving-llms-at-scale-on-gcp"
-canonical = "https://medium.com/@fmind/scaling-the-summit-challenges-for-serving-llms-at-scale-on-gcp-e0211efcdbbf"
+syndicated = "https://medium.com/@fmind/scaling-the-summit-challenges-for-serving-llms-at-scale-on-gcp-e0211efcdbbf"
 draft = false
 +++
 
@@ -37,33 +37,35 @@ To test these solutions under pressure, I used [**Locust**](https://locust.io/),
 
 The benchmark was configured to run for 5 minutes for each solution, ramping up from 0 to 250 concurrent users at a rate of 1 new user per second. Each virtual user continuously sends prompts from the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset. The prompts are sent with a `temperature` of `0.0` for deterministic outputs and a `max_output_tokens` limit of 1000. This setup allows us to measure key performance indicators like failure rate, response time, and throughput as the load intensifies.
 
-    # Example of benchmark in locustfile.py
-    class VertexAIMaaS(Benchmark, lc.HttpUser):
-        """Locust user for benchmarking Vertex AI Model as a Service."""
+```python
+# Example of benchmark in locustfile.py
+class VertexAIMaaS(Benchmark, lc.HttpUser):
+    """Locust user for benchmarking Vertex AI Model as a Service."""
 
-        host: str = (
-            f"https://{LOCATION}-aiplatform.googleapis.com"
-            if LOCATION != "global"
-            else "https://aiplatform.googleapis.com"
-        )
+    host: str = (
+        f"https://{LOCATION}-aiplatform.googleapis.com"
+        if LOCATION != "global"
+        else "https://aiplatform.googleapis.com"
+    )
 
-        @lc.task
-        def predict(self):
-            """Send a prediction request to the Vertex AI Model as a Service."""
-            config = {
-                "temperature": self.options.temperature,
-                "thinkingConfig": {"thinkingBudget": 0},
-                "maxOutputTokens": self.options.max_output_tokens,
-            }
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.bearer}",
-            }
-            url = f"/v1/projects/{self.options.project_id}/locations/{self.options.location}/publishers/google/models/{self.options.model}:generateContent"
-            for text in self.iter_data():
-                contents = [{"role": "user", "parts": [{"text": text}]}]
-                body = {"contents": contents, "generationConfig": config}
-                self.client.post(url=url, json=body, headers=headers)
+    @lc.task
+    def predict(self):
+        """Send a prediction request to the Vertex AI Model as a Service."""
+        config = {
+            "temperature": self.options.temperature,
+            "thinkingConfig": {"thinkingBudget": 0},
+            "maxOutputTokens": self.options.max_output_tokens,
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.bearer}",
+        }
+        url = f"/v1/projects/{self.options.project_id}/locations/{self.options.location}/publishers/google/models/{self.options.model}:generateContent"
+        for text in self.iter_data():
+            contents = [{"role": "user", "parts": [{"text": text}]}]
+            body = {"contents": contents, "generationConfig": config}
+            self.client.post(url=url, json=body, headers=headers)
+```
 
 ### 🗺️ GCP’s LLM Serving Options: A Review
 
@@ -115,21 +117,23 @@ Monitoring dashboard on Cloud Run
 
 &nbsp;
 
-    # setup the cloud run ollama model serving
-    setup-cloud-run-ollama model="gemma3-12b":
-     gcloud run deploy {{model}}-ollama \
-      --cpu=8 --max-instances=2 --memory=32Gi \
-      --gpu=1 --gpu-type=nvidia-l4 --no-gpu-zonal-redundancy \
-      --image=us-docker.pkg.dev/cloudrun/container/gemma/{{model}} \
-      --timeout=600 --concurrency=8 --ingress=all \
-      --allow-unauthenticated --no-cpu-throttling \
-      --project=$PROJECT_ID --region=$LOCATION \
-      --set-env-vars OLLAMA_NUM_PARALLEL=4 \
-      --set-env-vars API_KEY=$API_KEY
+```justfile
+# setup the cloud run ollama model serving
+setup-cloud-run-ollama model="gemma3-12b":
+ gcloud run deploy {{model}}-ollama \
+  --cpu=8 --max-instances=2 --memory=32Gi \
+  --gpu=1 --gpu-type=nvidia-l4 --no-gpu-zonal-redundancy \
+  --image=us-docker.pkg.dev/cloudrun/container/gemma/{{model}} \
+  --timeout=600 --concurrency=8 --ingress=all \
+  --allow-unauthenticated --no-cpu-throttling \
+  --project=$PROJECT_ID --region=$LOCATION \
+  --set-env-vars OLLAMA_NUM_PARALLEL=4 \
+  --set-env-vars API_KEY=$API_KEY
 
-    # proxy the cloud run ollama model serving
-    proxy-cloud-run-ollama model="gemma3-12b":
-     gcloud run services proxy {{model}}-ollama --port=8080 --region=$LOCATION --project=$PROJECT_ID
+# proxy the cloud run ollama model serving
+proxy-cloud-run-ollama model="gemma3-12b":
+ gcloud run services proxy {{model}}-ollama --port=8080 --region=$LOCATION --project=$PROJECT_ID
+```
 
 ### 4. GKE + vLLM (The Unclimbed Peak) 🏔️
 

@@ -31,6 +31,8 @@ func SitemapArticleCount(t *testing.T) int {
 	if err != nil {
 		t.Fatalf("load articles: %v", err)
 	}
+	// Only an article that genuinely belongs to another site is excluded; the
+	// syndicated Medium copies do not change what this sitemap claims.
 	count := 0
 	for _, article := range visibleArticles(collection.all, false) {
 		if article.Canonical == "" {

@@ -4,7 +4,7 @@ description = "MLOps practitioners (rightfully) point out that running notebooks
 date = "2023-06-24"
 tags = ["MLOps", "Python", "Project"]
 slug = "a-great-mlops-project-should-start-with-a-good-python-package"
-canonical = "https://medium.com/@fmind/a-great-mlops-project-should-start-with-a-good-python-package-7662bdf79563"
+syndicated = "https://medium.com/@fmind/a-great-mlops-project-should-start-with-a-good-python-package-7662bdf79563"
 draft = false
 +++
 

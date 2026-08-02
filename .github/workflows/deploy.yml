@@ -16,6 +16,7 @@ on:
       - "static/**"
       - "templates/**"
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - "**/*.go"
       - ".dockerignore"
@@ -52,6 +53,22 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 100
+      - name: Guard canonical article sources
+        if: github.event_name == 'pull_request'
+        env:
+          ALLOW_MANUAL: ${{ contains(github.event.pull_request.labels.*.name, 'article-manual-edit') }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --quiet "$BASE_SHA...$HEAD_SHA" -- content/articles; then
+            exit 0
+          fi
+          if [[ "$HEAD_REF" == article/* || "$ALLOW_MANUAL" == "true" ]]; then
+            exit 0
+          fi
+          echo "new articles use pub export on article/* branches; canonical-site corrections require the article-manual-edit label." >&2
+          exit 1
       - name: Set up mise tools
         uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
         with:

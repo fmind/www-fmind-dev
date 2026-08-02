@@ -4,7 +4,7 @@ description = "Meet Kate: an AI-powered, live, multimodal website assistant. She
 date = "2025-02-15"
 tags = ["Agent", "Demo"]
 slug = "meet-kate-your-ai-powered-live-multimodal-website-assistant"
-canonical = "https://medium.com/@fmind/meet-kate-your-ai-powered-live-multimodal-website-assistant-8f64fbad3937"
+syndicated = "https://medium.com/@fmind/meet-kate-your-ai-powered-live-multimodal-website-assistant-8f64fbad3937"
 draft = false
 +++
 

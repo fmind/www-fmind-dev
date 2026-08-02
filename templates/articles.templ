@@ -1,9 +1,6 @@
 package templates
 
-import (
-	"fmt"
-	"net/url"
-)
+import "fmt"
 
 // TagBadge renders a non-interactive tag. The color comes from the stylesheet
 // keyed on data-tag, so the vocabulary in tags.go stays the only list to edit.
@@ -11,11 +8,37 @@ templ TagBadge(tag string) {
 	<span class="tag" data-tag={ tag }>{ tag }</span>
 }
 
-// TagLink renders a tag that filters the index. active draws the selected state.
-templ TagLink(tag string, active bool) {
-	<a class={ "tag", templ.KV("tag-active", active) } data-tag={ tag } href={ templ.SafeURL("/articles/?tag=" + url.QueryEscape(tag)) }>
+// TagLink renders a tag that filters the index. active draws the selected state,
+// and query carries the current search so the two filters compose.
+templ TagLink(tag string, active bool, query string) {
+	<a class={ "tag", templ.KV("tag-active", active) } data-tag={ tag } href={ templ.SafeURL(ArticleFilterURL(tag, query)) }>
 		{ tag }
 	</a>
+}
+
+// ArticleSearchForm is a plain GET form: the server ranks and renders results,
+// so search works with JavaScript disabled and leaves no query in any log.
+templ ArticleSearchForm(view ArticleIndexView) {
+	<form class="flex flex-wrap justify-center items-center gap-2 mb-6" method="get" action="/articles/" role="search">
+		if view.ActiveTag != "" {
+			<input type="hidden" name="tag" value={ view.ActiveTag }/>
+		}
+		<label class="sr-only" for="article-search">Search articles</label>
+		<input
+			class="input input-bordered w-full max-w-md"
+			id="article-search"
+			type="search"
+			name="q"
+			value={ view.Query }
+			placeholder="Search articles…"
+			autocomplete="off"
+			maxlength="128"
+		/>
+		<button class="btn btn-primary rounded-xl font-semibold" type="submit">Search</button>
+		if view.Searching() {
+			<a class="btn btn-ghost border border-base-300 rounded-xl" href={ templ.SafeURL(ArticleFilterURL(view.ActiveTag, "")) }>Clear</a>
+		}
+	</form>
 }
 
 // ArticleCard renders one article teaser. priority marks the card that is above
@@ -36,8 +59,8 @@ templ ArticleCard(article Article, priority bool) {
 				<span aria-hidden="true">·</span>
 				<span>{ fmt.Sprintf("%d min read", article.ReadingMinutes) }</span>
 			</div>
-			<!-- h3: cards always sit under a section heading (year, "Articles",
-			     "Keep reading"), so the page outline stays sequential. -->
+			// h3: cards always sit under a section heading (year, "Articles",
+			// "Keep reading"), so the page outline stays sequential.
 			<h3 class="card-title font-heading text-xl leading-snug mt-2">
 				<a class="hover:text-primary transition-colors" href={ templ.SafeURL("/articles/" + article.Slug + "/") }>{ article.Title }</a>
 			</h3>
@@ -55,7 +78,7 @@ templ ArticleCard(article Article, priority bool) {
 	</article>
 }
 
-templ ArticleIndex(years []ArticleYear, tags []string, activeTag string) {
+templ ArticleIndex(view ArticleIndexView) {
 	<section class="bg-base-200 min-h-screen px-4 py-14 md:py-20">
 		<div class="container mx-auto max-w-6xl">
 			<header class="text-center max-w-3xl mx-auto mb-10 md:mb-14">
@@ -63,27 +86,45 @@ templ ArticleIndex(years []ArticleYear, tags []string, activeTag string) {
 				<h1 class="text-4xl md:text-6xl font-heading font-black text-balance">Articles</h1>
 				<p class="text-lg text-base-content/70 leading-relaxed mt-5">Pragmatic field notes on AI agents, MLOps, cloud architecture, and engineering systems.</p>
 			</header>
+			@ArticleSearchForm(view)
 			<nav class="flex flex-wrap justify-center gap-2 mb-12" aria-label="Filter articles by tag">
-				<a class={ "tag", templ.KV("tag-active", activeTag == "") } href="/articles/">All</a>
-				for _, tag := range tags {
-					@TagLink(tag, activeTag == tag)
+				<a class={ "tag", templ.KV("tag-active", view.ActiveTag == "") } href={ templ.SafeURL(ArticleFilterURL("", view.Query)) }>All</a>
+				for _, tag := range view.Tags {
+					@TagLink(tag, view.ActiveTag == tag, view.Query)
 				}
 			</nav>
-			if len(years) == 0 {
-				<div class="alert max-w-2xl mx-auto"><span>No articles match this tag.</span></div>
-			}
-			<div class="space-y-16">
-				for groupIndex, group := range years {
-					<section aria-labelledby={ fmt.Sprintf("year-%d", group.Year) }>
-						<h2 id={ fmt.Sprintf("year-%d", group.Year) } class="text-3xl font-heading font-bold mb-6 border-b border-base-300 pb-3">{ fmt.Sprintf("%d", group.Year) }</h2>
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-							for articleIndex, article := range group.Articles {
-								@ArticleCard(article, groupIndex == 0 && articleIndex == 0)
-							}
-						</div>
-					</section>
+			if view.Searching() {
+				<section aria-labelledby="search-results">
+					<h2 id="search-results" class="text-2xl font-heading font-bold mb-6 border-b border-base-300 pb-3">
+						{ fmt.Sprintf("%d result%s for", len(view.Results), plural(len(view.Results))) }
+						<span class="text-primary">“{ view.Query }”</span>
+					</h2>
+					if len(view.Results) == 0 {
+						<div class="alert max-w-2xl mx-auto"><span>No articles match this search. Try a broader term, or browse the tags above.</span></div>
+					}
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						for rank, article := range view.Results {
+							@ArticleCard(article, rank == 0)
+						}
+					</div>
+				</section>
+			} else {
+				if len(view.Years) == 0 {
+					<div class="alert max-w-2xl mx-auto"><span>No articles match this tag.</span></div>
 				}
-			</div>
+				<div class="space-y-16">
+					for groupIndex, group := range view.Years {
+						<section aria-labelledby={ fmt.Sprintf("year-%d", group.Year) }>
+							<h2 id={ fmt.Sprintf("year-%d", group.Year) } class="text-3xl font-heading font-bold mb-6 border-b border-base-300 pb-3">{ fmt.Sprintf("%d", group.Year) }</h2>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+								for articleIndex, article := range group.Articles {
+									@ArticleCard(article, groupIndex == 0 && articleIndex == 0)
+								}
+							</div>
+						</section>
+					}
+				</div>
+			}
 		</div>
 	</section>
 }
@@ -161,14 +202,14 @@ templ ArticlePage(article Article, related []Article) {
 				<ul class="flex flex-wrap justify-center gap-2 mt-6" aria-label="Article tags">
 					for _, tag := range article.Tags {
 						<li>
-							@TagLink(tag, false)
+							@TagLink(tag, false, "")
 						</li>
 					}
 				</ul>
 			}
 		</header>
-		<!-- Code blocks stay on the brand panel palette in both themes:
-		     slate-800/700/50 are the exact brand panel, border, and foreground. -->
+		// Code blocks stay on the brand panel palette in both themes:
+		// slate-800/700/50 are the exact brand panel, border, and foreground.
 		<div class="prose prose-lg md:prose-xl mx-auto max-w-4xl text-base-content prose-headings:font-heading prose-headings:scroll-mt-24 prose-a:text-primary prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-slate-800 prose-pre:text-slate-50 prose-pre:border prose-pre:border-slate-700 prose-code:before:content-none prose-code:after:content-none [&_figure]:my-10 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-base-content/60 [&_video]:my-10 [&_video]:w-full [&_video]:rounded-xl [&_video]:shadow-lg">
 			@templ.Raw(article.HTML)
 		</div>

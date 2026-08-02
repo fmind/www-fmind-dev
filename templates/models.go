@@ -26,8 +26,11 @@ type LeadershipRole struct {
 }
 
 type Metadata struct {
-	Name              string       `json:"name"`
-	AlternateName     string       `json:"alternate_name"`
+	Name          string `json:"name"`
+	AlternateName string `json:"alternate_name"`
+	// SiteName is the brand shown in the header, social cards, and structured
+	// data. The domain is where the site lives, not what it is called.
+	SiteName          string       `json:"site_name"`
 	Title             string       `json:"title"`
 	JobTitle          string       `json:"job_title"`
 	HeadlinePrimary   string       `json:"headline_primary"`
@@ -111,12 +114,20 @@ type Article struct {
 	Title       string    `json:"title"`
 	Slug        string    `json:"slug"`
 	Canonical   string    `json:"canonical,omitzero"`
-	HTML        string    `json:"-"`
-	URL         string    `json:"url"`
-	ImageURL    string    `json:"image_url"`
+	// Syndicated records a copy published elsewhere (Medium, DEV). It is
+	// provenance only: this site is the canonical home of every article.
+	Syndicated string `json:"syndicated,omitzero"`
+	HTML       string `json:"-"`
+	URL        string `json:"url"`
+	ImageURL   string `json:"image_url"`
 	// CardImageURL is the downscaled cover teasers load. Feeds, social metadata,
 	// and JSON-LD keep ImageURL so external consumers still get the full asset.
-	CardImageURL   string   `json:"-"`
+	CardImageURL string `json:"-"`
+	// CoverSrcset and CoverSizes are the rendered cover's responsive candidates.
+	// The <head> preload reuses them so the preload scanner resolves to the same
+	// file the layout paints instead of fetching the full-size cover alongside it.
+	CoverSrcset    string   `json:"-"`
+	CoverSizes     string   `json:"-"`
 	ImageAlt       string   `json:"image_alt"`
 	Tags           []string `json:"tags"`
 	ReadingMinutes int      `json:"reading_minutes"`
@@ -132,6 +143,7 @@ type ArticleSummary struct {
 	Description    string    `json:"description"`
 	Slug           string    `json:"slug"`
 	Canonical      string    `json:"canonical,omitzero"`
+	Syndicated     string    `json:"syndicated,omitzero"`
 	URL            string    `json:"url"`
 	ImageURL       string    `json:"image_url"`
 	ImageAlt       string    `json:"image_alt"`
@@ -148,6 +160,7 @@ func (article Article) Summary() ArticleSummary {
 		Tags:           article.Tags,
 		Slug:           article.Slug,
 		Canonical:      article.Canonical,
+		Syndicated:     article.Syndicated,
 		URL:            article.URL,
 		ImageURL:       article.ImageURL,
 		ImageAlt:       article.ImageAlt,
@@ -166,6 +179,16 @@ func (article Article) ImagePath() string {
 // layout at 2× density and no srcset is warranted.
 func (article Article) CardImagePath() string {
 	return strings.TrimPrefix(article.CardImageURL, METADATA.SiteURL)
+}
+
+// MarkdownPath is the same-origin path of an article's raw Markdown source, and
+// MarkdownURL its absolute form for machine-readable surfaces.
+func (article Article) MarkdownPath() string {
+	return "/articles/" + article.Slug + ".md"
+}
+
+func (article Article) MarkdownURL() string {
+	return METADATA.SiteURL + article.MarkdownPath()
 }
 
 // CanonicalURL returns the externally declared canonical when present and the
@@ -192,6 +215,21 @@ type ArticleYear struct {
 	Year     int
 }
 
+// ArticleIndexView is one render of the article index. The archive is grouped by
+// year; a search replaces those groups with a single relevance-ranked list,
+// because ordering by date would throw away the ranking the reader asked for.
+type ArticleIndexView struct {
+	Query     string
+	ActiveTag string
+	Tags      []string
+	Years     []ArticleYear
+	Results   []Article
+}
+
+// Searching reports whether this view renders ranked results instead of the
+// year-grouped archive.
+func (view ArticleIndexView) Searching() bool { return view.Query != "" }
+
 // PageMetadata drives one shared document head for home, article, and error pages.
 type PageMetadata struct {
 	Article     *Article
@@ -207,8 +245,14 @@ type PageMetadata struct {
 	// PreloadImage is the same-origin path of this page's Largest Contentful Paint
 	// image, preloaded in <head> so the browser starts it before parsing the body.
 	PreloadImage string
-	NoIndex      bool
-	IsHome       bool
+	// PreloadImageSrcset and PreloadImageSizes mirror the candidates on the image
+	// the page actually renders. When the LCP image is responsive they must be set,
+	// or the preload names one candidate while the layout paints another and the
+	// browser downloads both.
+	PreloadImageSrcset string
+	PreloadImageSizes  string
+	NoIndex            bool
+	IsHome             bool
 }
 
 type Service struct {

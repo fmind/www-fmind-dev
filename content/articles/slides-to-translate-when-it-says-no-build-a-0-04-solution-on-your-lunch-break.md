@@ -4,7 +4,7 @@ description = "It is a classic tale of corporate life. A colleague of mine at De
 date = "2025-07-29"
 tags = ["LLM", "Demo"]
 slug = "slides-to-translate-when-it-says-no-build-a-0-04-solution-on-your-lunch-break"
-canonical = "https://medium.com/@fmind/slides-to-translate-when-it-says-no-build-a-0-04-solution-on-your-lunch-break-3afa8bd9f6bb"
+syndicated = "https://medium.com/@fmind/slides-to-translate-when-it-says-no-build-a-0-04-solution-on-your-lunch-break-3afa8bd9f6bb"
 draft = false
 +++
 
@@ -42,74 +42,82 @@ The solution is a single [Google Colab notebook](https://colab.research.google.c
 
 First, you need to authenticate and set up the environment. This is surprisingly easy in Colab:
 
-    # Authenticate with your Google Cloud Project
-    from google.colab import auth
-    auth.authenticate_user(project_id="your-gcp-project-id")
+```python
+# Authenticate with your Google Cloud Project
+from google.colab import auth
+auth.authenticate_user(project_id="your-gcp-project-id")
 
-    # Build the service clients for Drive and Slides
-    from googleapiclient.discovery import build
-    drive_service = build('drive', 'v3')
-    slides_service = build('slides', 'v1')
+# Build the service clients for Drive and Slides
+from googleapiclient.discovery import build
+drive_service = build('drive', 'v3')
+slides_service = build('slides', 'v1')
 
-    # And initialize the Vertex AI client
-    from google import genai
-    client = genai.Client(vertexai=True)
+# And initialize the Vertex AI client
+from google import genai
+client = genai.Client(vertexai=True)
+```
 
 After creating a safe copy of the presentation and extracting all the unique text strings, the real magic begins. To make the translation process fast, I used a [`ThreadPoolExecutor`](https://docs.python.org/3/library/concurrent.futures.html#threadpoolexecutor) to make concurrent API calls to the Gemini model.
 
 The core translation function is simple. It takes a piece of text and a set of instructions, then returns the translation.
 
-    def translate_text(text):
-        """Translates a single text string."""
-        try:
-            response = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=text,
-                config=types.GenerateContentConfig(
-                    system_instruction=instructions, # e.g., "Translate to German..."
-                    temperature=0.0,
-                )
+```python
+def translate_text(text):
+    """Translates a single text string."""
+    try:
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=text,
+            config=types.GenerateContentConfig(
+                system_instruction=instructions, # e.g., "Translate to German..."
+                temperature=0.0,
             )
-            return text, response.text.strip()
-        except Exception as error:
-            print(f"Error translating '{text}': {error}")
-            return text, None
+        )
+        return text, response.text.strip()
+    except Exception as error:
+        print(f"Error translating '{text}': {error}")
+        return text, None
+```
 
 This function is then called in parallel for every unique piece of text from the slides:
 
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+```python
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    # Use ThreadPoolExecutor for concurrent translation
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        # Create a future for each text translation
-        futures = [executor.submit(translate_text, text) for text in unique_texts]
-        for future in as_completed(futures):
-            # Collect the results as they complete
-            text, translation = future.result()
-            translations[text] = translation
+# Use ThreadPoolExecutor for concurrent translation
+with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    # Create a future for each text translation
+    futures = [executor.submit(translate_text, text) for text in unique_texts]
+    for future in as_completed(futures):
+        # Collect the results as they complete
+        text, translation = future.result()
+        translations[text] = translation
+```
 
 Once all the text is translated, the final step is to replace the original text in the copied presentation. This is done by creating a batch of [`replaceAllText`](https://developers.google.com/workspace/slides/api/reference/rest/v1/presentations/request#replacealltextrequest) requests for the [Google Slides API](https://developers.google.com/workspace/slides/api/guides/overview). The requests are sorted from longest to shortest string to prevent issues where a shorter piece of text might be a substring of a longer one.
 
-    requests = []
-    sorted_translations = sorted(translations.items(), key=lambda item: len(item[0]), reverse=True)
-    for text, translation in sorted_translations:
-        if translation.strip():
-            requests.append({
-                'replaceAllText': {
-                    'replaceText': translation,
-                    'pageObjectIds': list(page_ids), # The slides where the text appears
-                    'containsText': {
-                        'text': text,
-                        'matchCase': True,
-                    }
+```python
+requests = []
+sorted_translations = sorted(translations.items(), key=lambda item: len(item[0]), reverse=True)
+for text, translation in sorted_translations:
+    if translation.strip():
+        requests.append({
+            'replaceAllText': {
+                'replaceText': translation,
+                'pageObjectIds': list(page_ids), # The slides where the text appears
+                'containsText': {
+                    'text': text,
+                    'matchCase': True,
                 }
-            })
+            }
+        })
 
-    # Execute the batch update
-    body = {'requests': requests}
-    response = slides_service.presentations().batchUpdate(
-        presentationId=copied_presentation_id, body=body
-    ).execute()
+# Execute the batch update
+body = {'requests': requests}
+response = slides_service.presentations().batchUpdate(
+    presentationId=copied_presentation_id, body=body
+).execute()
+```
 
 The result? A perfectly translated slide deck, ready to go.
 

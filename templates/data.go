@@ -4,6 +4,7 @@ package templates
 var METADATA = Metadata{
 	Name:              "Médéric Hurier",
 	AlternateName:     "Fmind",
+	SiteName:          "Fmind",
 	Title:             "Médéric Hurier (Fmind) | AI Architect (PhD) • Freelancer",
 	JobTitle:          "AI Architect (PhD) • Freelancer",
 	HeadlinePrimary:   "AI Architect (PhD) • VC Expert Advisor • AAIF Ambassador • GCP Certified Cloud Architect • AI Agents, MLOps & Security",
@@ -49,7 +50,7 @@ var BIOGRAPHY = []string{
 
 var LEADERSHIP = []LeadershipRole{
 	{
-		Role:         "Agentic AI Foundation Ambassador 2026",
+		Role:         "Agentic AI Foundation Ambassador",
 		Organization: "The Linux Foundation",
 		Description:  "Selected to serve as an AAIF Ambassador and help grow the open agentic AI community.",
 		URL:          "https://www.credly.com/badges/aaf051e1-202f-4b0f-bfc6-a23a3ef2e2a2",
@@ -105,7 +106,7 @@ var BADGES = []CertificationBadge{
 	{
 		URL:    "https://www.credly.com/badges/aaf051e1-202f-4b0f-bfc6-a23a3ef2e2a2",
 		Logo:   "aaif.webp",
-		Title:  "Agentic AI Foundation Ambassador 2026",
+		Title:  "Agentic AI Foundation Ambassador",
 		Issuer: "The Linux Foundation",
 		CertID: "2026",
 		Active: true,

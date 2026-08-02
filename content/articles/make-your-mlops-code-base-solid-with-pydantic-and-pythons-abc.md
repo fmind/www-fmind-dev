@@ -4,7 +4,7 @@ description = "MLOps projects are straightforward to initiate, but challenging t
 date = "2024-03-13"
 tags = ["MLOps", "Python"]
 slug = "make-your-mlops-code-base-solid-with-pydantic-and-pythons-abc"
-canonical = "https://medium.com/@fmind/make-your-mlops-code-base-solid-with-pydantic-and-pythons-abc-aeedfe9c3e65"
+syndicated = "https://medium.com/@fmind/make-your-mlops-code-base-solid-with-pydantic-and-pythons-abc-aeedfe9c3e65"
 draft = false
 +++
 
@@ -54,23 +54,25 @@ This section outlines key concepts used in this article. You can skip it if you�
 
 [Gradual typing](https://en.wikipedia.org/wiki/Gradual_typing) is a feature in programming languages that allows for the incremental introduction of [type annotations](https://en.wikipedia.org/wiki/Type_signature) into a code base, enhancing its robustness. This feature is supported by several dynamic languages, including JavaScript (via [TypeScript](https://www.typescriptlang.org/)), PHP (via [Hack](https://hacklang.org/)), [Dart](https://dart.dev/), and Python (via [mypy](https://mypy.readthedocs.io/en/stable/config_file.html)). Consider the following example:
 
-    import numpy as np
+```python
+import numpy as np
 
-    # without type annotations
-    def split_data(data, test_ratio):
-        shuffled_indices = np.random.permutation(len(data))
-        test_set_size = int(len(data) * test_ratio)
-        test_indices = shuffled_indices[:test_set_size]
-        train_indices = shuffled_indices[test_set_size:]
-        return data[train_indices], data[test_indices]
+# without type annotations
+def split_data(data, test_ratio):
+    shuffled_indices = np.random.permutation(len(data))
+    test_set_size = int(len(data) * test_ratio)
+    test_indices = shuffled_indices[:test_set_size]
+    train_indices = shuffled_indices[test_set_size:]
+    return data[train_indices], data[test_indices]
 
-    # with type annotations
-    def split_data(data: np.ndarray, test_ratio: float) -> tuple[np.ndarray, np.ndarray]:
-        shuffled_indices = np.random.permutation(len(data))
-        test_set_size = int(len(data) * test_ratio)
-        test_indices = shuffled_indices[:test_set_size]
-        train_indices = shuffled_indices[test_set_size:]
-        return data[train_indices], data[test_indices]
+# with type annotations
+def split_data(data: np.ndarray, test_ratio: float) -> tuple[np.ndarray, np.ndarray]:
+    shuffled_indices = np.random.permutation(len(data))
+    test_set_size = int(len(data) * test_ratio)
+    test_indices = shuffled_indices[:test_set_size]
+    train_indices = shuffled_indices[test_set_size:]
+    return data[train_indices], data[test_indices]
+```
 
 While dedicating time to assigning types to expressions might seem laborious, the benefits frequently surpass the costs. This is particularly relevant for MLOps code bases, which often manage large, untyped structures like DataFrames or AI/ML models. Utilizing dataframe schemas with tools like [Pandera](https://pandera.readthedocs.io/en/stable/) and defining model signatures with MLflow can significantly aid in object validation and the clear communication of structures. These practices not only improve code quality and maintainability but also facilitate better collaboration among developers by making the code more self-documenting and easier to understand.
 
@@ -78,28 +80,30 @@ While dedicating time to assigning types to expressions might seem laborious, th
 
 [Design patterns](https://en.wikipedia.org/wiki/Design_Patterns) are standardized solutions devised to address recurring problems in software development. For example, the [Memento pattern](https://en.wikipedia.org/wiki/Memento_pattern) enables saving the state of an entire program, while the Singleton pattern ensures a class has only one instance throughout the application, providing a single point of access to it. The example below showcases the [Decorator pattern](https://en.wikipedia.org/wiki/Decorator_pattern) for extending the capabilities of a Python function:
 
-    import time
-    from functools import wraps
+```python
+import time
+from functools import wraps
 
-    def timer(func):
-        """Decorator for timing functions."""
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            start_time = time.time()
-            result = func(*args, **kwargs)
-            end_time = time.time()
-            print(f"{func.__name__} completed in {end_time - start_time} seconds")
-            return result
-        return wrapper
+def timer(func):
+    """Decorator for timing functions."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"{func.__name__} completed in {end_time - start_time} seconds")
+        return result
+    return wrapper
 
-    @timer
-    def train_model(data):
-        """Simulate the training of a model."""
-        time.sleep(2) # Placeholder for the actual training logic
-        return "Model trained"
+@timer
+def train_model(data):
+    """Simulate the training of a model."""
+    time.sleep(2) # Placeholder for the actual training logic
+    return "Model trained"
 
-    # Calling the decorated train model function
-    train_model("sample_data")
+# Calling the decorated train model function
+train_model("sample_data")
+```
 
 I wrote [an article that delves into the design patterns I find most pertinent to AI/ML code bases](https://mlops.community/become-the-maestro-of-your-mlops-abstractions/), such as the Factory, Strategy, and Adapter patterns. Although it’s impractical to explore every pattern, a wealth of literature exists on the subject. [Numerous books](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) and [articles](https://wiki.c2.com/) offer detailed guidance on understanding and choosing the most suitable design patterns for specific scenarios.
 
@@ -121,29 +125,31 @@ Let’s discuss key methods for organizing MLOps code bases and their drawbacks.
 
 The prevalent approach for structuring AI/ML code bases, as often found in online examples, is straightforward: consolidate everything into a single Python script. This method is appealing for its simplicity, ensuring the code base remains concise and focused. However, this simplicity can soon prove to be inadequate for addressing the complexities of real-world applications. The typical characteristics of this approach are illustrated in the example below:
 
-    # Simplistic AI/ML Python Script Example
+```python
+# Simplistic AI/ML Python Script Example
 
-    import pandas as pd
-    from sklearn.model_selection import train_test_split
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.metrics import accuracy_score
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 
-    # Load and preprocess data
-    data = pd.read_csv('dataset.csv')
-    data.fillna(0, inplace=True)
+# Load and preprocess data
+data = pd.read_csv('dataset.csv')
+data.fillna(0, inplace=True)
 
-    # Split data
-    X, y = data.drop('target', axis=1), data['target']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Split data
+X, y = data.drop('target', axis=1), data['target']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Train model
-    model = LogisticRegression()
-    model.fit(X_train, y_train)
+# Train model
+model = LogisticRegression()
+model.fit(X_train, y_train)
 
-    # Evaluate model
-    predictions = model.predict(X_test)
-    accuracy = accuracy_score(y_test, predictions)
-    print(f"Model Accuracy: {accuracy}")
+# Evaluate model
+predictions = model.predict(X_test)
+accuracy = accuracy_score(y_test, predictions)
+print(f"Model Accuracy: {accuracy}")
+```
 
 This script, while concise, combines data loading, preprocessing, model training, and evaluation in a single block. This approach makes it challenging to add new features, adjust preprocessing steps, or swap out the model without significant changes to the code base. It also violates SOLID principles by not being particularly well-organized for scalability, maintainability, or flexibility.
 
@@ -151,66 +157,68 @@ This script, while concise, combines data loading, preprocessing, model training
 
 Adopting [Functional Programming](https://en.wikipedia.org/wiki/Functional_programming) (FP) represents a significant enhancement compared to merely scripting. Rather than delineating a singular workflow for your program, FP allows for the encapsulation of code components into functions. These functions can then be orchestrated in a declarative workflow, enhancing code clarity and structure. This approach embraces core functional programming concepts, such as [high-order functions](https://en.wikipedia.org/wiki/Higher-order_function), [immutability](https://en.wikipedia.org/wiki/Immutable_object) and [pure functions](https://en.wikipedia.org/wiki/Pure_function). For instance, the example below showcases how a model can be created from a string using the two high-order level function _get_model()_ and _train_model():_
 
-    from typing import Callable, Tuple
+```python
+from typing import Callable, Tuple
 
-    import pandas as pd
-    from sklearn.model_selection import train_test_split
-    from sklearn.base import BaseEstimator
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.metrics import accuracy_score
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.base import BaseEstimator
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
 
-    def load_and_preprocess_data(filepath: str, fill_na_value: float, target_name: str) -> Tuple[pd.DataFrame, pd.Series]:
-        """Load and preprocess data."""
-        data = pd.read_csv(filepath)
-        data = data.fillna(fill_na_value)
-        X = data.drop(target_name, axis=1)
-        y = data[target_name]
-        return X, y
+def load_and_preprocess_data(filepath: str, fill_na_value: float, target_name: str) -> Tuple[pd.DataFrame, pd.Series]:
+    """Load and preprocess data."""
+    data = pd.read_csv(filepath)
+    data = data.fillna(fill_na_value)
+    X = data.drop(target_name, axis=1)
+    y = data[target_name]
+    return X, y
 
-    def split_data(X: pd.DataFrame, y: pd.Series, test_size: float, random_state: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-        """Split the data into a train and testing sets.""" 
-        return train_test_split(X, y, test_size=test_size, random_state=random_state)
+def split_data(X: pd.DataFrame, y: pd.Series, test_size: float, random_state: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    """Split the data into a train and testing sets."""
+    return train_test_split(X, y, test_size=test_size, random_state=random_state)
 
-    def train_model(X_train: pd.DataFrame, y_train: pd.Series, model_func: Callable[[], BaseEstimator], **kwargs) -> BaseEstimator:
-        """Train the model with inputs and target data."""
-        model = model_func(**kwargs)
-        model.fit(X_train, y_train)
-        return model
+def train_model(X_train: pd.DataFrame, y_train: pd.Series, model_func: Callable[[], BaseEstimator], **kwargs) -> BaseEstimator:
+    """Train the model with inputs and target data."""
+    model = model_func(**kwargs)
+    model.fit(X_train, y_train)
+    return model
 
-    def evaluate_model(model: BaseEstimator, X_test: pd.DataFrame, y_test: pd.Series) -> float:
-        """Evaluate the model with a single metric."""
-        predictions = model.predict(X_test)
-        accuracy = accuracy_score(y_test, predictions)
-        return accuracy
+def evaluate_model(model: BaseEstimator, X_test: pd.DataFrame, y_test: pd.Series) -> float:
+    """Evaluate the model with a single metric."""
+    predictions = model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
+    return accuracy
 
-    def get_model(model_name: str) -> Callable[[], BaseEstimator]:
-        """High-order function to select the model to train."""
-        if model_name == "logistic_regression":
-            return LogisticRegression
-        elif model_name == "random_forest":
-            return RandomForestClassifier
-        else:
-            raise ValueError(f"Model {model_name} is not supported.")
+def get_model(model_name: str) -> Callable[[], BaseEstimator]:
+    """High-order function to select the model to train."""
+    if model_name == "logistic_regression":
+        return LogisticRegression
+    elif model_name == "random_forest":
+        return RandomForestClassifier
+    else:
+        raise ValueError(f"Model {model_name} is not supported.")
 
-    def run_workflow(model_name: str, model_kwargs: dict, filepath: str, fill_na_value: float, target_name: str, test_size: float, random_state: int) -> None:
-        """Orchestrate the training workflow."""
-        X, y = load_and_preprocess_data(filepath, fill_na_value, target_name)
-        X_train, X_test, y_train, y_test = split_data(X, y, test_size, random_state)
-        model_func = get_model(model_name)
-        model = train_model(X_train, y_train, model_func, **model_kwargs)
-        evaluate_model(model, X_test, y_test)
+def run_workflow(model_name: str, model_kwargs: dict, filepath: str, fill_na_value: float, target_name: str, test_size: float, random_state: int) -> None:
+    """Orchestrate the training workflow."""
+    X, y = load_and_preprocess_data(filepath, fill_na_value, target_name)
+    X_train, X_test, y_train, y_test = split_data(X, y, test_size, random_state)
+    model_func = get_model(model_name)
+    model = train_model(X_train, y_train, model_func, **model_kwargs)
+    evaluate_model(model, X_test, y_test)
 
-    # Example usage
-    run_workflow(
-        filepath='dataset.csv',
-        fill_na_value=0.0,
-        target_name='target',
-        test_size=0.2,
-        random_state=42,
-        model_name='random_forest',  # Or 'logistic_regression'
-        model_kwargs={'n_estimators': 30},
-    )
+# Example usage
+run_workflow(
+    filepath='dataset.csv',
+    fill_na_value=0.0,
+    target_name='target',
+    test_size=0.2,
+    random_state=42,
+    model_name='random_forest',  # Or 'logistic_regression'
+    model_kwargs={'n_estimators': 30},
+)
+```
 
 Functional programming strikes a great balance between simplicity and power, but it faces a significant challenge in Python. Python doesn’t support advanced functional programming concepts as well as languages like Haskell or Clojure do. Although you can write functions and use libraries like [Toolz](https://github.com/pytoolz/toolz) or [Fn.py](https://github.com/kachayev/fn.py), it’s not straightforward to use advanced techniques such as [monads](https://en.wikipedia.org/wiki/Monad_%28functional_programming%29), [currying](https://en.wikipedia.org/wiki/Currying), or [persistent data structures](https://en.wikipedia.org/wiki/Persistent_data_structure). Additionally, Python primarily relies on [subtyping](https://en.wikipedia.org/wiki/Subtyping) for [polymorphism](https://en.wikipedia.org/wiki/Polymorphism_%28computer_science%29), which isn’t as compatible with functional programming as [ad-hoc](https://en.wikipedia.org/wiki/Ad_hoc_polymorphism) or [parametric polymorphism](https://en.wikipedia.org/wiki/Parametric_polymorphism). Despite my wish for Python to lean more towards functional programming, trying to fully adopt this paradigm in Python might be a frustrating experience.
 
@@ -218,103 +226,105 @@ Functional programming strikes a great balance between simplicity and power, but
 
 [Object-Oriented Programming](https://en.wikipedia.org/wiki/Object-oriented_programming) (OOP) is an excellent way to use SOLID principles in Python. Python fully supports OOP concepts, making it easy to work with. Additionally, many online tools and frameworks like [scikit-learn](https://scikit-learn.org/) and [pandas](https://pandas.pydata.org/) use OOP in their APIs. An example of this is defining a Model base class with the ABC module, which is then extended by two subclasses: _RandomForestModel_ and _KerasBinaryClassifier_. A _ModelFactory_ can select and configure the appropriate model based on external inputs.
 
-    from abc import ABC, abstractmethod
-    from typing import Tuple, Type
+```python
+from abc import ABC, abstractmethod
+from typing import Tuple, Type
 
-    import pandas as pd
-    from sklearn.model_selection import train_test_split
-    from sklearn.base import BaseEstimator
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.metrics import accuracy_score
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.base import BaseEstimator
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 
-    class Model(ABC):
-        """Abstract base class for models."""
-        @abstractmethod
-        def train(self, X_train: pd.DataFrame, y_train: pd.Series) -> None:
-            pass
+class Model(ABC):
+    """Abstract base class for models."""
+    @abstractmethod
+    def train(self, X_train: pd.DataFrame, y_train: pd.Series) -> None:
+        pass
 
-        @abstractmethod
-        def predict(self, X: pd.DataFrame) -> pd.Series:
-            pass
+    @abstractmethod
+    def predict(self, X: pd.DataFrame) -> pd.Series:
+        pass
 
-    class RandomForestModel(Model):
-        """Random Forest Classifier model."""
-        def __init__(self, n_estimators: int = 20, max_depth: int = 5) -> None:
-            self.model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth)
+class RandomForestModel(Model):
+    """Random Forest Classifier model."""
+    def __init__(self, n_estimators: int = 20, max_depth: int = 5) -> None:
+        self.model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth)
 
-        def train(self, X_train: pd.DataFrame, y_train: pd.Series) -> None:
-            self.model.fit(X_train, y_train)
+    def train(self, X_train: pd.DataFrame, y_train: pd.Series) -> None:
+        self.model.fit(X_train, y_train)
 
-        def predict(self, X: pd.DataFrame) -> pd.Series:
-            return self.model.predict(X)
+    def predict(self, X: pd.DataFrame) -> pd.Series:
+        return self.model.predict(X)
 
-    class KerasBinaryClassifier(Model):
-        """Simple binary classification model using Keras."""
-        def __init__(self, input_dim: int, epochs: int = 100, batch_size: int = 32) -> None:
-            self.epochs = epochs
-            self.batch_size = batch_size  
-            self.model = Sequential([
-                Dense(64, activation='relu', input_shape=(input_dim,)),
-                Dense(1, activation='sigmoid')
-            ])
-            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+class KerasBinaryClassifier(Model):
+    """Simple binary classification model using Keras."""
+    def __init__(self, input_dim: int, epochs: int = 100, batch_size: int = 32) -> None:
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.model = Sequential([
+            Dense(64, activation='relu', input_shape=(input_dim,)),
+            Dense(1, activation='sigmoid')
+        ])
+        self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-        def train(self, X_train: pd.DataFrame, y_train: pd.Series) -> None:
-            self.model.fit(X_train, y_train, epochs=self.epochs, batch_size=self.batch_size)
+    def train(self, X_train: pd.DataFrame, y_train: pd.Series) -> None:
+        self.model.fit(X_train, y_train, epochs=self.epochs, batch_size=self.batch_size)
 
-        def predict(self, X: pd.DataFrame) -> pd.Series:
-            predictions = self.model.predict(X)
-            return (predictions > 0.5).flatten()
+    def predict(self, X: pd.DataFrame) -> pd.Series:
+        predictions = self.model.predict(X)
+        return (predictions > 0.5).flatten()
 
-    class ModelFactory:
-        """Factory to create model instances."""
-        @staticmethod
-        def get_model(model_name: str, **kwargs) -> Model:
-            # Assume all model classes are defined in the global scope.
-            model_class = globals()[model_name]
-            return model_class(**kwargs)
+class ModelFactory:
+    """Factory to create model instances."""
+    @staticmethod
+    def get_model(model_name: str, **kwargs) -> Model:
+        # Assume all model classes are defined in the global scope.
+        model_class = globals()[model_name]
+        return model_class(**kwargs)
 
-    class Workflow:
-        """Main workflow class for model training and evaluation."""
-        def run_workflow(self, model_name: str, model_kwargs: dict, filepath: str, fill_na_value: float, target_name: str, test_size: float, random_state: int) -> None:
-            X, y = self.load_and_preprocess_data(filepath, fill_na_value, target_name)
-            X_train, X_test, y_train, y_test = self.split_data(X, y, test_size, random_state)
-            model = ModelFactory.get_model(model_name, **model_kwargs)
-            model.train(X_train, y_train)
-            accuracy = self.evaluate_model(model, X_test, y_test)
-            print(f"Model Accuracy: {accuracy}")
+class Workflow:
+    """Main workflow class for model training and evaluation."""
+    def run_workflow(self, model_name: str, model_kwargs: dict, filepath: str, fill_na_value: float, target_name: str, test_size: float, random_state: int) -> None:
+        X, y = self.load_and_preprocess_data(filepath, fill_na_value, target_name)
+        X_train, X_test, y_train, y_test = self.split_data(X, y, test_size, random_state)
+        model = ModelFactory.get_model(model_name, **model_kwargs)
+        model.train(X_train, y_train)
+        accuracy = self.evaluate_model(model, X_test, y_test)
+        print(f"Model Accuracy: {accuracy}")
 
-        def load_and_preprocess_data(self, filepath: str, fill_na_value: float, target_name: str) -> Tuple[pd.DataFrame, pd.Series]:
-            """Load and preprocess data."""
-            data = pd.read_csv(filepath)
-            data = data.fillna(fill_na_value)
-            X = data.drop(target_name, axis=1)
-            y = data[target_name]
-            return X, y
+    def load_and_preprocess_data(self, filepath: str, fill_na_value: float, target_name: str) -> Tuple[pd.DataFrame, pd.Series]:
+        """Load and preprocess data."""
+        data = pd.read_csv(filepath)
+        data = data.fillna(fill_na_value)
+        X = data.drop(target_name, axis=1)
+        y = data[target_name]
+        return X, y
 
-        def split_data(self, X: pd.DataFrame, y: pd.Series, test_size: float, random_state: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-            """Split the data into a train and testing sets."""
-            return train_test_split(X, y, test_size=test_size, random_state=random_state)
+    def split_data(self, X: pd.DataFrame, y: pd.Series, test_size: float, random_state: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+        """Split the data into a train and testing sets."""
+        return train_test_split(X, y, test_size=test_size, random_state=random_state)
 
-        def evaluate_model(self, model: Model, X_test: pd.DataFrame, y_test: pd.Series) -> float:
-            """Evaluate the model with a single metric."""
-            predictions = model.predict(X_test)
-            accuracy = accuracy_score(y_test, predictions)
-            return accuracy
+    def evaluate_model(self, model: Model, X_test: pd.DataFrame, y_test: pd.Series) -> float:
+        """Evaluate the model with a single metric."""
+        predictions = model.predict(X_test)
+        accuracy = accuracy_score(y_test, predictions)
+        return accuracy
 
-    # Example usage
-    workflow = Workflow()
-    workflow.run_workflow(
-        filepath='dataset.csv',
-        fill_na_value=0.0,
-        target_name='target',
-        test_size=0.2,
-        random_state="42",
-        model_name='RandomForestModel',  # Or 'KerasBinaryClassifier'
-        model_kwargs={'n_estimators': 30},
-    )
+# Example usage
+workflow = Workflow()
+workflow.run_workflow(
+    filepath='dataset.csv',
+    fill_na_value=0.0,
+    target_name='target',
+    test_size=0.2,
+    random_state="42",
+    model_name='RandomForestModel',  # Or 'KerasBinaryClassifier'
+    model_kwargs={'n_estimators': 30},
+)
+```
 
 This code structure is often seen in well-developed MLOps projects, but it has its issues. Firstly, it lacks input and output validation at startup, leading to potential errors like mistaking a string for an integer in the _random_state_ input. Secondly, implementing a design pattern like the ModelFactory class can be complex and hard for beginners to use. To overcome these problems, I suggest using Pydantic to streamline the design and enhance the code’s reliability.
 
@@ -326,137 +336,143 @@ This code structure is often seen in well-developed MLOps projects, but it has i
 
 Pydantic primarily focuses on [object validation](https://docs.pydantic.dev/latest/why/#type-hints). **By adding type annotations to your class attributes, you can ensure your inputs are checked right when your program starts**. This is especially useful in MLOps, where incorrect inputs can disrupt lengthy training sessions and waste valuable resources.
 
-    from typing import Optional
+```python
+from typing import Optional
 
-    from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
 
-    class RandomForestClassifierModel(BaseModel):
-        n_estimators: int = Field(default=100, gt=0)
-        max_depth: Optional[int] = Field(default=None, gt=0, allow_none=True)
-        random_state: Optional[int] = Field(default=None, gt=0, allow_none=True)
+class RandomForestClassifierModel(BaseModel):
+    n_estimators: int = Field(default=100, gt=0)
+    max_depth: Optional[int] = Field(default=None, gt=0, allow_none=True)
+    random_state: Optional[int] = Field(default=None, gt=0, allow_none=True)
 
-    model = RandomForestClassifierModel(n_estimators=120, max_depth=5, random_state=42)
+model = RandomForestClassifierModel(n_estimators=120, max_depth=5, random_state=42)
+```
 
 #### Discriminated Union
 
 The [Discriminated Union](https://docs.pydantic.dev/latest/concepts/unions/#discriminated-unions) feature in Pydantic is a standout tool. **This feature lets you choose the class within a Union type by using a specific attribute (like KIND)** and validates that class with its particular attributes. With [Pydantic’s serialization abilities](https://docs.pydantic.dev/latest/why/#serialization), you can use this pattern as a streamlined alternative to the traditional Factory pattern, avoiding a lot of repetitive code.
 
-    from typing import Literal, Union
+```python
+from typing import Literal, Union
 
-    from pydantic import BaseModel, Field
-
-
-    class Model(BaseModel):
-        KIND: str
+from pydantic import BaseModel, Field
 
 
-    class RandomForestModel(Model):
-        KIND: Literal["RandomForest"]
-        n_estimators: int = 100
-        max_depth: int = 5
-        random_state: int = 42
+class Model(BaseModel):
+    KIND: str
 
 
-    class SVMModel(Model):
-        KIND: Literal["SVM"]
-        C: float = 1.0
-        kernel: str = "rbf"
-        degree: int = 3
+class RandomForestModel(Model):
+    KIND: Literal["RandomForest"]
+    n_estimators: int = 100
+    max_depth: int = 5
+    random_state: int = 42
 
 
-    # Union of all model configurations
-    ModelKind = Union[RandomForestModel, SVMModel]
+class SVMModel(Model):
+    KIND: Literal["SVM"]
+    C: float = 1.0
+    kernel: str = "rbf"
+    degree: int = 3
 
 
-    class Job(BaseModel):
-        model: ModelKind = Field(..., discriminator="KIND")
+# Union of all model configurations
+ModelKind = Union[RandomForestModel, SVMModel]
 
 
-    # initialize a job from a configs
-    config = {
-        "model": {
-            "KIND": "RandomForest",
-            "n_estimators": 100,
-            "max_depth": 5,
-            "random_state": 42,
-        }
+class Job(BaseModel):
+    model: ModelKind = Field(..., discriminator="KIND")
+
+
+# initialize a job from a configs
+config = {
+    "model": {
+        "KIND": "RandomForest",
+        "n_estimators": 100,
+        "max_depth": 5,
+        "random_state": 42,
     }
-    job = Job.model_validate(config)
+}
+job = Job.model_validate(config)
+```
 
 #### Abstract Base Classes
 
 [Python’s Abstract Base Classes](https://docs.python.org/3/library/abc.html) (ABC) enhance MLOps code by supporting the SOLID principles. **Think of it as ensuring that different pieces fit together perfectly, like matching puzzle pieces**. In the example below, we create a Model class and two subclasses: RandomForestModel and SVMModel. These subclasses align with the base class shape, allowing them to be used interchangeably without issues.
 
-    from typing import Literal, Union
-    from abc import ABC, abstractmethod
+```python
+from typing import Literal, Union
+from abc import ABC, abstractmethod
 
-    import pandas as pd
-    from pydantic import BaseModel, Field
-
-
-    class Model(BaseModel, ABC):
-        KIND: str
-
-        @abstractmethod
-        def fit(self, X: pd.DataFrame, y: pd.DataFrame) -> None:
-            pass
-
-        @abstractmethod
-        def predict(self, X: pd.DataFrame) -> pd.DataFrame:
-            pass
+import pandas as pd
+from pydantic import BaseModel, Field
 
 
-    class RandomForestModel(Model):
-        KIND: Literal["RandomForest"]
-        n_estimators: int = 100
-        max_depth: int = 5
-        random_state: int = 42
+class Model(BaseModel, ABC):
+    KIND: str
 
-        def fit(self, X: pd.DataFrame, y: pd.DataFrame) -> None:
-            print("Fitting RandomForestModel...")
+    @abstractmethod
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame) -> None:
+        pass
 
-        def predict(self, X: pd.DataFrame) -> pd.DataFrame:
-            print("Predicting with RandomForestModel...")
-            return pd.DataFrame()
+    @abstractmethod
+    def predict(self, X: pd.DataFrame) -> pd.DataFrame:
+        pass
 
 
-    class SVMModel(Model):
-        KIND: Literal["SVM"]
-        C: float = 1.0
-        kernel: str = "rbf"
-        degree: int = 3
+class RandomForestModel(Model):
+    KIND: Literal["RandomForest"]
+    n_estimators: int = 100
+    max_depth: int = 5
+    random_state: int = 42
 
-        def fit(self, X: pd.DataFrame, y: pd.DataFrame) -> None:
-            print("Fitting SVMModel...")
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame) -> None:
+        print("Fitting RandomForestModel...")
 
-        def predict(self, X: pd.DataFrame) -> pd.DataFrame:
-            print("Predicting with SVMModel...")
-            return pd.DataFrame()
-
-    # Union of all model configurations
-    ModelKind = Union[RandomForestModel, SVMModel]
-
-    class Job(BaseModel):
-        model: ModelKind = Field(..., discriminator="KIND")
-
-        def run(self) -> pd.DataFrame:
-            X_train, X_test, y_train = ..., ..., ...
-            self.model.fit(X=X_train, y=y_train)
-            predictions = self.model.predict(X=X_test)
-            return predictions
+    def predict(self, X: pd.DataFrame) -> pd.DataFrame:
+        print("Predicting with RandomForestModel...")
+        return pd.DataFrame()
 
 
-    # initialize a job from a configs
-    config = {
-        "model": {
-            "KIND": "RandomForest",
-            "n_estimators": 100,
-            "max_depth": 5,
-            "random_state": 42,
-        }
+class SVMModel(Model):
+    KIND: Literal["SVM"]
+    C: float = 1.0
+    kernel: str = "rbf"
+    degree: int = 3
+
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame) -> None:
+        print("Fitting SVMModel...")
+
+    def predict(self, X: pd.DataFrame) -> pd.DataFrame:
+        print("Predicting with SVMModel...")
+        return pd.DataFrame()
+
+# Union of all model configurations
+ModelKind = Union[RandomForestModel, SVMModel]
+
+class Job(BaseModel):
+    model: ModelKind = Field(..., discriminator="KIND")
+
+    def run(self) -> pd.DataFrame:
+        X_train, X_test, y_train = ..., ..., ...
+        self.model.fit(X=X_train, y=y_train)
+        predictions = self.model.predict(X=X_test)
+        return predictions
+
+
+# initialize a job from a configs
+config = {
+    "model": {
+        "KIND": "RandomForest",
+        "n_estimators": 100,
+        "max_depth": 5,
+        "random_state": 42,
     }
-    job = Job.model_validate(config)
-    job.run()
+}
+job = Job.model_validate(config)
+job.run()
+```
 
 ### Limitations
 

@@ -4,7 +4,7 @@ description = "The AI landscape is constantly evolving, pushing the boundaries o
 date = "2024-09-14"
 tags = ["Agent", "Project"]
 slug = "bromate-automate-your-browser-with-agentic-workflows"
-canonical = "https://medium.com/@fmind/bromate-automate-your-browser-with-agentic-workflows-a3917850192c"
+syndicated = "https://medium.com/@fmind/bromate-automate-your-browser-with-agentic-workflows-a3917850192c"
 draft = false
 +++
 
@@ -37,53 +37,55 @@ This approach offers several key advantages over traditional automation methods:
 
 [**Bromate Actions**](https://github.com/fmind/bromate/blob/main/src/bromate/actions.py) are defined in Python, like in the two functions below:
 
-    @declare(
-        schema=agents.Schema(
-            type=agents.Type.OBJECT,
-            properties={
-                "url": agents.Schema(type=agents.Type.STRING, description="URL of the web page to open")
-            },
-            required=["url"],
-        )
+```python
+@declare(
+    schema=agents.Schema(
+        type=agents.Type.OBJECT,
+        properties={
+            "url": agents.Schema(type=agents.Type.STRING, description="URL of the web page to open")
+        },
+        required=["url"],
     )
-    def get(driver: drivers.Driver, config: ActionConfig, url: str) -> agents.Structure:
-        """Open a web page in the browser window."""
-        driver.get(url=url)  # wait loading
-        time.sleep(config.sleep_time)
-        return agents.Structure(
-            name=get.__name__,
-            response={
-                "title": driver.title,
-                "url": driver.current_url,
-                "page_source": driver.page_source,
-            },
-        )
+)
+def get(driver: drivers.Driver, config: ActionConfig, url: str) -> agents.Structure:
+    """Open a web page in the browser window."""
+    driver.get(url=url)  # wait loading
+    time.sleep(config.sleep_time)
+    return agents.Structure(
+        name=get.__name__,
+        response={
+            "title": driver.title,
+            "url": driver.current_url,
+            "page_source": driver.page_source,
+        },
+    )
 
 
-    @declare(
-        schema=agents.Schema(
-            type=agents.Type.OBJECT,
-            properties={
-                "css_selector": agents.Schema(
-                    type=agents.Type.STRING, description="CSS selector of the element to click on."
-                ),
-            },
-            required=["css_selector"],
-        )
+@declare(
+    schema=agents.Schema(
+        type=agents.Type.OBJECT,
+        properties={
+            "css_selector": agents.Schema(
+                type=agents.Type.STRING, description="CSS selector of the element to click on."
+            ),
+        },
+        required=["css_selector"],
     )
-    def click(driver: drivers.Driver, config: ActionConfig, css_selector: str) -> agents.Structure:
-        """Click on an element given its CSS selector."""
-        element = driver.find_element(by=drivers.CSS, value=css_selector)
-        element.click()
-        time.sleep(config.sleep_time)
-        return agents.Structure(
-            name=click.__name__,
-            response={
-                "title": driver.title,
-                "url": driver.current_url,
-                "page_source": driver.page_source,
-            },
-        )
+)
+def click(driver: drivers.Driver, config: ActionConfig, css_selector: str) -> agents.Structure:
+    """Click on an element given its CSS selector."""
+    element = driver.find_element(by=drivers.CSS, value=css_selector)
+    element.click()
+    time.sleep(config.sleep_time)
+    return agents.Structure(
+        name=click.__name__,
+        response={
+            "title": driver.title,
+            "url": driver.current_url,
+            "page_source": driver.page_source,
+        },
+    )
+```
 
 ### Gemini: The Brain Behind Bromate’s Agentic Power 🧠
 
@@ -91,70 +93,72 @@ Bromate leverages the power of [**Google’s Gemini models**](https://ai.google.
 
 Here’s the core algorithm showing how Gemini is integrated into Bromate:
 
-    from bromate import actions, agents, drivers, types
+```python
+from bromate import actions, agents, drivers, types
 
-    def execute(
-        query: str,
-        agent: agents.Agent,
-        driver: drivers.Driver,
-        config: ExecutionConfig,
-        action_config: actions.ActionConfig,
-        agent_functions: list[agents.Function] = actions.AGENT_FUNCTIONS,
-    ) -> Execution:
-        """Execute a query given a config."""
-        # contents
-        query_content = agents.Content(role=agents.Role.USER.value, parts=[agents.Part(text=query)])
-        contents = [query_content]
-        # tools
-        agent_tool = agents.Tool(function_declarations=agent_functions)
-        tools = [agent_tool]
-        # steps
-        while True:
-            done = False
-            # response
-            response = agent.generate_content(contents=contents, tools=tools)
-            # parts
-            structures: list[agents.Structure] = []
-            for i, part in enumerate(response.parts, start=1):
-                if call := part.function_call:
-                    name, kwargs = call.name, call.args
-                    if name in config.stop_actions:
-                        done = True  # stop execution
-                    if action := getattr(actions, name):
-                        try:
-                            structure = action(driver=driver, config=action_config, **kwargs)
-                        except Exception as error:
-                            kwargs_text = ", ".join(f"{key}={val}" for key, val in kwargs.items())
-                            logger.error(
-                                f"Error while executing action '{name}' with kwargs '{kwargs_text}': {error}"
-                            )
-                            structure = agents.Structure(name=name, response={"error": str(error)})
-                        structures.append(structure)
-                    else:
-                        raise ValueError(f"Cannot execute action (unknown action name): {name}!")
-                elif part.text:
-                    pass
+def execute(
+    query: str,
+    agent: agents.Agent,
+    driver: drivers.Driver,
+    config: ExecutionConfig,
+    action_config: actions.ActionConfig,
+    agent_functions: list[agents.Function] = actions.AGENT_FUNCTIONS,
+) -> Execution:
+    """Execute a query given a config."""
+    # contents
+    query_content = agents.Content(role=agents.Role.USER.value, parts=[agents.Part(text=query)])
+    contents = [query_content]
+    # tools
+    agent_tool = agents.Tool(function_declarations=agent_functions)
+    tools = [agent_tool]
+    # steps
+    while True:
+        done = False
+        # response
+        response = agent.generate_content(contents=contents, tools=tools)
+        # parts
+        structures: list[agents.Structure] = []
+        for i, part in enumerate(response.parts, start=1):
+            if call := part.function_call:
+                name, kwargs = call.name, call.args
+                if name in config.stop_actions:
+                    done = True  # stop execution
+                if action := getattr(actions, name):
+                    try:
+                        structure = action(driver=driver, config=action_config, **kwargs)
+                    except Exception as error:
+                        kwargs_text = ", ".join(f"{key}={val}" for key, val in kwargs.items())
+                        logger.error(
+                            f"Error while executing action '{name}' with kwargs '{kwargs_text}': {error}"
+                        )
+                        structure = agents.Structure(name=name, response={"error": str(error)})
+                    structures.append(structure)
                 else:
-                    raise ValueError(f"Cannot handle agent response (unknown part type): {part}!")
-            # output
-            agent_content = agents.Content(role=agents.Role.AGENT.value, parts=response.parts)
-            if done is True:
-                return agent_content
-            contents.append(agent_content)
-            user_input = yield agent_content
-            # input
-            message = user_input or config.default_message
-            returned = [agents.Part(function_response=s) for s in structures]
-            screenshot = agents.Blob(mime_type="image/png", data=driver.get_screenshot_as_png())
-            user_content = agents.Content(
-                role=agents.Role.USER.value,
-                parts=[
-                    agents.Part(inline_data=screenshot),
-                    agents.Part(text=message),
-                ]
-                + returned,  # action calls
-            )
-            contents.append(user_content)
+                    raise ValueError(f"Cannot execute action (unknown action name): {name}!")
+            elif part.text:
+                pass
+            else:
+                raise ValueError(f"Cannot handle agent response (unknown part type): {part}!")
+        # output
+        agent_content = agents.Content(role=agents.Role.AGENT.value, parts=response.parts)
+        if done is True:
+            return agent_content
+        contents.append(agent_content)
+        user_input = yield agent_content
+        # input
+        message = user_input or config.default_message
+        returned = [agents.Part(function_response=s) for s in structures]
+        screenshot = agents.Blob(mime_type="image/png", data=driver.get_screenshot_as_png())
+        user_content = agents.Content(
+            role=agents.Role.USER.value,
+            parts=[
+                agents.Part(inline_data=screenshot),
+                agents.Part(text=message),
+            ]
+            + returned,  # action calls
+        )
+        contents.append(user_content)
+```
 
 ### A Deep Dive into Bromate’s Architecture 🧰
 
@@ -175,25 +179,29 @@ Bromate is easy to install and use. The [project’s README](https://github.com/
 
 **Here’s a simple example of how to use Bromate:**
 
-    # Install Bromate using pip
-    pip install bromate
-    # Export you Gemini API key
-    export GOOGLE_API_KEY=...
+```bash
+# Install Bromate using pip
+pip install bromate
+# Export you Gemini API key
+export GOOGLE_API_KEY=...
 
-    # Example 1: Subscribe to the MLOps Community Newsletter
-    bromate "Open the https://MLOps.Community website.
-    Click on the 'Join' link. Write the address 'hello@mlops'"
+# Example 1: Subscribe to the MLOps Community Newsletter
+bromate "Open the https://MLOps.Community website.
+Click on the 'Join' link. Write the address 'hello@mlops'"
+```
 
 # An error occurred.
 
 Unable to execute JavaScript.
 
-    # Example 2: Summarize the features of the next Python release
-    bromate --interaction.stay_open=False \
-    --agent.name "gemini-1.5-pro-latest" \
-    "Go to Python.org. Click on the downloads page. 
-    Click on the PEP link for the future Python release.
-    Summarize the release schedule dates."
+```bash
+# Example 2: Summarize the features of the next Python release
+bromate --interaction.stay_open=False \
+--agent.name "gemini-1.5-pro-latest" \
+"Go to Python.org. Click on the downloads page.
+Click on the PEP link for the future Python release.
+Summarize the release schedule dates."
+```
 
 # An error occurred.
 

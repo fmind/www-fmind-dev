@@ -4,7 +4,7 @@ description = "CAG vs RAG for Generative AI: Compare latency, cost \u0026 comple
 date = "2025-04-23"
 tags = ["LLM", "RAG"]
 slug = "cag-vs-rag-choosing-the-right-strategy-for-your-ai-application"
-canonical = "https://medium.com/@fmind/cag-vs-rag-choosing-the-right-strategy-for-your-ai-application-68dcae85d028"
+syndicated = "https://medium.com/@fmind/cag-vs-rag-choosing-the-right-strategy-for-your-ai-application-68dcae85d028"
 draft = false
 +++
 
@@ -20,40 +20,44 @@ Photo by [Andres Siimon](https://unsplash.com/@johnmcclane?utm_source=medium&utm
 
 **Context Augmented Generation (CAG):** This approach involves directly injecting the relevant context into the LLM prompt. For large contexts, this can be inefficient. However, modern platforms like [Google’s Gemini](https://ai.google.dev/gemini-api/docs/models) API offer [caching mechanisms](https://ai.google.dev/gemini-api/docs/caching). This allows you to pre-process and cache [large contexts](https://ai.google.dev/gemini-api/docs/long-context), sending only the cache identifier and the query in subsequent requests, significantly reducing the input tokens processed per call after the initial caching.
 
-    # cache creation
-    cache = genai_client.caches.create(
-        model=GENAI_MODEL,
-        config=gt.CreateCachedContentConfig(
-            display_name=CACHE_NAME,
-            contents=[content],
-            ttl=CACHE_TTL,
-        )
+```python
+# cache creation
+cache = genai_client.caches.create(
+    model=GENAI_MODEL,
+    config=gt.CreateCachedContentConfig(
+        display_name=CACHE_NAME,
+        contents=[content],
+        ttl=CACHE_TTL,
     )
-    # cache retrieval
-    response = genai_client.models.generate_content(
-      model=GENAI_MODEL,
-      contents=query,
-      config=gt.GenerateContentConfig(
-          cached_content=CACHE_NAME,
-      ),
-    )
+)
+# cache retrieval
+response = genai_client.models.generate_content(
+  model=GENAI_MODEL,
+  contents=query,
+  config=gt.GenerateContentConfig(
+      cached_content=CACHE_NAME,
+  ),
+)
+```
 
 **Retrieval Augmented Generation (RAG):** Instead of sending the entire context, RAG first retrieves the most relevant snippets or chunks of information from a larger knowledge base (often stored in a vector database like [ChromaDB](https://www.trychroma.com/), [Vertex AI Search](https://cloud.google.com/enterprise-search?hl=en), or [Cloud SQL](https://cloud.google.com/sql)) using techniques like [semantic search](https://cloud.google.com/discover/what-is-semantic-search). Then, relevant chunks are added to the prompt alongside the user’s query.
 
-    # database ingestion
-    database_client = cdb.PersistentClient()
-    collection = database_client.create_collection(name=COLLECTION_NAME, embedding_function=EMBEDDING_FUNCTION)
-    collection.add(ids=ids, documents=docs)
-    # database retrieval
-    docs = collection.query(
-        include=["documents"],
-        query_texts=[query],
-        n_results=5,
-    )['documents'][0]
-    response = genai_client.models.generate_content(
-        model=GENAI_MODEL,
-        contents=docs + [query],
-    )
+```python
+# database ingestion
+database_client = cdb.PersistentClient()
+collection = database_client.create_collection(name=COLLECTION_NAME, embedding_function=EMBEDDING_FUNCTION)
+collection.add(ids=ids, documents=docs)
+# database retrieval
+docs = collection.query(
+    include=["documents"],
+    query_texts=[query],
+    n_results=5,
+)['documents'][0]
+response = genai_client.models.generate_content(
+    model=GENAI_MODEL,
+    contents=docs + [query],
+)
+```
 
 ### ⏱ Performance Showdown: Latency
 
@@ -112,7 +116,7 @@ Price / Request Comparison with different Models, Approaches, Databases, \# of R
 
 While RAG might seem like the clear winner technically, it introduces significantly more complexity during development:
 
-- **Implementation:** Setting up a RAG pipeline involves more moving parts: data chunking strategies, choosing and implementing an embedding model, setting up and managing a vector database, and creating the retrieval logic … This is often challenging for a team starting a a Gen AI prototype.
+- **Implementation:** Setting up a RAG pipeline involves more moving parts: data chunking strategies, choosing and implementing an embedding model, setting up and managing a vector database, and creating the retrieval logic … This is often challenging for a team starting a Gen AI prototype.
 - **Tuning:** Optimizing RAG performance requires careful tuning — finding the right chunk size, deciding how many chunks to retrieve (`n_results`), setting similarity thresholds, etc. This takes development time and experimentation. Building a RAG is simple, but building a good RAG is complex.
 
 **CAG, especially using platform features like Gemini’s caching, is often simpler to implement initially.**

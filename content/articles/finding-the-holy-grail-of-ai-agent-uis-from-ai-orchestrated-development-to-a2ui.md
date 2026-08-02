@@ -4,7 +4,7 @@ description = "Discover how A2UI solves the AI Agent UI bottleneck. A deep dive 
 date = "2026-01-24"
 tags = ["Agent", "LLM"]
 slug = "finding-the-holy-grail-of-ai-agent-uis-from-ai-orchestrated-development-to-a2ui"
-canonical = "https://medium.com/@fmind/finding-the-holy-grail-of-ai-agent-uis-from-ai-orchestrated-development-to-a2ui-8fa8303d5381"
+syndicated = "https://medium.com/@fmind/finding-the-holy-grail-of-ai-agent-uis-from-ai-orchestrated-development-to-a2ui-8fa8303d5381"
 draft = false
 +++
 
@@ -97,7 +97,7 @@ The client can use the [Lit renderer](https://github.com/google/A2UI/tree/main/r
 - **Secure:** No arbitrary JavaScript execution. It’s just declarative data, mitigating injection risks. This is critical for enterprise adoption where security reviews block “dynamic code generation.”
 - **LLM-Friendly:** Flat, streaming JSON structure designed for easy generation. LLMs can build UIs incrementally without perfect JSON in one shot.
 
-**Note:** A2UI is currently at [v0.8](https://a2ui.org/specification/v0.8-a2ui/) and still in active development. The protocol has some rough edges, and for production use. The best approach is to wait for native integration in tools like [Gemini Enterprise](https://cloud.google.com/gemini/enterprise) or the [Agent Development Kit (ADK)](https://google.github.io/adk-docs).
+> **Note:** A2UI is currently at [v0.8](https://a2ui.org/specification/v0.8-a2ui/) and still in active development. The protocol has some rough edges, and for production use. The best approach is to wait for native integration in tools like [Gemini Enterprise](https://cloud.google.com/gemini/enterprise) or the [Agent Development Kit (ADK)](https://google.github.io/adk-docs).
 
 ### A2UI vs AG-UI: Two Philosophies
 

@@ -4,7 +4,7 @@ description = "For AI agents, the biggest challenge isn’t the model, it’s th
 date = "2025-10-12"
 tags = ["Agent"]
 slug = "the-real-ai-agent-bottleneck-is-the-damn-ui"
-canonical = "https://medium.com/@fmind/the-real-ai-agent-bottleneck-is-the-damn-ui-90e90ee369e0"
+syndicated = "https://medium.com/@fmind/the-real-ai-agent-bottleneck-is-the-damn-ui-90e90ee369e0"
 draft = false
 +++
 

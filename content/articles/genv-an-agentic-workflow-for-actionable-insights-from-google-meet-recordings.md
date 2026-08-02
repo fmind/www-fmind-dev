@@ -4,7 +4,7 @@ description = "Video meetings on platforms like Google Meet are essential for co
 date = "2025-04-11"
 tags = ["Agent", "Project"]
 slug = "genv-an-agentic-workflow-for-actionable-insights-from-google-meet-recordings"
-canonical = "https://medium.com/@fmind/genv-an-agentic-workflow-for-actionable-insights-from-google-meet-recordings-746d465fb827"
+syndicated = "https://medium.com/@fmind/genv-an-agentic-workflow-for-actionable-insights-from-google-meet-recordings-746d465fb827"
 draft = false
 +++
 
@@ -56,66 +56,70 @@ GenV follows a clear agentic process: **Locate -\> Prepare -\> Analyze -\> Repor
 
 &nbsp;
 
-    class MeetingInsight(pdt.BaseModel):
-        """Structured insights extracted from a Google Meet recording analysis."""
-        title: T.Optional[str] = pdt.Field(
-            default=None,
-            description="The inferred title or primary subject of the meeting based on the discussion."
-        )
-        summary: T.Optional[str] = pdt.Field(
-            default=None,
-            description="A concise summary (3-5 sentences) of the main topics discussed and key outcomes of the meeting."
-        )
-        questions_answers: T.Optional[list[QuestionAnswer]] = pdt.Field(
-            default=None,
-            description="A list of significant questions asked and their corresponding answers from the meeting."
-        )
-        unanswered_questions: T.Optional[list[str]] = pdt.Field(
-            default=None,
-            description="A list of significant questions that were asked but do not appear to have been clearly answered during the meeting.."
-        )
-        projects_discussed: T.Optional[list[ProjectInfo]] = pdt.Field(
-            default=None,
-            description="A list of specific projects discussed, including status or key points."
-        )
-        action_items: T.Optional[list[ActionItem]] = pdt.Field(
-            default=None,
-            description="A list of specific tasks or action items assigned, including owner and deadline if specified."
-        )
-        decisions_suggestions: T.Optional[list[DecisionSuggestion]] = pdt.Field(
-            default=None,
-            description="A list of key decisions made or significant suggestions proposed during the meeting."
-        )
-        technical_insights: T.Optional[list[str]] = pdt.Field(
-           default=None,
-           description="Specific mentions related technical solutions, configurations, or code snippets discussed."
-        )
-        key_topics_mentioned: T.Optional[list[str]] = pdt.Field(
-            default=None,
-            description="A list of other important topics, keywords, or themes discussed that are not captured elsewhere (e.g., specific technologies, methodologies, upcoming events, general announcements)."
-        )
+```python
+class MeetingInsight(pdt.BaseModel):
+    """Structured insights extracted from a Google Meet recording analysis."""
+    title: T.Optional[str] = pdt.Field(
+        default=None,
+        description="The inferred title or primary subject of the meeting based on the discussion."
+    )
+    summary: T.Optional[str] = pdt.Field(
+        default=None,
+        description="A concise summary (3-5 sentences) of the main topics discussed and key outcomes of the meeting."
+    )
+    questions_answers: T.Optional[list[QuestionAnswer]] = pdt.Field(
+        default=None,
+        description="A list of significant questions asked and their corresponding answers from the meeting."
+    )
+    unanswered_questions: T.Optional[list[str]] = pdt.Field(
+        default=None,
+        description="A list of significant questions that were asked but do not appear to have been clearly answered during the meeting.."
+    )
+    projects_discussed: T.Optional[list[ProjectInfo]] = pdt.Field(
+        default=None,
+        description="A list of specific projects discussed, including status or key points."
+    )
+    action_items: T.Optional[list[ActionItem]] = pdt.Field(
+        default=None,
+        description="A list of specific tasks or action items assigned, including owner and deadline if specified."
+    )
+    decisions_suggestions: T.Optional[list[DecisionSuggestion]] = pdt.Field(
+        default=None,
+        description="A list of key decisions made or significant suggestions proposed during the meeting."
+    )
+    technical_insights: T.Optional[list[str]] = pdt.Field(
+       default=None,
+       description="Specific mentions related technical solutions, configurations, or code snippets discussed."
+    )
+    key_topics_mentioned: T.Optional[list[str]] = pdt.Field(
+        default=None,
+        description="A list of other important topics, keywords, or themes discussed that are not captured elsewhere (e.g., specific technologies, methodologies, upcoming events, general announcements)."
+    )
+```
 
 - **API Call:** For each video file (referenced by its GCS URI), the script sends a request to the [Gemini model](https://cloud.google.com/vertex-ai/generative-ai/docs/models) (`gemini-2.0-flash` or similar multimodal model). The key here is providing the video URI directly to the model, along with the prompt and, importantly, specifying the `response_mime_type` as `application/json` and providing the `response_schema` (our `MeetingInsight` Pydantic model). This multimodal capability combined with structured output is incredibly powerful.
 - **Parsing:** The Gemini API directly returns JSON conforming to the schema, which the library automatically parses into our Pydantic `MeetingInsight` object.
 
 &nbsp;
 
-    # Simplified Gemini API Call Example
-    uri = f"gs://{blob.bucket.name}/{blob.name}" # GCS URI of the video
-    contents = [
-        GT.Part.from_uri(file_uri=uri, mime_type="video/mp4"),
-        prompt, # Your prompt guiding the analysis
-    ]
-    response = genai_client.models.generate_content(
-        model=MODEL, # e.g., "gemini-2.0-flash"
-        contents=contents,
-        config={
-            "response_mime_type": "application/json",
-            "response_schema": MeetingInsight, # Providing the schema
-            "temperature": TEMPERATURE
-        },
-    )
-    insight = response.parsed # The structured Pydantic object
+```python
+# Simplified Gemini API Call Example
+uri = f"gs://{blob.bucket.name}/{blob.name}" # GCS URI of the video
+contents = [
+    GT.Part.from_uri(file_uri=uri, mime_type="video/mp4"),
+    prompt, # Your prompt guiding the analysis
+]
+response = genai_client.models.generate_content(
+    model=MODEL, # e.g., "gemini-2.0-flash"
+    contents=contents,
+    config={
+        "response_mime_type": "application/json",
+        "response_schema": MeetingInsight, # Providing the schema
+        "temperature": TEMPERATURE
+    },
+)
+insight = response.parsed # The structured Pydantic object
+```
 
 **Report Results (Output):** The final step presents the insights clearly.
 
@@ -125,36 +129,38 @@ GenV follows a clear agentic process: **Locate -\> Prepare -\> Analyze -\> Repor
 
 _**Example Output Snippet (from**_ _**`video_insights.txt`**):_**
 
-    # MLOps Community - Kubeflow
+```markdown
+# MLOps Community - Kubeflow
 
-    ## Meeting Title
+## Meeting Title
 
-    Kubeflow: The ML Toolkit for Kubernetes
+Kubeflow: The ML Toolkit for Kubernetes
 
-    ## Summary
+## Summary
 
-    The speaker introduces Kubeflow as a toolkit for doing machine learning on top of Kubernetes. He outlines the agenda for the presentation, which includes components, architecture, ML workflow, Kubeflow pipelines, and a Q&A session. He emphasizes that Kubeflow is an open-source ML Ops platform based on Kubernetes, primarily using Python and YAML.
+The speaker introduces Kubeflow as a toolkit for doing machine learning on top of Kubernetes. He outlines the agenda for the presentation, which includes components, architecture, ML workflow, Kubeflow pipelines, and a Q&A session. He emphasizes that Kubeflow is an open-source ML Ops platform based on Kubernetes, primarily using Python and YAML.
 
-    ## Projects Discussed
+## Projects Discussed
 
-    * **Kubeflow:** Kubeflow is an open-source ML Ops platform based on Kubernetes, primarily using Python and YAML. It is a tool to power the develop platform with Kubernetes. The project has been sponsored by Google.
+- **Kubeflow:** Kubeflow is an open-source ML Ops platform based on Kubernetes, primarily using Python and YAML. It is a tool to power the develop platform with Kubernetes. The project has been sponsored by Google.
 
-    ## Technical Insights
+## Technical Insights
 
-    * Kubeflow uses Python and YAML.
-    * Kubeflow is based on Kubernetes.
-    * Kubeflow uses Docker.
+- Kubeflow uses Python and YAML.
+- Kubeflow is based on Kubernetes.
+- Kubeflow uses Docker.
 
-    ## Key Topics
+## Key Topics
 
-    * MLOps
-    * Kubernetes
-    * Python
-    * YAML
-    * Docker
-    * Pipelines
-    * Components
-    * Architecture
+- MLOps
+- Kubernetes
+- Python
+- YAML
+- Docker
+- Pipelines
+- Components
+- Architecture
+```
 
 ### The Value Proposition: Why Use GenV?
 

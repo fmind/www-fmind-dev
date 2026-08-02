@@ -4,7 +4,7 @@ description = "As developers and AI practitioners, many of us belong to vibrant 
 date = "2025-04-15"
 tags = ["Agent", "LLM", "Python"]
 slug = "structured-llm-outputs-made-easy-building-a-slack-digest-agent-with-pydantic-ai"
-canonical = "https://medium.com/@fmind/structured-llm-outputs-made-easy-building-a-slack-digest-agent-with-pydantic-ai-d61df262e63d"
+syndicated = "https://medium.com/@fmind/structured-llm-outputs-made-easy-building-a-slack-digest-agent-with-pydantic-ai-d61df262e63d"
 draft = false
 +++
 
@@ -59,27 +59,29 @@ Project Structure of the MLOps Digester
 
 First, we define our desired output structure using Pydantic models. In [`src/mlops_digester/results.py`](https://github.com/fmind/mlops-digester/blob/main/src/mlops_digester/results.py), we have something like this:
 
-    import pydantic as pdt
+```python
+import pydantic as pdt
 
-    class SlackThreadDigest(pdt.BaseModel):
-        """Digest of a Slack thread."""
+class SlackThreadDigest(pdt.BaseModel):
+    """Digest of a Slack thread."""
 
-        title: str
-        summary: str
-        takeaways: list[str]
-        tags: list[str]
-        links: list[str]
-        tools: list[str]
+    title: str
+    summary: str
+    takeaways: list[str]
+    tags: list[str]
+    links: list[str]
+    tools: list[str]
 
 
-    class SlackWorkspaceDigest(pdt.BaseModel):
-        """Digest of a Slack workspace."""
+class SlackWorkspaceDigest(pdt.BaseModel):
+    """Digest of a Slack workspace."""
 
-        tops: list[str]
-        flops: list[str]
-        moods: list[str]
-        topics: list[str]
-        sharing: list[str]
+    tops: list[str]
+    flops: list[str]
+    moods: list[str]
+    topics: list[str]
+    sharing: list[str]
+```
 
 Here, the _SlackThreadDigest_ defines the fields we want for _each_ summarized thread. On the other hand, the _SlackWorkspaceDigest_ summarizes the key points of a whole Slack Workspace.
 
@@ -87,82 +89,86 @@ Here, the _SlackThreadDigest_ defines the fields we want for _each_ summarized t
 
 Next, in [`src/mlops_digester/agents.py`](https://github.com/fmind/mlops-digester/blob/main/src/mlops_digester/agents.py), we create an agent that uses Pydantic AI. This involves initializing `PydanticAI` with an LLM client (like OpenAI's or Gemini's) and then using it to process the input text based on our desired Pydantic model.
 
-    def to_slack_thread_digest_agent(
-        slack_thread_digest_agent_settings: settings.SlackThreadDigesterAgentSettings,
-    ) -> SlackThreadDigestAgent:
-        """Create an agent for digesting Slack threads from settings."""
-        agent = pdtai.Agent(
-            name=slack_thread_digest_agent_settings.name,
-            model_settings=slack_thread_digest_agent_settings.model_settings,
-            deps_type=depends.SlackThreadDepends,
-            result_type=results.SlackThreadDigest,
-        )
+```python
+def to_slack_thread_digest_agent(
+    slack_thread_digest_agent_settings: settings.SlackThreadDigesterAgentSettings,
+) -> SlackThreadDigestAgent:
+    """Create an agent for digesting Slack threads from settings."""
+    agent = pdtai.Agent(
+        name=slack_thread_digest_agent_settings.name,
+        model_settings=slack_thread_digest_agent_settings.model_settings,
+        deps_type=depends.SlackThreadDepends,
+        result_type=results.SlackThreadDigest,
+    )
 
-        @agent.system_prompt
-        def agent_system_prompt(ctx: pdtai.RunContext[depends.SlackThreadDepends]) -> str:
-            """Define the system prompt for the agent."""
-            slack_channel_name = ctx.deps.channel_name
-            system_prompt = f"""{slack_thread_digest_agent_settings.system_prompt}
+    @agent.system_prompt
+    def agent_system_prompt(ctx: pdtai.RunContext[depends.SlackThreadDepends]) -> str:
+        """Define the system prompt for the agent."""
+        slack_channel_name = ctx.deps.channel_name
+        system_prompt = f"""{slack_thread_digest_agent_settings.system_prompt}
 
-            The Slack Channel Name is: {slack_channel_name}
-            """
-            return system_prompt
+        The Slack Channel Name is: {slack_channel_name}
+        """
+        return system_prompt
 
-        return agent
+    return agent
+```
 
 3\. **Running the Main Tasks**
 
 The magic happens in [`src/mlops_digester/tasks.py`](https://github.com/fmind/mlops-digester/blob/main/src/mlops_digester/tasks.py). We provide the raw Slack transcript within a prompt and tell Pydantic AI we expect an output conforming to the `Digests` model. Pydantic AI handles the interaction with the LLM, the parsing, the validation, and potentially the retries, finally returning a validated `Digest` object (or raising an error if it fails).
 
-    def fetch_slack_content(
-        fetch_slack_content_step_settings: settings.FetchSlackContentStepSettings,
-        slack_client: slack.WebClient,
-    ) -> SlackContent:
-        """Fetch MLOps content from Slack channels, messages, and replies."""
-        # dates
-        end_date = datetime.datetime.now()
-        start_date = end_date - datetime.timedelta(
-            days=fetch_slack_content_step_settings.since_last_days
+```python
+def fetch_slack_content(
+    fetch_slack_content_step_settings: settings.FetchSlackContentStepSettings,
+    slack_client: slack.WebClient,
+) -> SlackContent:
+    """Fetch MLOps content from Slack channels, messages, and replies."""
+    # dates
+    end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(
+        days=fetch_slack_content_step_settings.since_last_days
+    )
+    # channels
+    slack_channels = {}
+    if fetch_slack_content_step_settings.channels:
+        for slack_channel_id in fetch_slack_content_step_settings.channels:
+            slack_channel_result = slack_client.conversations_info(channel=slack_channel_id)
+            slack_channel = slack_channel_result["channel"]  # extract channel data
+            slack_channels[slack_channel["id"]] = slack_channel
+    else:
+        slack_conversations = slack_client.conversations_list(
+            limit=fetch_slack_content_step_settings.max_channels_per_workspace,
+            exclude_archived=fetch_slack_content_step_settings.exclude_archived_channels,
         )
-        # channels
-        slack_channels = {}
-        if fetch_slack_content_step_settings.channels:
-            for slack_channel_id in fetch_slack_content_step_settings.channels:
-                slack_channel_result = slack_client.conversations_info(channel=slack_channel_id)
-                slack_channel = slack_channel_result["channel"]  # extract channel data
-                slack_channels[slack_channel["id"]] = slack_channel
-        else:
-            slack_conversations = slack_client.conversations_list(
-                limit=fetch_slack_content_step_settings.max_channels_per_workspace,
-                exclude_archived=fetch_slack_content_step_settings.exclude_archived_channels,
+        for slack_channel in slack_conversations["channels"]:
+            slack_channels[slack_channel["id"]] = slack_channel
+    # messages
+    for slack_channel_id, slack_channel in slack_channels.items():
+        slack_channel_messages = slack_channel.setdefault("messages", {})
+        try:
+            slack_conversation_history = slack_client.conversations_history(
+                channel=slack_channel_id,
+                oldest=str(start_date.timestamp()),
+                limit=fetch_slack_content_step_settings.max_messages_per_channel,
             )
-            for slack_channel in slack_conversations["channels"]:
-                slack_channels[slack_channel["id"]] = slack_channel
-        # messages
-        for slack_channel_id, slack_channel in slack_channels.items():
-            slack_channel_messages = slack_channel.setdefault("messages", {})
-            try:
-                slack_conversation_history = slack_client.conversations_history(
-                    channel=slack_channel_id,
-                    oldest=str(start_date.timestamp()),
-                    limit=fetch_slack_content_step_settings.max_messages_per_channel,
-                )
-                for slack_channel_message in slack_conversation_history["messages"]:
-                    slack_channel_messages[slack_channel_message["ts"]] = slack_channel_message
-            except slack_errors.SlackApiError as slack_api_error:
-                logger.warning(f"Error while Fetching Slack Channel Messages: {slack_api_error}")
-        # replies
-        for slack_channel_id, slack_channel in slack_channels.items():
-            for slack_message_ts, slack_message in slack_channel["messages"].items():
-                slack_message_replies = slack_message.setdefault("replies", {})
-                slack_message_thread = slack_client.conversations_replies(
-                    ts=slack_message_ts,
-                    channel=slack_channel_id,
-                    limit=fetch_slack_content_step_settings.max_replies_per_message,
-                )
-                for slack_message_reply in slack_message_thread["messages"]:
-                    slack_message_replies[slack_message_reply["ts"]] = slack_message_reply
-        return slack_channels
+            for slack_channel_message in slack_conversation_history["messages"]:
+                slack_channel_messages[slack_channel_message["ts"]] = slack_channel_message
+        except slack_errors.SlackApiError as slack_api_error:
+            logger.warning(f"Error while Fetching Slack Channel Messages: {slack_api_error}")
+    # replies
+    for slack_channel_id, slack_channel in slack_channels.items():
+        for slack_message_ts, slack_message in slack_channel["messages"].items():
+            slack_message_replies = slack_message.setdefault("replies", {})
+            slack_message_thread = slack_client.conversations_replies(
+                ts=slack_message_ts,
+                channel=slack_channel_id,
+                limit=fetch_slack_content_step_settings.max_replies_per_message,
+            )
+            for slack_message_reply in slack_message_thread["messages"]:
+                slack_message_replies[slack_message_reply["ts"]] = slack_message_reply
+    return slack_channels
+```
 
 This gives us confidence that `digest_output` will have all the required fields (`title`, `summary`, `takeaways`) and nested structures (SlackThreadDigest and SlackWorkspaceDigest) we defined, ready for use in our application.
 

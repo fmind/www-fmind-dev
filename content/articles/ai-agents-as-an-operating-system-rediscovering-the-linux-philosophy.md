@@ -4,7 +4,7 @@ description = "We are building the most advanced AI systems in history, yet the 
 date = "2026-03-14"
 tags = ["Agent", "LLM"]
 slug = "ai-agents-as-an-operating-system-rediscovering-the-linux-philosophy"
-canonical = "https://medium.com/@fmind/ai-agents-as-an-operating-system-rediscovering-the-linux-philosophy-f0e76f29ebdb"
+syndicated = "https://medium.com/@fmind/ai-agents-as-an-operating-system-rediscovering-the-linux-philosophy-f0e76f29ebdb"
 draft = false
 +++
 
@@ -52,7 +52,7 @@ For a long time, I believed [Agent-to-Agent (A2A)](https://a2a-protocol.org/late
 I previously thought [Agent Skills](https://agentskills.io/home) were going to be the golden hammer — a concept I explored in [_MLOps Coding Skills: Bridging the Gap Between Specs and Agents_](https://fmind.medium.com/mlops-coding-skills-bridging-the-gap-between-specs-and-agents-4c8170570eba). I was wrong.
 
 - **Premature Abstraction:** Skills are designed to be reusable. The trap is making them overly verbose on Day 1, trying to account for edge cases that don’t exist yet.
-- **Context over Skills:** On a new project, you are much better off using an [AGENTS.md](https://agents.md/) file, system instructions, or [context files like the 5XP framework](https://fmind.medium.com/the-5xp-framework-steering-ai-coding-agents-from-chaos-to-success-83fbdb318b2b). They are vastly easier to operate and tweak.
+- **Context over Skills:** On a new project, you are much better off using an [`AGENTS.md`](https://agents.md/) file, system instructions, or [context files like the 5XP framework](https://fmind.medium.com/the-5xp-framework-steering-ai-coding-agents-from-chaos-to-success-83fbdb318b2b). They are vastly easier to operate and tweak.
 - **Incomplete Taxonomy:** Structuring everything as a “skill” is a flawed mental model. Not everything is a skill. Way-of-working, product objectives, and business context cannot be neatly packaged into executable skills.
 - **The “Static Fit” Problem:** When you import open-source skills or skills written by others, they rarely align 100% with your needs. Because they are static, they either fit perfectly, or they break. There is no inherent mechanism for the skill to learn or adapt to the user’s specific workflow.
 
@@ -67,10 +67,10 @@ If bloated protocols and rigid abstractions are slowing us down, what is the alt
 
 For developers, treating the CLI as the primary interface for agents has undeniable benefits:
 
-- **Battle-Tested Maturity:** There are thousands of mature, edge-case-tested CLI tools already on the market. Furthermore, LLMs have ingested the man pages for these tools; they already know exactly how to use them.
+- **Battle-Tested Maturity:** There are thousands of mature, edge-case-tested CLI tools already on the market. Furthermore, LLMs have ingested the `man` pages for these tools; they already know exactly how to use them.
 - **Shared Environment:** A human can step in and run the exact same command. The environment is already authenticated, and debugging is trivial (standard error messages, exit codes, easily readable flags).
 - **Zero Bloat:** It’s incredibly lightweight. You don’t need to deploy a wrapper or a daemon. You just execute the command.
-- **Infinite Composability:** Agents can natively pipe find, grep, jq, and curl together, without passing the intermediate tool output to the LLM.
+- **Infinite Composability:** Agents can natively pipe `find`, `grep`, `jq`, and `curl` together, without passing the intermediate tool output to the LLM.
 - **Language Agnostic:** It doesn’t matter if the underlying tool is written in Rust, Go, Python, or Bash. To the agent, it’s just a command.
 
 What we are doing is rediscovering the [**Linux Philosophy**](https://en.wikipedia.org/wiki/Unix_philosophy):

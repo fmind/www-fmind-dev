@@ -4,7 +4,7 @@ description = "Building AI-First apps with A2UI: from the Agent-View-Controller 
 date = "2026-01-28"
 tags = ["Agent", "LLM"]
 slug = "building-with-a2ui-extending-the-expressiveness-of-ai-agent-interfaces"
-canonical = "https://medium.com/@fmind/building-with-a2ui-extending-the-expressiveness-of-ai-agent-interfaces-d380ceac2040"
+syndicated = "https://medium.com/@fmind/building-with-a2ui-extending-the-expressiveness-of-ai-agent-interfaces-d380ceac2040"
 draft = false
 +++
 
@@ -42,32 +42,34 @@ Before diving into the code, it’s critical to understand the two pillars of th
 
 A2UI is a **declarative protocol**. Instead of an agent writing code (which is risky and error-prone), it streams a structured JSON description of a UI.
 
-Here is what it looks like on the wire. The agent sends SurfaceUpdate events to render components like a card with a button:
+Here is what it looks like on the wire. The agent sends `SurfaceUpdate` events to render components like a card with a button:
 
-    {
-      "surfaceUpdate": {
-        "surfaceId": "main-surface",
-        "components": [
-          {
-            "id": "welcome-card",
-            "component": {
-              "Card": {
-                "child": "welcome-text"
-              }
-            }
-          },
-          {
-            "id": "welcome-text",
-            "component": {
-              "Text": {
-                "text": { "literalString": "Welcome to Featest" },
-                "usageHint": "h1"
-              }
-            }
+```json
+{
+  "surfaceUpdate": {
+    "surfaceId": "main-surface",
+    "components": [
+      {
+        "id": "welcome-card",
+        "component": {
+          "Card": {
+            "child": "welcome-text"
           }
-        ]
+        }
+      },
+      {
+        "id": "welcome-text",
+        "component": {
+          "Text": {
+            "text": { "literalString": "Welcome to Featest" },
+            "usageHint": "h1"
+          }
+        }
       }
-    }
+    ]
+  }
+}
+```
 
 ### 2. A2A: Agent-to-Agent Communication (The Transport)
 
@@ -75,15 +77,17 @@ Here is what it looks like on the wire. The agent sends SurfaceUpdate events to 
 
 In Featest, the client wraps the user’s intent in an A2A message:
 
-    POST /api/agents/feature_request_agent/tasks
-    Content-Type: application/json
+```http
+POST /api/agents/feature_request_agent/tasks
+Content-Type: application/json
 
-    {
-      "task_id": "12345",
-      "input": {
-        "text": "I want to vote for dark mode"
-      }
-    }
+{
+  "task_id": "12345",
+  "input": {
+    "text": "I want to vote for dark mode"
+  }
+}
+```
 
 Together, they create a universal language. A2A carries the envelope, and A2UI ensures the letter inside contains rich, interactive content, not just text.
 
@@ -97,16 +101,16 @@ Architecture Diagram of the Featest App (Source: Fmind.dev)
 
 The flow is bidirectional and relies on robust open-source packages:
 
-1. **User** interacts with the **Lit Client**, which uses the official [@a2ui/lit](https://github.com/google/A2UI/tree/main/renderers/lit) renderer. It acts as a state machine, processing SurfaceUpdate events to patch the DOM efficiently.
-2. **Client** sends intent via **A2A** to the **Backend**. The A2UIClient wraps the user’s input (text or events) in a standard JSON-RPC envelope.
+1. **User** interacts with the **Lit Client**, which uses the official [`@a2ui/lit`](https://github.com/google/A2UI/tree/main/renderers/lit) renderer. It acts as a state machine, processing `SurfaceUpdate` events to patch the DOM efficiently.
+2. **Client** sends intent via **A2A** to the **Backend**. The `A2UIClient` wraps the user’s input (text or events) in a standard JSON-RPC envelope.
 3. **Backend Agent** processes logic and streams back **A2UI** JSON instructions.
 4. **Client** renders the UI components dynamically.
 
-The power of this system comes from the **Component Schema**. Featest supports a rich set of native components defined in schemas.py, ensuring the agent has high-level building blocks rather than raw HTML:
+The power of this system comes from the **Component Schema**. Featest supports a rich set of native components defined in `schemas.py`, ensuring the agent has high-level building blocks rather than raw HTML:
 
-- **Layout**: Row, Column, List, Card, Tabs, Divider, Modal.
-- **Input**: Button, CheckBox, TextField, DateTimeInput, MultipleChoice, Slider.
-- **Media**: Text, Image, Icon, Video, AudioPlayer.
+- **Layout**: `Row`, `Column`, `List`, `Card`, `Tabs`, `Divider`, Modal.
+- **Input**: `Button`, `CheckBox`, `TextField`, `DateTimeInput`, `MultipleChoice`, Slider.
+- **Media**: `Text`, `Image`, `Icon`, `Video`, AudioPlayer.
 
 ### The AVC Pattern: Agent-View-Controller
 
@@ -118,47 +122,53 @@ I adopted what I call the **Agent-View-Controller (AVC) Pattern** — an evo
 
 ### 1. The Controller Agent (The Brain)
 
-This agent handles the business logic. It doesn’t care about pixels. It inputs a user request, decides which tool to use (e.g., vote_feature, add_comment), and outputs structured data.
+This agent handles the business logic. It doesn’t care about pixels. It inputs a user request, decides which tool to use (e.g., `vote_feature`, `add_comment`), and outputs structured data.
 
-    # agent/agent.py
-    controller_agent = agents.Agent(
-        name="controller_agent",
-        model=configs.AGENT_MODEL,
-        description="Executes application logic.",
-        instruction=prompts.CONTROLLER_INSTRUCTION,
-        tools=[
-            tools.list_features,
-            tools.add_feature,
-            tools.upvote_feature,
-            tools.add_comment,
-            tools.get_feature,
-            tools.update_feature,
-            tools.delete_feature,
+```python
+# agent/agent.py
+controller_agent = agents.Agent(
+    name="controller_agent",
+    model=configs.AGENT_MODEL,
+    description="Executes application logic.",
+    instruction=prompts.CONTROLLER_INSTRUCTION,
+    tools=[
+        tools.list_features,
+        tools.add_feature,
+        tools.upvote_feature,
+        tools.add_comment,
+        tools.get_feature,
+        tools.update_feature,
+        tools.delete_feature,
 
-        ],
-    )
+    ],
+)
+```
 
 ### 2. The View Agent (The Renderer)
 
 This agent is the designer. It takes the data from the Controller and translates it into A2UI JSON. It cares about layout, typography, and hierarchy.
 
-    view_agent = agents.Agent(
-        name="view_agent",
-        model=configs.AGENT_MODEL,
-        description="Formats data into A2UI schema.",
-        instruction=prompts.VIEW_INSTRUCTION,
-        output_schema=schemas.A2UI,
-    )
+```python
+view_agent = agents.Agent(
+    name="view_agent",
+    model=configs.AGENT_MODEL,
+    description="Formats data into A2UI schema.",
+    instruction=prompts.VIEW_INSTRUCTION,
+    output_schema=schemas.A2UI,
+)
+```
 
 ### 3. The Sequential Pipeline
 
 I chained them together using ADK’s SequentialAgent. This simple composition gave me immense flexibility. I could swap the View Agent to change the entire look and feel of the app without touching a single line of business logic.
 
-    root_agent = agents.SequentialAgent(
-        name="feature_request_agent",
-        description="Handles feature requests from users.",
-        sub_agents=[controller_agent, view_agent],
-    )
+```python
+root_agent = agents.SequentialAgent(
+    name="feature_request_agent",
+    description="Handles feature requests from users.",
+    sub_agents=[controller_agent, view_agent],
+)
+```
 
 ### Strengths of the Protocol
 
@@ -176,7 +186,7 @@ If an agent needs to ask for a complex set of preferences, Markdown forces it to
 
 ### 2. Security by Design
 
-This is the enterprise killer feature. Because A2UI is **data**, not code, there is no eval() happening on the client. The agent selects from a catalog of safe, pre-built components. You can’t inject malicious scripts via A2UI, making it safe for production environments where “generated code” is a security nightmare.
+This is the enterprise killer feature. Because A2UI is **data**, not code, there is no `eval()` happening on the client. The agent selects from a catalog of safe, pre-built components. You can’t inject malicious scripts via A2UI, making it safe for production environments where “generated code” is a security nightmare.
 
 ### 3. Progressive Rendering
 

@@ -12,13 +12,17 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
+
 	"github.com/fmind/www-fmind-dev/templates"
 )
 
-// The Medium import is frozen, so its size and shape are asserted exactly. Articles
-// published natively from the Publications repository are additive: they carry no
-// Medium canonical and ship a cover the template renders rather than the body, so
-// the archive invariants below are scoped to the imported subset.
+// The Medium import is frozen, so its size and shape are asserted exactly. The
+// import is identified by its `syndicated` URL, which records where a copy also
+// lives; this site is canonical for every article it publishes. Articles authored
+// natively are additive and ship a cover the template renders rather than the body,
+// so the archive invariants below are scoped to the imported subset.
 const (
 	mediumArchiveArticles = 57
 	mediumArchiveImages   = 295
@@ -32,7 +36,7 @@ func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 
 	archive := make([]templates.Article, 0, len(collection.all))
 	for _, article := range collection.all {
-		if isMediumCanonical(article.Canonical) {
+		if isMediumURL(article.Syndicated) {
 			archive = append(archive, article)
 		}
 	}
@@ -46,13 +50,13 @@ func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 	imagePattern := regexp.MustCompile(`\]\((/static/img/articles/[^)[:space:]]+)`)
 	archiveImages := make(map[string]bool)
 	archiveSlugs := make(map[string]bool, len(archive))
-	canonicals := make(map[string]bool, len(archive))
+	syndications := make(map[string]bool, len(archive))
 	for _, article := range archive {
 		archiveSlugs[article.Slug] = true
-		if canonicals[article.Canonical] {
-			t.Errorf("%s duplicates canonical %q", article.Slug, article.Canonical)
+		if syndications[article.Syndicated] {
+			t.Errorf("%s duplicates syndicated URL %q", article.Slug, article.Syndicated)
 		}
-		canonicals[article.Canonical] = true
+		syndications[article.Syndicated] = true
 		if strings.Contains(article.Markdown, "medium.com/max/") || strings.Contains(article.Markdown, "cdn-images-") {
 			t.Errorf("%s still references a Medium image CDN", article.Slug)
 		}
@@ -72,8 +76,13 @@ func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 		if strings.Contains(article.HTML, "<script") || strings.Contains(article.HTML, "<style") {
 			t.Errorf("%s rendered raw HTML", article.Slug)
 		}
-		if !isMediumCanonical(article.Canonical) && article.Canonical != "" {
-			t.Errorf("%s canonical = %q, want a Medium URL or empty for a native article", article.Slug, article.Canonical)
+		// Reclaimed SEO: this site is canonical for its whole archive. A syndicated
+		// copy is recorded as provenance and must never hand ranking away again.
+		if article.Canonical != "" {
+			t.Errorf("%s declares an external canonical %q", article.Slug, article.Canonical)
+		}
+		if !isMediumURL(article.Syndicated) {
+			t.Errorf("%s syndicated = %q, want a Medium URL", article.Slug, article.Syndicated)
 		}
 	}
 
@@ -136,7 +145,7 @@ func examplePNG(t *testing.T) []byte {
 	return encoded.Bytes()
 }
 
-func isMediumCanonical(canonical string) bool {
+func isMediumURL(canonical string) bool {
 	return strings.HasPrefix(canonical, "https://medium.com/@fmind/") ||
 		strings.HasPrefix(canonical, "https://fmind.medium.com/")
 }
@@ -278,7 +287,7 @@ func TestEnhanceBodyImagesPrioritizesCoverAndDefersFigures(t *testing.T) {
 	body := `<p><img src="/static/img/articles/example/cover.webp" alt="cover"></p>` +
 		`<p><img src="/static/img/articles/example/figure.png" alt="figure"></p>`
 
-	got, err := enhanceBodyImages(body, assets)
+	got, _, err := enhanceBodyImages(body, assets)
 	if err != nil {
 		t.Fatalf("enhance images: %v", err)
 	}
@@ -294,9 +303,53 @@ func TestEnhanceBodyImagesPrioritizesCoverAndDefersFigures(t *testing.T) {
 	}
 }
 
+// A cover exported as PNG must still get the downscaled WebP candidate. `pub
+// export` copies the reviewed diagrams/cover.png verbatim, so keying the srcset
+// on the .webp filename made the next published article silently serve its
+// full-size original as the mobile LCP image.
+func TestEnhanceBodyImagesServesResponsiveCoverForEveryCoverFormat(t *testing.T) {
+	for _, extension := range []string{"webp", "png", "jpg", "gif"} {
+		t.Run(extension, func(t *testing.T) {
+			cover := "static/img/articles/example/cover." + extension
+			assets := fstest.MapFS{
+				cover: {Data: sizedPNG(t, 1_200, 600)},
+				"static/img/articles/example/cover-800.webp": {Data: []byte("derivative")},
+			}
+			body := `<p><img src="/` + cover + `" alt="cover"></p>`
+
+			got, _, err := enhanceBodyImages(body, assets)
+			if err != nil {
+				t.Fatalf("enhance images: %v", err)
+			}
+			want := `srcset="/static/img/articles/example/cover-800.webp 800w, /` + cover + ` 1200w"`
+			if !strings.Contains(got, want) {
+				t.Errorf("enhanced body missing %q: %s", want, got)
+			}
+		})
+	}
+}
+
+// A non-cover figure keeps its single source: only the cover has a generated
+// card derivative to offer as a second candidate.
+func TestEnhanceBodyImagesLeavesNonCoverFiguresUnscaled(t *testing.T) {
+	assets := fstest.MapFS{
+		"static/img/articles/example/coverage-chart.png": {Data: sizedPNG(t, 1_200, 600)},
+		"static/img/articles/example/cover-800.webp":     {Data: []byte("derivative")},
+	}
+	body := `<p><img src="/static/img/articles/example/coverage-chart.png" alt="chart"></p>`
+
+	got, _, err := enhanceBodyImages(body, assets)
+	if err != nil {
+		t.Fatalf("enhance images: %v", err)
+	}
+	if strings.Contains(got, "srcset") {
+		t.Errorf("non-cover figure should not gain a srcset: %s", got)
+	}
+}
+
 func TestEnhanceBodyImagesConvertsExplicitMP4ToVideo(t *testing.T) {
 	body := `<p><img src="/static/img/articles/example/demo.mp4" alt="editor demo"></p>`
-	got, err := enhanceBodyImages(body, fstest.MapFS{})
+	got, _, err := enhanceBodyImages(body, fstest.MapFS{})
 	if err != nil {
 		t.Fatalf("enhance video: %v", err)
 	}
@@ -371,5 +424,113 @@ func TestVisibleArticlesExcludesDrafts(t *testing.T) {
 	}
 	if got := visibleArticles(articles, true); len(got) != 2 {
 		t.Errorf("development visible articles = %d, want 2", len(got))
+	}
+}
+
+// TestEveryTagIsUsed keeps the vocabulary lean: a tag nobody writes under is a
+// dead entry plus a dead color rule, and it silently rots (the "Go" tag did).
+// Tags exist to slice the archive, so one with no articles has no reason to ship.
+func TestEveryTagIsUsed(t *testing.T) {
+	collection, err := loadArticles()
+	if err != nil {
+		t.Fatalf("load articles: %v", err)
+	}
+	used := make(map[string]int, len(templates.TAGS))
+	for _, article := range collection.all {
+		for _, tag := range article.Tags {
+			used[tag]++
+		}
+	}
+	for _, tag := range templates.TAGS {
+		if used[tag.Name] == 0 {
+			t.Errorf("tag %q is in the vocabulary but tags no article", tag.Name)
+		}
+	}
+}
+
+// TestSiteIsCanonicalForEveryArticle pins the reclaimed SEO decision: this site
+// owns the canonical URL of everything it publishes, so no article hands ranking
+// to a syndicated copy and every public article reaches the sitemap. A canonical
+// pointing back here is rejected too — the site treats a non-empty canonical as
+// "belongs elsewhere" and would silently drop the article from the sitemap.
+func TestSiteIsCanonicalForEveryArticle(t *testing.T) {
+	collection, err := loadArticles()
+	if err != nil {
+		t.Fatalf("load articles: %v", err)
+	}
+	for _, article := range collection.all {
+		if article.Canonical != "" {
+			t.Errorf("%s declares canonical %q; this site is the canonical home", article.Slug, article.Canonical)
+		}
+		if got := article.CanonicalURL(); got != article.URL {
+			t.Errorf("%s canonical URL = %q, want %q", article.Slug, got, article.URL)
+		}
+	}
+
+	sitemap, err := renderSitemap(visibleArticles(collection.all, false))
+	if err != nil {
+		t.Fatalf("render sitemap: %v", err)
+	}
+	for _, article := range visibleArticles(collection.all, false) {
+		if !strings.Contains(string(sitemap), "<loc>"+article.URL+"</loc>") {
+			t.Errorf("sitemap is missing %s", article.Slug)
+		}
+	}
+}
+
+// TestArticleRejectsSelfCanonical proves the guard that makes the invariant above
+// enforceable at parse time rather than by convention.
+func TestArticleRejectsSelfCanonical(t *testing.T) {
+	source := []byte(`+++
+title = "Example"
+description = "Example"
+date = "2026-08-01"
+slug = "example"
+canonical = "https://www.fmind.dev/articles/example/"
+tags = ["Agent"]
++++
+
+Body.
+`)
+	if _, err := parseArticle("content/articles/example.md", source, exampleAssets(t, ".webp")); err == nil {
+		t.Fatal("a canonical pointing at this site was accepted")
+	} else if !strings.Contains(err.Error(), "canonical must not point at this site") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// TestEveryCodeBlockDeclaresALanguage keeps highlighting exact rather than
+// inferred. The guesser in highlight.go is a fallback for content this site did
+// not author; everything in content/articles/ states its own language, including
+// an explicit "text" for trees, transcripts, and console output.
+func TestEveryCodeBlockDeclaresALanguage(t *testing.T) {
+	names, err := fs.Glob(articleFS, articleContentPattern)
+	if err != nil {
+		t.Fatalf("list articles: %v", err)
+	}
+	for _, name := range names {
+		data, err := fs.ReadFile(articleFS, name)
+		if err != nil {
+			t.Fatalf("read %q: %v", name, err)
+		}
+		_, markdown, err := splitFrontmatter(data)
+		if err != nil {
+			t.Fatalf("parse %q: %v", name, err)
+		}
+		document := articleMarkdown.Parser().Parse(text.NewReader(markdown))
+		_ = ast.Walk(document, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+			if !entering {
+				return ast.WalkContinue, nil
+			}
+			switch block := node.(type) {
+			case *ast.CodeBlock:
+				t.Errorf("%s: indented code block; fence it and declare a language", name)
+			case *ast.FencedCodeBlock:
+				if len(block.Language(markdown)) == 0 {
+					t.Errorf("%s: fenced code block without a language", name)
+				}
+			}
+			return ast.WalkContinue, nil
+		})
 	}
 }

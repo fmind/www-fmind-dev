@@ -4,7 +4,7 @@ description = "Tame your Python chaos! Learn how pyenv simplifies managing Pytho
 date = "2024-10-08"
 tags = ["Python", "Guide"]
 slug = "taming-python-installation-with-pyenv-for-ai-ml-and-mlops-projects"
-canonical = "https://medium.com/@fmind/taming-python-installation-with-pyenv-for-ai-ml-and-mlops-projects-00cb0bec09b4"
+syndicated = "https://medium.com/@fmind/taming-python-installation-with-pyenv-for-ai-ml-and-mlops-projects-00cb0bec09b4"
 draft = false
 +++
 
@@ -42,21 +42,27 @@ The installation process is straightforward, varying slightly depending on your 
 
 For macOS, UNIX and Windows+[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) systems, use the automatic installer:
 
-    curl https://pyenv.run | bash
+```bash
+curl https://pyenv.run | bash
+```
 
 #### Setting Up Your Shell Environment
 
 For bash and zsh shells, add these lines to both ~/.bashrc ~/.zshrc or ~/.profile:
 
-    export PYENV_ROOT="$HOME/.pyenv"
-    command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init -)"
+```bash
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+```
 
 #### Restart Your Shell
 
 Finally, restart your shell to update your shell PATH:
 
-    exec "$SHELL"
+```bash
+exec "$SHELL"
+```
 
 **Important: Be sure** [**to install Python build dependencies**](https://github.com/pyenv/pyenv/wiki#suggested-build-environment) **on your system after the installation.**
 
@@ -68,36 +74,46 @@ Once installed, using pyenv is a breeze:
 
 &nbsp;
 
-    pyenv install 3.12.0
+```bash
+pyenv install 3.12.0
+```
 
 - **Set a Global Version (Optional):**
 
 &nbsp;
 
-    pyenv global 3.12.0
+```bash
+pyenv global 3.12.0
+```
 
 - **Set a Local Version (Project-Specific):** Create a .python-version file in your project’s root directory containing the desired version (e.g., 3.12.0). pyenv automatically switches to this version when you enter the project directory.
 
 &nbsp;
 
-    # in .python-version
-    3.12
+```text
+# in .python-version
+3.12
+```
 
 - **Check Active Version:**
 
 &nbsp;
 
-    pyenv version
+```bash
+pyenv version
+```
 
 ### Example Workflow
 
 Let’s say you’re starting a new project that requires Python 3.12:
 
-    mkdir my-mlops-project
-    cd my-mlops-project
-    pyenv install 3.12
-    echo "3.12" > .python-version
-    python --version  # Verify the correct version is active
+```bash
+mkdir my-mlops-project
+cd my-mlops-project
+pyenv install 3.12
+echo "3.12" > .python-version
+python --version  # Verify the correct version is active
+```
 
 Now, whenever you work within the my-mlops-project directory, pyenv ensures you’re using the correct Python version.
 

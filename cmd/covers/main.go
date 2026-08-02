@@ -23,8 +23,11 @@ import (
 
 const (
 	articleImageRoot = "static/img/articles"
-	coverQuality     = 80
-	coverMethod      = 6
+	// Cards render this derivative at ~378-683 CSS px, where q75 is visually
+	// indistinguishable from q80 but ~16% smaller across the archive. Below q72 the
+	// curve flattens while compression artifacts start showing on flat brand fills.
+	coverQuality = 75
+	coverMethod  = 6
 )
 
 func main() {

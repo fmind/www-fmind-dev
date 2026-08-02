@@ -16,6 +16,7 @@ hadolint = "2.15.1"
 lefthook = "2.1.10"
 lychee = "0.24.2"
 terraform = "1.15.8"
+typos = "1.47.0"
 
 [tasks.all]
 alias = "a"
@@ -70,6 +71,7 @@ depends = [
   "check:leaks",
   "check:dockerfile",
   "check:terraform",
+  "check:typos",
 ]
 
 [tasks."check:dockerfile"]
@@ -91,6 +93,10 @@ run = "gitleaks git --log-opts=\"--max-count=100\" --verbose"
 alias = "ck"
 description = "Check external content links are reachable"
 run = "lychee --root-dir \"$PWD\" ."
+
+[tasks."check:typos"]
+description = "Check article prose for common spelling mistakes"
+run = "typos content/articles"
 
 [tasks."check:lint"]
 alias = "cl"

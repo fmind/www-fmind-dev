@@ -4,7 +4,7 @@ description = "In the fast-paced world of content creation, efficiency is key. M
 date = "2025-04-28"
 tags = ["Agent", "Python", "Project"]
 slug = "introducing-gentwriter-building-a-multi-agent-content-generator-with-googles-adk"
-canonical = "https://medium.com/@fmind/introducing-gentwriter-building-a-multi-agent-content-generator-with-googles-adk-a216558692de"
+syndicated = "https://medium.com/@fmind/introducing-gentwriter-building-a-multi-agent-content-generator-with-googles-adk-a216558692de"
 draft = false
 +++
 
@@ -69,32 +69,34 @@ Orchestration of agent included in GentWriter
 
 This combination of sequential steps and parallel processing makes the whole workflow efficient. The use of Pydantic ensures the data passed between agents is well-structured and reliable.
 
-    class Article(pdt.BaseModel):
-        """Schema of an online article."""
+```python
+class Article(pdt.BaseModel):
+    """Schema of an online article."""
 
-        link: str = pdt.Field(description="The link of the article.")
-        title: str = pdt.Field(description="The title of the article.")
-        content: str = pdt.Field(description="The content of the article in markdown.")
+    link: str = pdt.Field(description="The link of the article.")
+    title: str = pdt.Field(description="The title of the article.")
+    content: str = pdt.Field(description="The content of the article in markdown.")
 
-    seo_writer_agent = agents.LlmAgent(
-        name="seo_writer_agent",
-        model="gemini-2.0-flash",
-        description="Generates concise, keyword-focused SEO meta descriptions from article information.",
-        instruction=tw.dedent("""
-            - **Role:** You are an expert SEO Analyst specializing in crafting compelling meta descriptions.
-            - **Task:** Summarize the key information from the provided article content into a concise and informative SEO meta description.
-            - **Input:** You will receive the article object containing the link, title, and content.
-            - **Constraint:** The description MUST be less than 150 characters.
-            - **Objective:** Maximize click-through rate (CTR) from search engine results pages (SERPs). Focus on accuracy, relevance, and incorporating likely search keywords naturally.
-            - **Format:** Output only the description text. Do not include labels like "SEO Description:".
-        """),
-        input_schema=Article,
-        output_key="seo_description",
-        generate_content_config=gt.GenerateContentConfig(
-            temperature=0.3,
-            max_output_tokens=100,
-        ),
-    )
+seo_writer_agent = agents.LlmAgent(
+    name="seo_writer_agent",
+    model="gemini-2.0-flash",
+    description="Generates concise, keyword-focused SEO meta descriptions from article information.",
+    instruction=tw.dedent("""
+        - **Role:** You are an expert SEO Analyst specializing in crafting compelling meta descriptions.
+        - **Task:** Summarize the key information from the provided article content into a concise and informative SEO meta description.
+        - **Input:** You will receive the article object containing the link, title, and content.
+        - **Constraint:** The description MUST be less than 150 characters.
+        - **Objective:** Maximize click-through rate (CTR) from search engine results pages (SERPs). Focus on accuracy, relevance, and incorporating likely search keywords naturally.
+        - **Format:** Output only the description text. Do not include labels like "SEO Description:".
+    """),
+    input_schema=Article,
+    output_key="seo_description",
+    generate_content_config=gt.GenerateContentConfig(
+        temperature=0.3,
+        max_output_tokens=100,
+    ),
+)
+```
 
 ### Key Features ✨
 

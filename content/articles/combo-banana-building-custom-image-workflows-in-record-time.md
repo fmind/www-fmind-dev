@@ -4,7 +4,7 @@ description = "Build custom AI image workflows fast with Combo-Banana. Empower d
 date = "2025-09-08"
 tags = ["LLM", "Project"]
 slug = "combo-banana-building-custom-image-workflows-in-record-time"
-canonical = "https://medium.com/@fmind/combo-banana-building-custom-image-workflows-in-record-time-966f3ba71787"
+syndicated = "https://medium.com/@fmind/combo-banana-building-custom-image-workflows-in-record-time-966f3ba71787"
 draft = false
 +++
 
@@ -32,19 +32,21 @@ When done manually across hundreds of SKUs, this process is slow and prone to in
 
 This prototype reimagines that process. Instead of a series of manual actions across different tools, the designer defines a “combo” — a sequence of operations executed automatically by the application.
 
+```json
+{
+  "name": "Social Media Ad Creation",
+  "steps": [
     {
-        "name": "Social Media Ad Creation",
-        "steps": [
-            {
-                "title": "Place Item in Landscape",
-                "prompt": "Integrate the product or item seamlessly into a visually stunning and appropriate landscape background, ensuring realistic lighting and perspective."
-            },
-            {
-                "title": "Add Catchy Slogan",
-                "prompt": "Overlay a concise and catchy slogan onto the image, using a font and placement that enhances readability and visual appeal for a social media ad."
-            }
-        ]
+      "title": "Place Item in Landscape",
+      "prompt": "Integrate the product or item seamlessly into a visually stunning and appropriate landscape background, ensuring realistic lighting and perspective."
+    },
+    {
+      "title": "Add Catchy Slogan",
+      "prompt": "Overlay a concise and catchy slogan onto the image, using a font and placement that enhances readability and visual appeal for a social media ad."
     }
+  ]
+}
+```
 
 ### The Experience: Flexibility Meets Simplicity
 

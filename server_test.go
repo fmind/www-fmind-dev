@@ -422,7 +422,7 @@ func TestProfileAPI(t *testing.T) {
 		certifications[i] = item.Title
 	}
 	assertOrderedValues(t, "certifications", certifications, []string{
-		"Agentic AI Foundation Ambassador 2026",
+		"Agentic AI Foundation Ambassador",
 		"Professional Cloud Architect",
 		"Professional ML Engineer",
 		"Machine Learning Associate",
@@ -441,12 +441,12 @@ func TestProfileAPI(t *testing.T) {
 	if want := site.PublicArticleCount(t); len(payload.Articles) != want {
 		t.Fatalf("profile articles = %d, want %d", len(payload.Articles), want)
 	}
-	// Article ordering is asserted against the frozen Medium import: a natively
-	// published article legitimately becomes the newest entry and must not turn this
-	// reverse-chronology check into a failure.
+	// Article ordering is asserted against the frozen Medium import, identified by
+	// its syndication URL: a natively published article legitimately becomes the
+	// newest entry and must not turn this reverse-chronology check into a failure.
 	newestArchived := -1
 	for i, article := range payload.Articles {
-		if strings.HasPrefix(article.Canonical, "https://medium.com/@fmind/") || strings.HasPrefix(article.Canonical, "https://fmind.medium.com/") {
+		if strings.HasPrefix(article.Syndicated, "https://medium.com/@fmind/") || strings.HasPrefix(article.Syndicated, "https://fmind.medium.com/") {
 			newestArchived = i
 			break
 		}
@@ -488,20 +488,34 @@ func TestArticlePagesAndDiscovery(t *testing.T) {
 		t.Fatalf("article status = %d, want 200", status)
 	}
 	for _, want := range []string{
-		`<link rel="canonical" href="https://medium.com/@fmind/`,
+		`<link rel="canonical" href="https://www.fmind.dev/articles/` + slug + `/"`,
 		`<meta property="og:type" content="article"`,
 		`<meta name="twitter:card" content="summary_large_image"`,
 		`<meta name="description"`,
 		`/static/img/articles/` + slug + `/cover.`,
 		`"@type":"BlogPosting"`,
 		`"author":{"@id":"https://www.fmind.dev/#person"}`,
-		`<link rel="preload" href="/static/img/articles/` + slug + `/cover.webp" fetchpriority="high" as="image"`,
+		`<link rel="preload" href="/static/img/articles/` + slug + `/cover.webp" imagesrcset="/static/img/articles/` + slug + `/cover-800.webp 800w,`,
 		`fetchpriority="high"`,
 		`srcset="/static/img/articles/` + slug + `/cover-800.webp 800w,`,
 	} {
 		if !strings.Contains(article, want) {
 			t.Errorf("article page missing %q", want)
 		}
+	}
+
+	// The preload scanner and the layout must resolve the cover to the same file.
+	// With href alone the phone fetches the full-size cover for the preload and the
+	// 800px derivative for the paint, paying twice for one image.
+	preloadSrcset := attributeValue(t, article, `<link rel="preload" href="/static/img/articles/`+slug+`/cover.webp"`, "imagesrcset")
+	renderedSrcset := attributeValue(t, article, `<img fetchpriority="high"`, "srcset")
+	if preloadSrcset == "" || preloadSrcset != renderedSrcset {
+		t.Errorf("preload imagesrcset %q does not match rendered srcset %q", preloadSrcset, renderedSrcset)
+	}
+	preloadSizes := attributeValue(t, article, `<link rel="preload" href="/static/img/articles/`+slug+`/cover.webp"`, "imagesizes")
+	renderedSizes := attributeValue(t, article, `<img fetchpriority="high"`, "sizes")
+	if preloadSizes == "" || preloadSizes != renderedSizes {
+		t.Errorf("preload imagesizes %q does not match rendered sizes %q", preloadSizes, renderedSizes)
 	}
 	if got := strings.Count(article, `"@type":"Person"`); got != 1 {
 		t.Errorf("Person JSON-LD definitions = %d, want 1", got)
@@ -545,12 +559,13 @@ func TestArticlePagesAndDiscovery(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("sitemap status = %d, want 200", status)
 	}
-	// Only native, self-canonical articles belong beside the two index pages.
+	// This site is canonical for everything it publishes, so every public article
+	// belongs in the sitemap beside the two index pages.
 	if got, want := strings.Count(sitemap, "<url>"), site.SitemapArticleCount(t)+2; got != want {
 		t.Errorf("sitemap URLs = %d, want %d", got, want)
 	}
-	if strings.Contains(sitemap, "/articles/"+slug+"/") {
-		t.Error("sitemap includes an article with an external canonical")
+	if !strings.Contains(sitemap, "/articles/"+slug+"/") {
+		t.Error("sitemap is missing a published article")
 	}
 
 	status, _, llms := get(t, srv.URL+"/llms.txt")
@@ -978,4 +993,167 @@ func TestPrecompressedAssetsAreNotRecompressed(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestRenderedInternalLinksResolve walks every same-origin link and asset the
+// rendered pages emit and requires each to answer 200 with a fragment that
+// actually exists. Broken internal links are invisible in unit tests otherwise:
+// each surface renders fine on its own, and only the crossing fails.
+func TestRenderedInternalLinksResolve(t *testing.T) {
+	srv := newServer(t)
+	linkPattern := regexp.MustCompile(`(?:href|src)="([^"]+)"`)
+	idPattern := regexp.MustCompile(`\sid="([^"]+)"`)
+
+	// One page of every kind the site renders, so a link that only exists in the
+	// article layout or on the 404 page is still covered.
+	pages := []string{"/", "/articles/", "/articles/the-affordable-ai-agents/", "/no-such-page"}
+	seen := make(map[string]bool)
+	for _, page := range pages {
+		_, _, body := get(t, srv.URL+page)
+		for _, match := range linkPattern.FindAllStringSubmatch(body, -1) {
+			link := strings.TrimPrefix(match[1], templates.METADATA.SiteURL)
+			if !strings.HasPrefix(link, "/") || seen[link] {
+				continue
+			}
+			seen[link] = true
+			path, fragment, _ := strings.Cut(link, "#")
+			if path == "" {
+				path = page
+			}
+			status, headers, target := get(t, srv.URL+path)
+			if status != http.StatusOK {
+				t.Errorf("%s (linked from %s) = %d, want 200", link, page, status)
+				continue
+			}
+			if fragment == "" || !strings.HasPrefix(headers.Get("Content-Type"), "text/html") {
+				continue
+			}
+			if !slices.ContainsFunc(idPattern.FindAllStringSubmatch(target, -1), func(id []string) bool {
+				return id[1] == fragment
+			}) {
+				t.Errorf("%s (linked from %s) targets a missing anchor", link, page)
+			}
+		}
+	}
+	if len(seen) == 0 {
+		t.Fatal("no internal links were discovered")
+	}
+}
+
+// TestArticleSearchPage covers the search surface end to end: a plain GET form
+// produces ranked results, composes with the tag filter, and stays out of the
+// search-engine index (a result page is a view of articles, not a new page).
+func TestArticleSearchPage(t *testing.T) {
+	srv := newServer(t)
+
+	status, _, page := get(t, srv.URL+"/articles/?q=kubeflow")
+	if status != http.StatusOK {
+		t.Fatalf("search status = %d, want 200", status)
+	}
+	for _, want := range []string{
+		`name="q"`,
+		"result",
+		"kubeflow",
+		"/articles/how-to-install-kubeflow-on-apple-silicon/",
+		`<meta name="robots" content="noindex, follow"`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("search page missing %q", want)
+		}
+	}
+	// The archive view groups by year; ranked results must not also be grouped.
+	if strings.Contains(page, `id="year-`) {
+		t.Error("search page still renders the year-grouped archive")
+	}
+	// Tag chips keep the query, so the two filters compose instead of resetting.
+	if !strings.Contains(page, "q=kubeflow&amp;tag=") && !strings.Contains(page, "tag=Cloud&amp;q=kubeflow") {
+		t.Error("tag chips drop the active search query")
+	}
+
+	_, _, empty := get(t, srv.URL+"/articles/?q=zzzznotaword")
+	if !strings.Contains(empty, "No articles match this search") {
+		t.Error("empty search result is missing its explanation")
+	}
+
+	// A query with no matching tag must return nothing rather than falling back
+	// to the whole archive, which would look like the filter was ignored.
+	_, _, mismatched := get(t, srv.URL+"/articles/?q=kubeflow&tag=Python")
+	if strings.Contains(mismatched, "/articles/how-to-install-kubeflow-on-apple-silicon/") {
+		t.Error("tag filter is ignored while searching")
+	}
+}
+
+// TestArticleMarkdownSource covers the agent-facing Markdown surface: the source
+// of any article, self-describing and with absolute links so it stands alone.
+func TestArticleMarkdownSource(t *testing.T) {
+	srv := newServer(t)
+	const slug = "the-affordable-ai-agents"
+
+	status, headers, body := get(t, srv.URL+"/articles/"+slug+".md")
+	if status != http.StatusOK {
+		t.Fatalf("markdown status = %d, want 200", status)
+	}
+	if contentType := headers.Get("Content-Type"); !strings.HasPrefix(contentType, "text/markdown") {
+		t.Errorf("Content-Type = %q, want text/markdown", contentType)
+	}
+	if headers.Get("Access-Control-Allow-Origin") != "*" {
+		t.Error("markdown source is not readable cross-origin by agents")
+	}
+	for _, want := range []string{
+		"# The Affordable AI Agents",
+		"- Tags: ",
+		"- URL: https://www.fmind.dev/articles/" + slug + "/",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("markdown source missing %q", want)
+		}
+	}
+	// Root-relative asset links would break the moment the file is read off-site.
+	if strings.Contains(body, "](/static/") {
+		t.Error("markdown source keeps root-relative links")
+	}
+	if strings.HasPrefix(body, "+++") {
+		t.Error("markdown source leaks TOML frontmatter")
+	}
+
+	if status, _, _ := get(t, srv.URL+"/articles/not-an-article.md"); status != http.StatusNotFound {
+		t.Errorf("unknown markdown source status = %d, want 404", status)
+	}
+
+	// Discovery: the article page announces it and llms.txt lists it.
+	_, _, page := get(t, srv.URL+"/articles/"+slug+"/")
+	if !strings.Contains(page, `<link rel="alternate" type="text/markdown" href="/articles/`+slug+`.md"`) {
+		t.Error("article page does not announce its Markdown source")
+	}
+	_, _, llms := get(t, srv.URL+"/llms.txt")
+	if !strings.Contains(llms, "https://www.fmind.dev/articles/"+slug+".md") {
+		t.Error("llms.txt does not list the Markdown source")
+	}
+}
+
+// attributeValue reads one attribute from the first tag in body that starts with
+// prefix, so a test can compare what two tags actually agreed on rather than
+// asserting the same literal twice.
+func attributeValue(t *testing.T, body, prefix, attribute string) string {
+	t.Helper()
+	start := strings.Index(body, prefix)
+	if start < 0 {
+		t.Errorf("no tag starting with %q", prefix)
+		return ""
+	}
+	tag := body[start:]
+	if end := strings.Index(tag, ">"); end >= 0 {
+		tag = tag[:end]
+	}
+	marker := " " + attribute + `="`
+	value := strings.Index(tag, marker)
+	if value < 0 {
+		return ""
+	}
+	rest := tag[value+len(marker):]
+	quote := strings.Index(rest, `"`)
+	if quote < 0 {
+		return ""
+	}
+	return rest[:quote]
 }

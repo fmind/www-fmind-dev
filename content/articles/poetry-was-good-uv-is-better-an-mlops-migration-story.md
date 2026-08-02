@@ -4,7 +4,7 @@ description = "Poetry to Uv: A faster, simpler way to manage dependencies for ML
 date = "2025-01-27"
 tags = ["MLOps", "Python"]
 slug = "poetry-was-good-uv-is-better-an-mlops-migration-story"
-canonical = "https://medium.com/@fmind/poetry-was-good-uv-is-better-an-mlops-migration-story-f52bf0c6c703"
+syndicated = "https://medium.com/@fmind/poetry-was-good-uv-is-better-an-mlops-migration-story-f52bf0c6c703"
 draft = false
 +++
 
@@ -30,58 +30,66 @@ Migrating from Poetry to Uv was surprisingly straightforward. The most interesti
 
 The move to Uv brought welcome changes to our [`pyproject.toml`](https://github.com/fmind/mlops-python-package/blob/main/pyproject.toml) file. We were able to remove the Poetry-specific sections, like `[tool.poetry]` and its associated configurations:
 
-    [tool.poetry]
-    name = "bikes"
-    version = "2.0.0"
-    description = "Predict the number of bikes available."
-    ...
-    [tool.poetry.dependencies]
-    python = "^3.12"
-    loguru = "^0.7.2"
-    ...
-    [tool.poetry.group.checks.dependencies]
-    bandit = "^1.7.9"
-    ...
+```toml
+[tool.poetry]
+name = "bikes"
+version = "2.0.0"
+description = "Predict the number of bikes available."
+...
+[tool.poetry.dependencies]
+python = "^3.12"
+loguru = "^0.7.2"
+...
+[tool.poetry.group.checks.dependencies]
+bandit = "^1.7.9"
+...
+```
 
 Now we could rely solely on [standards-compliant sections](https://peps.python.org/pep-0621/) like `[project]` and `[project.optional-dependencies]`:
 
-    [project]
-    name = "bikes"
-    version = "3.0.0"
-    description = "Predict the number of bikes available."
+```toml
+[project]
+name = "bikes"
+version = "3.0.0"
+description = "Predict the number of bikes available."
+...
+dependencies = [
+    "loguru>=0.7.2",
     ...
-    dependencies = [
-        "loguru>=0.7.2",
-        ...
-    ]
+]
+...
+[dependency-groups]
+checks = [
+    "bandit>=1.8.0",
     ...
-    [dependency-groups]
-    checks = [
-        "bandit>=1.8.0",
-        ...
-    ]
+]
+```
 
 **GitHub Actions: Setup**
 
 Previously, our [setup action](https://github.com/fmind/mlops-python-package/blob/v3.0.0/.github/actions/setup/action.yml) involved installing `pipx`, `invoke`, and `poetry`:
 
-    - run: pipx install invoke poetry
-      shell: bash
-    - uses: actions/setup-python@v5
-      with:
-        python-version: 3.12
-        cache: poetry
+```yaml
+- run: pipx install invoke poetry
+  shell: bash
+- uses: actions/setup-python@v5
+  with:
+    python-version: 3.12
+    cache: poetry
+```
 
 With Uv we simply need to adopt a new GitHub Action:
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-      with:
-        enable-cache: true
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version-file: .python-version
+```yaml
+- name: Install uv
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+- name: Setup Python
+  uses: actions/setup-python@v5
+  with:
+    python-version-file: .python-version
+```
 
 The [`astral-sh/setup-uv`](https://github.com/astral-sh/setup-uv) action made installing Uv incredibly simple, and we could rely on the action to specify the python version in the `.python-version` file.
 
@@ -89,17 +97,21 @@ The [`astral-sh/setup-uv`](https://github.com/astral-sh/setup-uv) action made in
 
 Our [check workflow](https://github.com/fmind/mlops-python-package/blob/v3.0.0/.github/workflows/check.yml) also saw few changes. Instead of running a single checker step with Poetry:
 
-    - run: poetry install --with checks
-    - run: poetry run invoke checks
+```yaml
+- run: poetry install --with checks
+- run: poetry run invoke checks
+```
 
 We now have separate checkers with Uv to improve speed and debugging:
 
-    - run: uv sync --group=checks
-    - run: uv run invoke checks.format
-    - run: uv run invoke checks.type
-    - run: uv run invoke checks.code
-    - run: uv run invoke checks.security
-    - run: uv run invoke checks.coverage
+```yaml
+- run: uv sync --group=checks
+- run: uv run invoke checks.format
+- run: uv run invoke checks.type
+- run: uv run invoke checks.code
+- run: uv run invoke checks.security
+- run: uv run invoke checks.coverage
+```
 
 Similarly, in our [publishing workflow](https://github.com/fmind/mlops-python-package/blob/v3.0.0/.github/workflows/publish.yml), `poetry install --with docs` and `poetry run invoke docs` became `uv sync --group=docs` and `uv run invoke docs`, respectively. These changes highlight Uv's ability to seamlessly integrate into existing workflows while being faster than Poetry.
 
@@ -107,43 +119,51 @@ Similarly, in our [publishing workflow](https://github.com/fmind/mlops-python-pa
 
 Our pyinvoke [tasks](https://github.com/fmind/mlops-python-package/tree/v3.0.0/tasks), defined in the `tasks/` directory, also required only minor changes. For instance, our [installation](https://github.com/fmind/mlops-python-package/blob/v3.0.0/tasks/installs.py) and [format](https://github.com/fmind/mlops-python-package/blob/v3.0.0/tasks/formats.py) task went from:
 
-    @task
-    def poetry(ctx: Context) -> None:
-        """Install poetry packages."""
-        ctx.run("poetry install")
+```python
+@task
+def poetry(ctx: Context) -> None:
+    """Install poetry packages."""
+    ctx.run("poetry install")
 
-    @task
-    def format(ctx: Context) -> None:
-        """Check the formats with ruff."""
-        ctx.run("poetry run ruff format --check src/ tasks/ tests/")
+@task
+def format(ctx: Context) -> None:
+    """Check the formats with ruff."""
+    ctx.run("poetry run ruff format --check src/ tasks/ tests/")
+```
 
 With Uv it becomes:
 
-    @task
-    def uv(ctx: Context) -> None:
-        """Install uv packages."""
-        ctx.run("uv sync --all-groups")
+```python
+@task
+def uv(ctx: Context) -> None:
+    """Install uv packages."""
+    ctx.run("uv sync --all-groups")
 
-    @task
-    def format(ctx: Context) -> None:
-        """Check the formats with ruff."""
-        ctx.run("uv run ruff format --check src/ tasks/ tests/")
+@task
+def format(ctx: Context) -> None:
+    """Check the formats with ruff."""
+    ctx.run("uv run ruff format --check src/ tasks/ tests/")
+```
 
 #### Slimmer, Faster Docker Builds with Uv
 
 The benefits of Uv extends into our Docker builds as well. Our initial `Dockerfile` relied on installing the package wheel using `pip`:
 
-    FROM python:3.12
-    COPY dist/*.whl .
-    RUN pip install *.whl
-    CMD ["bikes", "--help"]
+```dockerfile
+FROM python:3.12
+COPY dist/*.whl .
+RUN pip install *.whl
+CMD ["bikes", "--help"]
+```
 
 This was functional but not optimal. With Uv, we were able to switch to a more streamlined approach, leveraging Uv’s speed within the Docker build process. We also switched to the official `uv` image maintained by Astral:
 
-    FROM ghcr.io/astral-sh/uv:python3.12-bookworm
-    COPY dist/*.whl .
-    RUN uv pip install --system *.whl
-    CMD ["bikes", "--help"]
+```dockerfile
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm
+COPY dist/*.whl .
+RUN uv pip install --system *.whl
+CMD ["bikes", "--help"]
+```
 
 The key change here is using `uv pip install --system *.whl` instead of `pip install *.whl`. By using the `--system` flag, we ensure that the package and its dependencies are installed into the system's site packages directory, making for a cleaner environment. This, combined with Uv's installation speed, resulted in significantly faster Docker builds.
 

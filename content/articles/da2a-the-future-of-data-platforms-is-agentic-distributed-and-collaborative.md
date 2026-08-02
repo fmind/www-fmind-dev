@@ -4,7 +4,7 @@ description = "For decades, the story of data platforms has been one of centrali
 date = "2025-09-27"
 tags = ["Agent", "Cloud"]
 slug = "da2a-the-future-of-data-platforms-is-agentic-distributed-and-collaborative"
-canonical = "https://medium.com/@fmind/da2a-the-future-of-data-platforms-is-agentic-distributed-and-collaborative-741d5aa96fc4"
+syndicated = "https://medium.com/@fmind/da2a-the-future-of-data-platforms-is-agentic-distributed-and-collaborative-741d5aa96fc4"
 draft = false
 +++
 
@@ -63,36 +63,40 @@ The architecture consists of:
 
 The root agent is configured to know about these remote agents. Here is a simplified look at the code from the da2a [`agent.py`](https://github.com/fmind/da2a/blob/main/da2a/agent.py) file, which sets up the connection to the remote agents using their "agent cards."
 
-    import google.adk.agents.remote_a2a_agent as a2a
-    import google.adk.tools.agent_tool as at
+```python
+import google.adk.agents.remote_a2a_agent as a2a
+import google.adk.tools.agent_tool as at
 
-    # The URL points to the 'agent card' of the remote agent
-    AGENT_CARD_ECOMMERCE = "[https://da2a-ecommerce.fmind.dev/a2a/ecommerce/.well-known/agent-card.json](https://da2a-ecommerce.fmind.dev/a2a/ecommerce/.well-known/agent-card.json)"
-    AGENT_CARD_MARKETING = "[https://da2a-marketing.fmind.dev/a2a/marketing/.well-known/agent-card.json](https://da2a-marketing.fmind.dev/a2a/marketing/.well-known/agent-card.json)"
+# The URL points to the 'agent card' of the remote agent
+AGENT_CARD_ECOMMERCE = "[https://da2a-ecommerce.fmind.dev/a2a/ecommerce/.well-known/agent-card.json](https://da2a-ecommerce.fmind.dev/a2a/ecommerce/.well-known/agent-card.json)"
+AGENT_CARD_MARKETING = "[https://da2a-marketing.fmind.dev/a2a/marketing/.well-known/agent-card.json](https://da2a-marketing.fmind.dev/a2a/marketing/.well-known/agent-card.json)"
 
-    # Create local proxy objects for the remote agents
-    ecommerce_agent = a2a.RemoteA2aAgent(
-        name="ecommerce_agent",
-        agent_card=AGENT_CARD_ECOMMERCE,
-        description="Answers questions about e-commerce data..."
-    )
-    marketing_agent = a2a.RemoteA2aAgent(
-        name="marketing_agent",
-        agent_card=AGENT_CARD_MARKETING,
-        description="Answers questions about marketing data..."
-    )
+# Create local proxy objects for the remote agents
+ecommerce_agent = a2a.RemoteA2aAgent(
+    name="ecommerce_agent",
+    agent_card=AGENT_CARD_ECOMMERCE,
+    description="Answers questions about e-commerce data..."
+)
+marketing_agent = a2a.RemoteA2aAgent(
+    name="marketing_agent",
+    agent_card=AGENT_CARD_MARKETING,
+    description="Answers questions about marketing data..."
+)
 
-    # The root agent uses these agents as 'tools' to solve problems
-    root_agent = LlmAgent(
-        ...
-        tools=[at.AgentTool(ecommerce_agent), at.AgentTool(marketing_agent)],
-        ...
-    )
+# The root agent uses these agents as 'tools' to solve problems
+root_agent = LlmAgent(
+    ...
+    tools=[at.AgentTool(ecommerce_agent), at.AgentTool(marketing_agent)],
+    ...
+)
+```
 
 Each domain agent is served via the [Agent Development Kit’s](https://google.github.io/adk-docs/) (ADK) web server, which automatically exposes the A2A endpoints and the agent card.
 
-    # Command to serve an agent and enable A2A communication
-    adk web --a2a
+```bash
+# Command to serve an agent and enable A2A communication
+adk web --a2a
+```
 
 This simple, powerful mechanism allows us to build a distributed system where components can be developed, deployed, and scaled independently.
 

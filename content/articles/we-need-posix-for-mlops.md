@@ -4,7 +4,7 @@ description = "There is an ever-growing landscape of tools and solutions for MLO
 date = "2023-04-17"
 tags = ["MLOps"]
 slug = "we-need-posix-for-mlops"
-canonical = "https://medium.com/@fmind/we-need-posix-for-mlops-e7bea8d8ec29"
+syndicated = "https://medium.com/@fmind/we-need-posix-for-mlops-e7bea8d8ec29"
 draft = false
 +++
 
@@ -16,11 +16,13 @@ If you work on MLOps, you must navigate [an ever-growing landscape of tools and 
 
 Vendors and users face the same problem: **How can we combine all these tools without the** [**combinatorial complexity**](https://en.wikipedia.org/wiki/Combinatorial_explosion) **of** [**creating custom integrations**](https://zenml.io/integrations) **?**
 
-    import math
-    # number of AI/ML tools -> number of possible integrations
-    print({n: math.comb(n, 2) for n in range(10, 100+10, 10)})
-    {10: 45, 20: 190, 30: 435, 40: 780, 50: 1225, 60: 1770,
-     70: 2415, 80: 3160, 90: 4005, 100: 4950}
+```python
+import math
+# number of AI/ML tools -> number of possible integrations
+print({n: math.comb(n, 2) for n in range(10, 100+10, 10)})
+{10: 45, 20: 190, 30: 435, 40: 780, 50: 1225, 60: 1770,
+ 70: 2415, 80: 3160, 90: 4005, 100: 4950}
+```
 
 In this article, I propose a solution analogous to [POSIX](https://en.wikipedia.org/wiki/POSIX) to address this challenge. First, I motivate the creation of common protocols and schemas for combining MLOps tools. Second, I present a high-level architecture to support implementation. Third, I conclude with the benefits and limitations of standardizing MLOps.
 

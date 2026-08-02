@@ -4,7 +4,7 @@ description = "Team collaboration often lives and breathes within chat applicati
 date = "2025-04-08"
 tags = ["Agent", "Project"]
 slug = "bkfc-an-agentic-workflow-for-gathering-knowledge-from-google-chat"
-canonical = "https://medium.com/@fmind/bkfc-an-agentic-workflow-for-gathering-knowledge-from-google-chat-b521cba535d7"
+syndicated = "https://medium.com/@fmind/bkfc-an-agentic-workflow-for-gathering-knowledge-from-google-chat-b521cba535d7"
 draft = false
 +++
 
@@ -36,7 +36,9 @@ The notebook follows a straightforward, agentic process: **Fetch -\> Process -\>
 
 **Setup & Authentication:** The first step involves standard Google Cloud setup. This means enabling the Google Chat and Vertex AI APIs in a GCP project and creating OAuth credentials (specifically for a Desktop app) to allow the script to securely access chat data on your behalf. Colab’s secrets management handles the client ID, secret, and project ID securely. Authentication uses the `gcloud auth application-default login` flow, granting the necessary `chat.spaces.readonly` and `chat.messages.readonly` scopes.
 
-    !gcloud auth application-default login --no-browser --client-id-file={SECRETS} --scopes={",".join(SCOPES)}
+```bash
+!gcloud auth application-default login --no-browser --client-id-file={SECRETS} --scopes={",".join(SCOPES)}
+```
 
 **Fetch Data (Perception):** The agent’s “perception” phase involves using the `googleapiclient` library to interact with the Google Chat API.
 
@@ -46,18 +48,20 @@ The notebook follows a straightforward, agentic process: **Fetch -\> Process -\>
 
 &nbsp;
 
-    spaces = []
-    page_token = None
-    while True:
-        response = chat_service.spaces().list(pageSize=PAGE_SIZE, pageToken=page_token).execute()
-        for space in response.get('spaces', []):
-            last_active_time = dt.datetime.fromisoformat(space['lastActiveTime'])
-            last_active_date = last_active_time.date()
-            if last_active_date >= since:
-                spaces.append(space)
-        if not page_token:
-            break
-    len(spaces)
+```python
+spaces = []
+page_token = None
+while True:
+    response = chat_service.spaces().list(pageSize=PAGE_SIZE, pageToken=page_token).execute()
+    for space in response.get('spaces', []):
+        last_active_time = dt.datetime.fromisoformat(space['lastActiveTime'])
+        last_active_date = last_active_time.date()
+        if last_active_date >= since:
+            spaces.append(space)
+    if not page_token:
+        break
+len(spaces)
+```
 
 **Process Data (Preparation):** The raw message data needs some structuring before analysis.
 
@@ -67,25 +71,27 @@ The notebook follows a straightforward, agentic process: **Fetch -\> Process -\>
 
 &nbsp;
 
-    messages = []
-    for space in spaces:
-        page_token = None
-        while True:
-            response = chat_service.spaces().messages().list(
-                parent=space['name'],
-                filter=f'createTime > "{since}T00:00:00+00:00"',
-                orderBy='createTime DESC',
-                pageToken=page_token,
-                pageSize=PAGE_SIZE,
+```python
+messages = []
+for space in spaces:
+    page_token = None
+    while True:
+        response = chat_service.spaces().messages().list(
+            parent=space['name'],
+            filter=f'createTime > "{since}T00:00:00+00:00"',
+            orderBy='createTime DESC',
+            pageToken=page_token,
+            pageSize=PAGE_SIZE,
 
-            ).execute()
-            messages.extend(response.get('messages', []))
-            if not page_token:
-                break
-    len(messages)
-    ...
-    messages = sorted(messages, key=message_sorted_key, reverse=True)
-    groups = {key: list(values) for key, values in it.groupby(messages, key=message_groupby_key)}
+        ).execute()
+        messages.extend(response.get('messages', []))
+        if not page_token:
+            break
+len(messages)
+...
+messages = sorted(messages, key=message_sorted_key, reverse=True)
+groups = {key: list(values) for key, values in it.groupby(messages, key=message_groupby_key)}
+```
 
 **Analyze Data (Reasoning & Action):** This is where the Gen AI magic happens, powered by Gemini via the Vertex AI API (`python-genai` library).
 
@@ -100,42 +106,46 @@ The notebook follows a straightforward, agentic process: **Fetch -\> Process -\>
 
 &nbsp;
 
-    # --- Define the main structure for the overall chat insights ---
-    class ChatInsight(pdt.BaseModel):
-      """Structured insight extracted from a Google Chat conversation history."""
-      summary: T.Optional[str] = pdt.Field(...)
-      questions_answers: T.Optional[list[QuestionAnswerPair]] = pdt.Field(...)
-      unanswered_questions: T.Optional[list[str]] = pdt.Field(...)
-      projects: T.Optional[list[ProjectInfo]] = pdt.Field(...)
-      action_items: T.Optional[list[ActionItem]] = pdt.Field(...)
-      feedback_suggestions: T.Optional[list[str]] = pdt.Field(...)
-      technical_insights: T.Optional[list[str]] = pdt.Field(...)
-      # (Inner classes like QuestionAnswerPair, ProjectInfo defined elsewhere)
+```python
+# --- Define the main structure for the overall chat insights ---
+class ChatInsight(pdt.BaseModel):
+  """Structured insight extracted from a Google Chat conversation history."""
+  summary: T.Optional[str] = pdt.Field(...)
+  questions_answers: T.Optional[list[QuestionAnswerPair]] = pdt.Field(...)
+  unanswered_questions: T.Optional[list[str]] = pdt.Field(...)
+  projects: T.Optional[list[ProjectInfo]] = pdt.Field(...)
+  action_items: T.Optional[list[ActionItem]] = pdt.Field(...)
+  feedback_suggestions: T.Optional[list[str]] = pdt.Field(...)
+  technical_insights: T.Optional[list[str]] = pdt.Field(...)
+  # (Inner classes like QuestionAnswerPair, ProjectInfo defined elsewhere)
+```
 
 - **API Call:** For each space’s conversation page, a prompt is sent to the Gemini model (`gemini-2.0-flash` is a great choice for speed and cost-effectiveness here). Crucially, the API call specifies the desired `response_mime_type` as `application/json` and provides the `response_schema` (our `ChatInsight` Pydantic model). This instructs Gemini to format its response according to our defined structure.
 - **Parsing:** The library automatically parses the JSON response back into a Pydantic `ChatInsight` object.
 
 &nbsp;
 
-    insights = {}
-    for key, page in pages.items():
-        page = pages[key]
-        prompt = ANALYSIS_TEMPLATE.substitute(page=page)
-        try:
-            response = genai_client.models.generate_content(
-                model=MODEL,
-                contents=prompt,
-                config={
-                    "response_mime_type": "application/json",
-                    "response_schema": ChatInsight,
-                    "temperature": TEMPERATURE
-                },
-            )
-            print(key, response.usage_metadata.total_token_count)
-            insights[key] = response.parsed
-        except Exception as error:
-            print(f"An error occurred during API call for space {key}: {error}")
-    len(insights)
+```python
+insights = {}
+for key, page in pages.items():
+    page = pages[key]
+    prompt = ANALYSIS_TEMPLATE.substitute(page=page)
+    try:
+        response = genai_client.models.generate_content(
+            model=MODEL,
+            contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+                "response_schema": ChatInsight,
+                "temperature": TEMPERATURE
+            },
+        )
+        print(key, response.usage_metadata.total_token_count)
+        insights[key] = response.parsed
+    except Exception as error:
+        print(f"An error occurred during API call for space {key}: {error}")
+len(insights)
+```
 
 **Report Results (Output):** The final step is presenting the extracted insights.
 
@@ -145,22 +155,24 @@ The notebook follows a straightforward, agentic process: **Fetch -\> Process -\>
 
 &nbsp;
 
-    ## Summary
+```markdown
+## Summary
 
-    Discussions highlight active development of AI solutions, particularly using LLMs for document analysis and market prediction. A strong emphasis emerged on the necessity of solid **MLOps** practices for managing these initiatives effectively, including standardization and deployment strategies, even as significant budgets are approved.
+Discussions highlight active development of AI solutions, particularly using LLMs for document analysis and market prediction. A strong emphasis emerged on the necessity of solid **MLOps** practices for managing these initiatives effectively, including standardization and deployment strategies, even as significant budgets are approved.
 
-    ## Projects
+## Projects
 
-    -   **Predictive Insights Initiative:** Focuses on leveraging LLMs for market trends, with explicit discussion around needing standardized MLOps pipelines for deployment and monitoring.
+- **Predictive Insights Initiative:** Focuses on leveraging LLMs for market trends, with explicit discussion around needing standardized MLOps pipelines for deployment and monitoring.
 
-    ## Feedback & Suggestions
+## Feedback & Suggestions
 
-    -   Suggestion to establish shared MLOps best practices across teams working on similar ML problems to improve efficiency and consistency.
+- Suggestion to establish shared MLOps best practices across teams working on similar ML problems to improve efficiency and consistency.
 
-    ## Technical Insights
+## Technical Insights
 
-    -   Need identified for standardized ML model deployment and monitoring pipelines.
-    -   Importance of data standardization for reliable LLM inputs emphasized.
+- Need identified for standardized ML model deployment and monitoring pipelines.
+- Importance of data standardization for reliable LLM inputs emphasized.
+```
 
 ### The Value Proposition: Why Bother?
 

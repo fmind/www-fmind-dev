@@ -216,3 +216,52 @@ func TestMaxBodyCapsRequestBody(t *testing.T) {
 		t.Errorf("small body status = %d, want 200", under.StatusCode)
 	}
 }
+
+// TestMCPSearchArticlesTool proves agents can ask what Fmind wrote about a topic
+// instead of pulling the whole archive: the tool ranks, bounds, and reports the
+// total so a client knows whether it saw everything.
+func TestMCPSearchArticlesTool(t *testing.T) {
+	srv := newServer(t)
+
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call",` +
+		`"params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28",` +
+		`"io.modelcontextprotocol/clientInfo":{"name":"test","version":"1.0"},` +
+		`"io.modelcontextprotocol/clientCapabilities":{}},` +
+		`"name":"search_articles","arguments":{"query":"kubeflow","limit":3}}}`
+	resp, err := http.DefaultClient.Do(newMCPRequest(t, srv.URL, "tools/call", "search_articles", body))
+	if err != nil {
+		t.Fatalf("call search_articles: %v", err)
+	}
+	defer closeBody(t, resp.Body)
+	payload, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read search response: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("search_articles status = %d; body=%s", resp.StatusCode, payload)
+	}
+	for _, want := range []string{
+		`"query":"kubeflow"`,
+		`"total":`,
+		"How to install Kubeflow Pipelines v2 on Apple Silicon",
+	} {
+		if !strings.Contains(string(payload), want) {
+			t.Errorf("search_articles response missing %q: %s", want, payload)
+		}
+	}
+
+	// An empty query is a client bug, not an invitation to dump every article.
+	emptyBody := strings.Replace(body, `"query":"kubeflow"`, `"query":"  "`, 1)
+	emptyResp, err := http.DefaultClient.Do(newMCPRequest(t, srv.URL, "tools/call", "search_articles", emptyBody))
+	if err != nil {
+		t.Fatalf("call search_articles with an empty query: %v", err)
+	}
+	defer closeBody(t, emptyResp.Body)
+	empty, err := io.ReadAll(emptyResp.Body)
+	if err != nil {
+		t.Fatalf("read empty search response: %v", err)
+	}
+	if !strings.Contains(string(empty), "query must not be empty") {
+		t.Errorf("empty query was not rejected: %s", empty)
+	}
+}

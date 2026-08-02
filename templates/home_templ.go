@@ -43,7 +43,7 @@ func HeroSection() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"hero min-h-screen bg-base-200 relative overflow-hidden flex items-center justify-center\"><div class=\"hero-content text-center z-10 relative px-4\"><div class=\"max-w-5xl\"><!-- Avatar --><div class=\"avatar mb-8\"><div class=\"w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 shadow-2xl overflow-hidden mx-auto\"><img class=\"object-cover w-full h-full\" src=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"hero min-h-screen bg-base-200 relative overflow-hidden flex items-center justify-center\"><div class=\"hero-content text-center z-10 relative px-4\"><div class=\"max-w-5xl\"><div class=\"avatar mb-8\"><div class=\"w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 shadow-2xl overflow-hidden mx-auto\"><img class=\"object-cover w-full h-full\" src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -82,7 +82,7 @@ func HeroSection() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" width=\"192\" height=\"192\" fetchpriority=\"high\"></div></div><!-- Headline --><h1 class=\"text-5xl md:text-7xl font-heading font-black mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 select-text\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" width=\"192\" height=\"192\" fetchpriority=\"high\"></div></div><h1 class=\"text-5xl md:text-7xl font-heading font-black mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 select-text\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -108,7 +108,7 @@ func HeroSection() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</h2><!-- Actions --><div class=\"flex flex-wrap justify-center gap-4 md:gap-8\"><a class=\"btn btn-lg bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-transform hover:shadow-xl hover:shadow-primary/10 px-6 py-3 font-semibold\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</h2><div class=\"flex flex-wrap justify-center gap-4 md:gap-8\"><a class=\"btn btn-lg bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-transform hover:shadow-xl hover:shadow-primary/10 px-6 py-3 font-semibold\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -134,7 +134,7 @@ func HeroSection() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" target=\"_blank\" rel=\"noopener noreferrer\">Book a Session</a></div><!-- Scroll Down --><div class=\"mt-16 animate-bounce flex justify-center\"><a class=\"text-primary hover:text-primary-focus transition-colors duration-300\" href=\"#about\" aria-label=\"Scroll to About section\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" target=\"_blank\" rel=\"noopener noreferrer\">Book a Session</a></div><div class=\"mt-16 animate-bounce flex justify-center\"><a class=\"text-primary hover:text-primary-focus transition-colors duration-300\" href=\"#about\" aria-label=\"Scroll to About section\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -171,7 +171,7 @@ func AboutSection() templ.Component {
 			templ_7745c5c3_Var9 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<section class=\"py-16 md:py-24 bg-base-100 overflow-hidden px-4\" id=\"about\"><div class=\"container mx-auto\"><!-- Section Header --><div class=\"text-center mb-12\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content\">About <span class=\"text-primary\">Me</span></h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Transforming AI/ML initiatives into secure, scalable, and high-impact solutions.</p></div><!-- Biography --><div class=\"grid md:grid-cols-12 gap-8 mb-14\"><div class=\"md:col-span-10 md:col-start-2 space-y-6\"><div class=\"prose prose-lg text-base-content/80 mx-auto leading-loose [&_p]:leading-loose space-y-6 select-text\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<section class=\"py-16 md:py-24 bg-base-100 overflow-hidden px-4\" id=\"about\"><div class=\"container mx-auto\"><div class=\"text-center mb-12\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content\">About <span class=\"text-primary\">Me</span></h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Transforming AI/ML initiatives into secure, scalable, and high-impact solutions.</p></div><div class=\"grid md:grid-cols-12 gap-8 mb-14\"><div class=\"md:col-span-10 md:col-start-2 space-y-6\"><div class=\"prose prose-lg text-base-content/80 mx-auto leading-loose [&_p]:leading-loose space-y-6 select-text\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -189,7 +189,7 @@ func AboutSection() templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></div></div><!-- Core Expertise Divider --><h3 class=\"text-xl font-bold mb-10 flex items-center justify-center gap-2\"><span class=\"w-2 h-8 bg-primary rounded-full\"></span> Core Expertise & Skills</h3><!-- Cards Grid --><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 max-w-6xl mx-auto\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></div></div><h3 class=\"text-xl font-bold mb-10 flex items-center justify-center gap-2\"><span class=\"w-2 h-8 bg-primary rounded-full\"></span> Core Expertise & Skills</h3><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 max-w-6xl mx-auto\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -289,7 +289,7 @@ func WorkExperienceSection() templ.Component {
 			templ_7745c5c3_Var15 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<section class=\"py-16 md:py-24 bg-base-200 px-4\" id=\"work-experience\"><div class=\"container mx-auto\"><!-- Section Header --><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content\">Work <span class=\"text-primary\">Experience</span></h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">A track record of engineering scale, reliability, and security for industry-leading institutions.</p></div><!-- Experience Timeline Grid --><ul class=\"grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 max-w-6xl mx-auto\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<section class=\"py-16 md:py-24 bg-base-200 px-4\" id=\"work-experience\"><div class=\"container mx-auto\"><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content\">Work <span class=\"text-primary\">Experience</span></h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">A track record of engineering scale, reliability, and security for industry-leading institutions.</p></div><ul class=\"grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 max-w-6xl mx-auto\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -307,7 +307,7 @@ func WorkExperienceSection() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\"><!-- Logo Figure Container (Left side) --><figure class=\"w-full sm:w-1/3 p-4 sm:p-6 shrink-0 flex items-center justify-center min-h-24 sm:min-h-[150px] bg-slate-50 border-r border-base-200\"><div class=\"rounded-lg p-2 flex items-center justify-center w-full h-full max-h-24 max-w-[150px]\"><img class=\"object-contain w-full h-full max-h-20 filter\" src=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\"><figure class=\"w-full sm:w-1/3 p-4 sm:p-6 shrink-0 flex items-center justify-center min-h-24 sm:min-h-[150px] bg-slate-50 border-r border-base-200\"><div class=\"rounded-lg p-2 flex items-center justify-center w-full h-full max-h-24 max-w-[150px]\"><img class=\"object-contain w-full h-full max-h-20 filter\" src=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -333,7 +333,7 @@ func WorkExperienceSection() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" width=\"150\" height=\"80\" loading=\"lazy\" decoding=\"async\"></div></figure><!-- Experience Info (Right side) --><div class=\"card-body w-full sm:w-2/3 p-6 flex flex-col justify-between\"><div><h3 class=\"card-title text-lg md:text-xl font-bold leading-tight text-base-content select-text\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" width=\"150\" height=\"80\" loading=\"lazy\" decoding=\"async\"></div></figure><div class=\"card-body w-full sm:w-2/3 p-6 flex flex-col justify-between\"><div><h3 class=\"card-title text-lg md:text-xl font-bold leading-tight text-base-content select-text\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -372,7 +372,7 @@ func WorkExperienceSection() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</p></div><!-- Tag Badges --><div class=\"card-actions justify-start gap-1.5 mt-6\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</p></div><div class=\"card-actions justify-start gap-1.5 mt-6\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -400,7 +400,7 @@ func WorkExperienceSection() templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</ul><!-- Current leadership and community roles --><h3 class=\"text-xl font-bold mb-8 mt-14 md:mt-20 flex items-center justify-center gap-2\"><span class=\"w-2 h-8 bg-primary rounded-full\"></span> Leadership & Community</h3><ul class=\"grid grid-cols-1 md:grid-cols-3 gap-5 max-w-6xl mx-auto\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</ul><h3 class=\"text-xl font-bold mb-8 mt-14 md:mt-20 flex items-center justify-center gap-2\"><span class=\"w-2 h-8 bg-primary rounded-full\"></span> Leadership & Community</h3><ul class=\"grid grid-cols-1 md:grid-cols-3 gap-5 max-w-6xl mx-auto\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -495,7 +495,7 @@ func CertificationsSection() templ.Component {
 			templ_7745c5c3_Var27 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<section class=\"py-16 md:py-24 bg-base-100 px-4\" id=\"certifications\"><div class=\"container mx-auto\"><!-- Section Header --><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-primary\">Certifications</h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Validated capabilities from leading foundations, cloud providers, and academic networks.</p></div><!-- Credentials Badges Grid --><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center max-w-6xl mx-auto mb-16\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<section class=\"py-16 md:py-24 bg-base-100 px-4\" id=\"certifications\"><div class=\"container mx-auto\"><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-primary\">Certifications</h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Validated capabilities from leading foundations, cloud providers, and academic networks.</p></div><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center max-w-6xl mx-auto mb-16\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -531,7 +531,7 @@ func CertificationsSection() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "\" target=\"_blank\" rel=\"noopener noreferrer\"><!-- Logo Container --><div class=\"p-2.5 rounded-xl group-hover:bg-base-300 transition-colors shrink-0 flex items-center justify-center w-16 h-16 bg-slate-50 border border-base-200\"><img class=\"w-11 h-11 object-contain\" src=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "\" target=\"_blank\" rel=\"noopener noreferrer\"><div class=\"p-2.5 rounded-xl group-hover:bg-base-300 transition-colors shrink-0 flex items-center justify-center w-16 h-16 bg-slate-50 border border-base-200\"><img class=\"w-11 h-11 object-contain\" src=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -557,7 +557,7 @@ func CertificationsSection() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "\" width=\"44\" height=\"44\" loading=\"lazy\" decoding=\"async\"></div><!-- Content Info --><div class=\"flex-1 min-w-0\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "\" width=\"44\" height=\"44\" loading=\"lazy\" decoding=\"async\"></div><div class=\"flex-1 min-w-0\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -631,7 +631,7 @@ func CertificationsSection() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "</p></div><!-- Link Indicator Icon -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "</p></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -651,7 +651,7 @@ func CertificationsSection() templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "</div><!-- Specializations & Foundations Divider --><div class=\"relative py-8 max-w-6xl mx-auto\"><div class=\"absolute inset-0 flex items-center\" aria-hidden=\"true\"><div class=\"w-full border-t border-base-300\"></div></div><div class=\"relative flex justify-center\"><span class=\"bg-base-100 px-6 text-sm text-base-content/70 uppercase tracking-widest font-semibold select-none\">Specializations & Foundations</span></div></div><!-- Specializations Entry Grid --><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto mt-6\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "</div><div class=\"relative py-8 max-w-6xl mx-auto\"><div class=\"absolute inset-0 flex items-center\" aria-hidden=\"true\"><div class=\"w-full border-t border-base-300\"></div></div><div class=\"relative flex justify-center\"><span class=\"bg-base-100 px-6 text-sm text-base-content/70 uppercase tracking-widest font-semibold select-none\">Specializations & Foundations</span></div></div><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto mt-6\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -767,7 +767,7 @@ func ArticlesSection(articles []Article) templ.Component {
 			templ_7745c5c3_Var44 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<section class=\"py-16 md:py-24 bg-base-200 px-4\" id=\"articles\"><div class=\"container mx-auto\"><!-- Section Header --><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-primary\">Articles</h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Field notes on AI agents, MLOps, cloud architecture, and security — written from delivery, not theory.</p></div><!-- Recent articles: the same card component the index uses, so both\n\t\t\t     surfaces stay identical as the article model evolves. --><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<section class=\"py-16 md:py-24 bg-base-200 px-4\" id=\"articles\"><div class=\"container mx-auto\"><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-primary\">Articles</h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Field notes on AI agents, MLOps, cloud architecture, and security — written from delivery, not theory.</p></div><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -825,7 +825,7 @@ func ProjectsSection() templ.Component {
 			templ_7745c5c3_Var46 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "<section class=\"py-16 md:py-24 bg-base-200 px-4\" id=\"projects\"><div class=\"container mx-auto\"><!-- Section Header --><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-primary\">Projects</h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Open-source repositories and educational deep dives created to upskill engineers worldwide.</p></div><!-- Open Source Projects Section --><div class=\"mb-16 max-w-6xl mx-auto\"><h3 class=\"text-2xl font-bold mb-6 text-base-content\"><a class=\"inline-flex items-center gap-2.5 group hover:text-accent transition-colors\" href=\"https://github.com/fmind\" target=\"_blank\" rel=\"noopener noreferrer\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "<section class=\"py-16 md:py-24 bg-base-200 px-4\" id=\"projects\"><div class=\"container mx-auto\"><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-primary\">Projects</h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Open-source repositories and educational deep dives created to upskill engineers worldwide.</p></div><div class=\"mb-16 max-w-6xl mx-auto\"><h3 class=\"text-2xl font-bold mb-6 text-base-content\"><a class=\"inline-flex items-center gap-2.5 group hover:text-accent transition-colors\" href=\"https://github.com/fmind\" target=\"_blank\" rel=\"noopener noreferrer\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -846,7 +846,7 @@ func ProjectsSection() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		for _, project := range OPEN_SOURCE {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "<div class=\"card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-base-300 hover:border-primary/30 group overflow-hidden\"><!-- Top Gradient Accent line --><div class=\"h-0.5 bg-gradient-to-r from-primary to-blue-400\"></div><div class=\"card-body p-6 flex flex-col justify-between\"><div><h3 class=\"card-title text-lg font-bold flex items-center gap-2 select-none\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "<div class=\"card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-base-300 hover:border-primary/30 group overflow-hidden\"><div class=\"h-0.5 bg-gradient-to-r from-primary to-blue-400\"></div><div class=\"card-body p-6 flex flex-col justify-between\"><div><h3 class=\"card-title text-lg font-bold flex items-center gap-2 select-none\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -947,7 +947,7 @@ func ProjectsSection() templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "</div></div><!-- YouTube Series Section --><div class=\"max-w-6xl mx-auto\"><h3 class=\"text-2xl font-bold mb-6 text-base-content\"><a class=\"inline-flex items-center gap-2.5 group hover:text-accent transition-colors\" href=\"https://www.youtube.com/@fmind-dev\" target=\"_blank\" rel=\"noopener noreferrer\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "</div></div><div class=\"max-w-6xl mx-auto\"><h3 class=\"text-2xl font-bold mb-6 text-base-content\"><a class=\"inline-flex items-center gap-2.5 group hover:text-accent transition-colors\" href=\"https://www.youtube.com/@fmind-dev\" target=\"_blank\" rel=\"noopener noreferrer\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -981,7 +981,7 @@ func ProjectsSection() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "\" target=\"_blank\" rel=\"noopener noreferrer\"><!-- Top Gradient Accent line --><div class=\"h-0.5 bg-gradient-to-r from-primary to-blue-400\"></div><div class=\"card-body p-6\"><h3 class=\"card-title text-base-content group-hover:text-primary transition-colors flex items-center gap-1.5 select-none\"><span class=\"font-bold text-lg\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "\" target=\"_blank\" rel=\"noopener noreferrer\"><div class=\"h-0.5 bg-gradient-to-r from-primary to-blue-400\"></div><div class=\"card-body p-6\"><h3 class=\"card-title text-base-content group-hover:text-primary transition-colors flex items-center gap-1.5 select-none\"><span class=\"font-bold text-lg\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1062,12 +1062,12 @@ func ServicesSection() templ.Component {
 			templ_7745c5c3_Var56 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<section class=\"py-16 md:py-24 bg-base-100 overflow-hidden relative px-4\" id=\"services\"><div class=\"container mx-auto\"><!-- Section Header --><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content\">My <span class=\"text-primary\">Services</span></h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Bring deep AI architecture, MLOps, and security expertise to your next high-impact initiative.</p></div><!-- Services Cards Grid --><div class=\"grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<section class=\"py-16 md:py-24 bg-base-100 overflow-hidden relative px-4\" id=\"services\"><div class=\"container mx-auto\"><div class=\"text-center mb-10 md:mb-16\"><h2 class=\"text-4xl md:text-5xl font-heading font-bold mb-4 text-base-content\">My <span class=\"text-primary\">Services</span></h2><p class=\"text-xl text-base-content/70 max-w-3xl mx-auto leading-relaxed text-balance\">Bring deep AI architecture, MLOps, and security expertise to your next high-impact initiative.</p></div><div class=\"grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, service := range GetServices() {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<div class=\"card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-primary group rounded-2xl overflow-hidden\"><div class=\"card-body p-8 items-center text-center\"><!-- Large Icon --><span class=\"text-6xl mb-4 inline-block group-hover:scale-110 transition-transform duration-300 select-none\" aria-hidden=\"true\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<div class=\"card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-primary group rounded-2xl overflow-hidden\"><div class=\"card-body p-8 items-center text-center\"><span class=\"text-6xl mb-4 inline-block group-hover:scale-110 transition-transform duration-300 select-none\" aria-hidden=\"true\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1141,7 +1141,7 @@ func ServicesSection() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 95, "</div><!-- CTA Button --><div class=\"card-actions mt-8 w-full justify-center\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 95, "</div><div class=\"card-actions mt-8 w-full justify-center\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -4,7 +4,7 @@ description = "The MLOps ecosystem is evolving into a sophisticated symphony, co
 date = "2024-01-30"
 tags = ["MLOps", "Python"]
 slug = "become-the-maestro-of-your-mlops-abstractions"
-canonical = "https://medium.com/@fmind/become-the-maestro-of-your-mlops-abstractions-ca6e814f13f8"
+syndicated = "https://medium.com/@fmind/become-the-maestro-of-your-mlops-abstractions-ca6e814f13f8"
 draft = false
 +++
 
@@ -92,12 +92,14 @@ ZenML proves especially valuable in ecosystems that utilize diverse software sta
 
 My recent adoption of [**Evidently**](https://www.evidentlyai.com/) to power a monitoring stack was prompted by a review of vendor solutions that [lacked essential features](https://fmind.medium.com/is-ai-ml-monitoring-just-data-engineering-10a2525a9c73). Evidently offers notable capabilities, [such as generating metrics and dashboards](https://docs.evidentlyai.com/examples/introduction) that can be ingested in our MLOps platform:
 
-    report = Report(metrics=[
-        DataDriftPreset(), 
-    ])
+```python
+report = Report(metrics=[
+    DataDriftPreset(),
+])
 
-    report.run(reference_data=reference, current_data=current)
-    report
+report.run(reference_data=reference, current_data=current)
+report
+```
 
 ![Data Drift report overview](/static/img/articles/become-the-maestro-of-your-mlops-abstractions/08.webp)
 
@@ -111,88 +113,94 @@ I recently introduced a GitHub repository showcasing tips for crafting an [**MLO
 
 For example, the package offers [an interface for unifying AI/ML models](https://github.com/fmind/mlops-python-package/blob/618b83a0f1d8f218d131a8f415e95a44929654af/src/wines/models.py) from various frameworks (e.g., sklearn, pytorch), demonstrating the [strategy pattern](https://en.wikipedia.org/wiki/Strategy_pattern).
 
-    import abc
-    import typing as T
-    import pydantic as pdt
-    from sklearn import ensemble, pipeline
+```python
+import abc
+import typing as T
+import pydantic as pdt
+from sklearn import ensemble, pipeline
 
-    ParamKey = str
-    ParamValue = T.Any
-    Params = T.Dict[ParamKey, ParamValue]
+ParamKey = str
+ParamValue = T.Any
+Params = T.Dict[ParamKey, ParamValue]
 
-    class Model(abc.ABC, pdt.BaseModel):
-        """Base class for a model."""
+class Model(abc.ABC, pdt.BaseModel):
+    """Base class for a model."""
 
-        KIND: str
+    KIND: str
 
-        def get_params(self, deep: bool = True) -> Params:
-            """Get the model params."""
-            params: Params = {}
-            for key, value in self.dict().items():
-                if not key.startswith("_") and not key.isupper():
-                    params[key] = value
-            return params
+    def get_params(self, deep: bool = True) -> Params:
+        """Get the model params."""
+        params: Params = {}
+        for key, value in self.dict().items():
+            if not key.startswith("_") and not key.isupper():
+                params[key] = value
+        return params
 
-        def set_params(self, **params: ParamValue) -> "Model":
-            """Set the model params in place."""
-            for key, value in params.items():
-                setattr(self, key, value)
-            return self
+    def set_params(self, **params: ParamValue) -> "Model":
+        """Set the model params in place."""
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self
 
-        @abc.abstractmethod
-        def fit(self, inputs: schemas.Inputs, target: schemas.Target) -> "Model":
-            """Fit the model on the given inputs and target."""
+    @abc.abstractmethod
+    def fit(self, inputs: schemas.Inputs, target: schemas.Target) -> "Model":
+        """Fit the model on the given inputs and target."""
 
-        @abc.abstractmethod
-        def predict(self, inputs: schemas.Inputs) -> schemas.Output:
-            """Generate an output with the model for the given inputs."""
+    @abc.abstractmethod
+    def predict(self, inputs: schemas.Inputs) -> schemas.Output:
+        """Generate an output with the model for the given inputs."""
+```
 
 It also features a [high-level job API](https://github.com/fmind/mlops-python-package/blob/618b83a0f1d8f218d131a8f415e95a44929654af/src/wines/jobs.py), enabling users to alter the task type via configuration files. The package readily supports Tuning, Training, and Inference jobs, showcasing the [factory pattern](https://en.wikipedia.org/wiki/Factory_method_pattern)’s role in initiating programs based on external settings.
 
-    import abc
-    import typing as T
-    import pydantic as pdt
+```python
+import abc
+import typing as T
+import pydantic as pdt
 
-    Locals = T.Dict[str, T.Any]
+Locals = T.Dict[str, T.Any]
 
-    class Job(abc.ABC, pdt.BaseModel):
-        """Base class for a job."""
+class Job(abc.ABC, pdt.BaseModel):
+    """Base class for a job."""
 
-        KIND: str
+    KIND: str
 
-        @abc.abstractmethod
-        def run(self) -> Locals:
-            """Run the job in context."""
+    @abc.abstractmethod
+    def run(self) -> Locals:
+        """Run the job in context."""
 
-    class TrainingJob(Job):
-        """Train and register a single AI/ML model"""
+class TrainingJob(Job):
+    """Train and register a single AI/ML model"""
 
-        KIND: T.Literal["TrainingJob"] = "TrainingJob"
+    KIND: T.Literal["TrainingJob"] = "TrainingJob"
 
-        inputs: datasets.DatasetKind
-        target: datasets.DatasetKind
-        model: models.ModelKind = models.BaselineSklearnModel()
-        metric: metrics.MetricKind = metrics.SklearnMetric()
+    inputs: datasets.DatasetKind
+    target: datasets.DatasetKind
+    model: models.ModelKind = models.BaselineSklearnModel()
+    metric: metrics.MetricKind = metrics.SklearnMetric()
 
-        def run(self) -> Locals:
-            """Run the training job in context."""
-            # lots of code here ...
-            return locals()
+    def run(self) -> Locals:
+        """Run the training job in context."""
+        # lots of code here ...
+        return locals()
+```
 
 Lastly, the package incorporates an [adapter pattern](https://en.wikipedia.org/wiki/Adapter_pattern) for [configuration file loading](https://github.com/fmind/mlops-python-package/blob/618b83a0f1d8f218d131a8f415e95a44929654af/src/wines/configs.py). Although [OmegaConf](https://omegaconf.readthedocs.io/) can parse and merge YAML files, it lacks native support for cloud storage like S3 or GCP. Integrating with the [cloudpathlib](https://cloudpathlib.drivendata.org/stable/) package allows for configuration file access from any location, seamlessly hiding internal complexities.
 
-    import typing as T
-    from cloudpathlib import AnyPath
-    from omegaconf import DictConfig, ListConfig, OmegaConf
+```python
+import typing as T
+from cloudpathlib import AnyPath
+from omegaconf import DictConfig, ListConfig, OmegaConf
 
-    Config = T.Union[ListConfig, DictConfig]
+Config = T.Union[ListConfig, DictConfig]
 
-    def load_config(path: str) -> Config:
-        """Load a configuration file."""
-        any_path = AnyPath(path)
-        text = any_path.read_text()
-        config = OmegaConf.create(text)
-        return config
+def load_config(path: str) -> Config:
+    """Load a configuration file."""
+    any_path = AnyPath(path)
+    text = any_path.read_text()
+    config = OmegaConf.create(text)
+    return config
+```
 
 ### Conclusions: Abstract, Adapt, Overcome
 
