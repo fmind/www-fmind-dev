@@ -159,13 +159,13 @@ run = "go mod tidy"
 [tasks.test]
 alias = "t"
 description = "Run the test suite (gotestsum)"
-depends = ["build:templ"]
+depends = ["build:templ", "build:css"]
 run = "gotestsum --format pkgname -- -race -coverprofile=coverage.out ./..."
 
 [tasks."test:watch"]
 alias = "tw"
 description = "Run the test suite in watch mode"
-depends = ["build:templ"]
+depends = ["build:templ", "build:css"]
 run = "gotestsum --watch --format pkgname -- -race -coverprofile=coverage.out ./..."
 
 [tasks.watch]
