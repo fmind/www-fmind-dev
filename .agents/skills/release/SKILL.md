@@ -8,66 +8,77 @@ metadata:
 
 # Release Workflow
 
-This skill defines the end-to-end process for validating, committing, releasing, and verifying the application in production.
+This skill defines the end-to-end process for validating, committing, releasing, deploying, and verifying the application in production.
 
-## 1. Local Verification
+## Preconditions
 
-Run the project verification commands to ensure zero warnings or errors:
+1. Working tree is clean or contains reviewed changes on `main`.
+2. Environment tools (`mise`, `go`, `git-cliff`, `gh`, `xh`, `terraform`) are initialized.
+3. Network access to GitHub and production domain (`fmind.dev` / `www.fmind.dev`) is available.
 
-```bash
-mise run format
-mise run check
-mise run check:typos
-mise run test
-mise run build
-```
+## Workflow
 
-Fix any linter errors, test failures, or formatting issues before proceeding.
+1. **Local Verification** Run the full suite of local quality gate tasks to guarantee zero lint warnings, formatting drift, or broken tests:
+   ```bash
+   mise run format
+   mise run check
+   mise run check:typos
+   mise run test
+   mise run build
+   ```
+   Fix any failing assertions, formatting mismatches, or typos before proceeding to commit.
 
-## 2. Commit Staged Changes
+1. **Stage and Commit Changes** Stage all modified, added, or deleted files, and commit using Conventional Commits grammar:
+   ```bash
+   git add .
+   git commit -m "feat: add release agent skill and update project tooling"
+   ```
+   Ensure pre-commit hooks (`lefthook`) pass cleanly without warnings.
 
-Stage and commit all changes using Conventional Commits grammar:
+1. **Calculate Version and Update Changelog** Compute the next semver tag using `git-cliff` based on commit grammar since the last tag. Generate `CHANGELOG.md`:
+   ```bash
+   NEXT_TAG=$(git-cliff --config ~/.config/git-cliff/cliff.toml --bumped-version)
+   git-cliff --config ~/.config/git-cliff/cliff.toml --bump -o CHANGELOG.md
+   ```
 
-```bash
-git add .
-git commit -m "feat: add release agent skill and verify codebase"
-```
+1. **Release Commit and Git Tag** Commit `CHANGELOG.md` and push commit and annotated tag to `origin/main`:
+   ```bash
+   git add CHANGELOG.md
+   git commit -m "chore(release): ${NEXT_TAG}"
+   git tag -a "${NEXT_TAG}" -m "${NEXT_TAG}"
+   git push --follow-tags
+   ```
 
-## 3. Semver Release & Tagging
+1. **Publish GitHub Release** Extract notes for the latest release section into a temporary file and publish the release via `gh`:
+   ```bash
+   mkdir -p .agents/tmp
+   git-cliff --config ~/.config/git-cliff/cliff.toml --latest --strip all > .agents/tmp/release-notes.md
+   gh release create "${NEXT_TAG}" --title "${NEXT_TAG}" --notes-file .agents/tmp/release-notes.md
+   rm -rf .agents/tmp
+   ```
 
-Compute the next version with `git-cliff`, generate the changelog, tag, and publish the GitHub release:
+1. **Monitor Deployment Workflow** Track the GitHub Actions CI/CD deployment pipeline until all jobs finish with a successful exit code:
+   ```bash
+   RUN_ID=$(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
+   gh run watch "${RUN_ID}"
+   ```
 
-```bash
-NEXT_TAG=$(git-cliff --config ~/.config/git-cliff/cliff.toml --bumped-version)
-git-cliff --config ~/.config/git-cliff/cliff.toml --bump -o CHANGELOG.md
-git add CHANGELOG.md
-git commit -m "chore(release): ${NEXT_TAG}"
-git tag -a "${NEXT_TAG}" -m "${NEXT_TAG}"
-git push --follow-tags
-mkdir -p .agents/tmp
-git-cliff --config ~/.config/git-cliff/cliff.toml --latest --strip all > .agents/tmp/release-notes.md
-gh release create "${NEXT_TAG}" --title "${NEXT_TAG}" --notes-file .agents/tmp/release-notes.md
-rm -rf .agents/tmp
-```
+1. **Verify Production Site Health** Perform thorough HTTP status, TLS/DNS, and content checks against the live production endpoints:
+   ```bash
+   # Primary and domain redirect health
+   xh --headers GET https://fmind.dev
+   xh --headers GET https://www.fmind.dev
 
-## 4. Monitor Deployment
+   # Discovery surfaces & metadata
+   xh --headers GET https://www.fmind.dev/llms.txt
+   xh --headers GET https://www.fmind.dev/sitemap.xml
+   xh --headers GET https://www.fmind.dev/articles/index.xml
+   xh --headers GET https://www.fmind.dev/.well-known/mcp.json
+   ```
 
-Monitor the GitHub Actions workflow execution until completion:
+## Gotchas & Guidelines
 
-```bash
-gh run list --limit 1
-gh run watch
-```
-
-Confirm that all deployment jobs pass without failure.
-
-## 5. Production Health Check
-
-Validate that the live site is operational, returning 200 HTTP status codes, valid TLS, and correct response headers:
-
-```bash
-xh --headers GET https://fmind.dev
-xh --headers GET https://www.fmind.dev
-```
-
-Verify DNS resolution and endpoint reachability.
+1. **Tag Consistency**: Always preserve the `v` prefix (`vX.Y.Z`) for Go module compatibility and GitHub release formatting.
+2. **Immutable Tags**: Never delete or force-move an already published release tag.
+3. **Network Checks**: Link checking (`mise run check:links`) runs in CI; keep local checks fast and offline-capable.
+4. **Distroless Runtime**: Production container builds are distroless; verify static binary embedding during `mise run build`.
