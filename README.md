@@ -41,7 +41,7 @@ Rendering normalizes what imported sources leave inconsistent: body headings are
 
 Cards and responsive article covers load a downscaled `cover-800.webp` rather than always transferring the full-width original. The committed derivative is produced by `mise run build:covers` (`FORCE=1` rebuilds all sources) through the pinned pure-Go `gen2brain/webp` WASM encoder with its deterministic `nodynamic` path; no image-processing binary is required. A new article whose derivative is missing fails startup and the test suite.
 
-The parsed article set is the single source for the home page, `/articles/` (including its search index and `/articles/<slug>.md` sources), `/articles/feed.xml`, `/sitemap.xml`, `/llms.txt`, `/api/profile`, and MCP `list_publications`. New private drafts are promoted here by `pub export` from `~/fmind/publications` on `article/*` branches. After the live site URL is recorded in the private package, its temporary `article.md` is removed and this repository owns the only published body. Later corrections require the `article-manual-edit` PR label; a substantial generated revision starts from the current site Markdown rather than a stale private copy.
+The parsed article set is the single source for the home page, `/articles/` (including its search index and `/articles/<slug>.md` sources), `/articles/feed.xml`, `/sitemap.xml`, `/llms.txt`, `/api/profile`, and MCP `list_publications`. New private drafts are promoted here by `pub export` from `~/fmind/publications`. After the live site URL is recorded in the private package, its temporary `article.md` is removed and this repository owns the only published body; a substantial generated revision starts from the current site Markdown rather than a stale private copy.
 
 ## Tasks
 
