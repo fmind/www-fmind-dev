@@ -188,7 +188,10 @@ templ ArticleFooter(related []Article) {
 }
 
 templ ArticlePage(article Article, related []Article) {
-	<article class="bg-base-100 min-h-screen px-4 py-12 md:py-20">
+	// article-page is the container body figures measure themselves against when
+	// they break out of the text column; the rule lives in input.css because the
+	// renderer, not a template, emits those figures.
+	<article class="article-page bg-base-100 min-h-screen px-4 py-12 md:py-20">
 		<header class="max-w-4xl mx-auto text-center mb-10 md:mb-14">
 			<a class="link link-primary font-semibold" href="/articles/">← All articles</a>
 			<h1 class="font-heading text-4xl md:text-6xl font-black leading-tight text-balance mt-6">{ article.Title }</h1>
@@ -210,7 +213,7 @@ templ ArticlePage(article Article, related []Article) {
 		</header>
 		// Code blocks stay on the brand panel palette in both themes:
 		// slate-800/700/50 are the exact brand panel, border, and foreground.
-		<div class="prose prose-lg md:prose-xl mx-auto max-w-4xl text-base-content prose-headings:font-heading prose-headings:scroll-mt-24 prose-a:text-primary prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-slate-800 prose-pre:text-slate-50 prose-pre:border prose-pre:border-slate-700 prose-code:before:content-none prose-code:after:content-none [&_figure]:my-10 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-base-content/60 [&_video]:my-10 [&_video]:w-full [&_video]:rounded-xl [&_video]:shadow-lg">
+		<div class="prose prose-lg md:prose-xl mx-auto max-w-4xl text-base-content prose-headings:font-heading prose-headings:scroll-mt-24 prose-a:text-primary prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-slate-800 prose-pre:text-slate-50 prose-pre:border prose-pre:border-slate-700 prose-code:before:content-none prose-code:after:content-none [&_video]:my-10 [&_video]:w-full [&_video]:rounded-xl [&_video]:shadow-lg">
 			@templ.Raw(article.HTML)
 		</div>
 		@ArticleFooter(related)

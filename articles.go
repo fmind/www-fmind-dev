@@ -5,7 +5,9 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"html"
 	"image"
+	"unicode"
 
 	// Registering the decoders lets image.DecodeConfig read the intrinsic size of
 	// every format an article cover or figure can ship in.
@@ -49,7 +51,17 @@ var (
 	highlighter, highlighterErr = newCodeHighlighter()
 	bodyImagePattern            = regexp.MustCompile(`<img src="(/static/img/articles/[^"]+)"`)
 	bodyVideoPattern            = regexp.MustCompile(`<img src="(/static/img/articles/[^"]+\.mp4)" alt="([^"]*)">`)
-	articleMarkdown             = goldmark.New(
+	// A body image alone in its paragraph is an illustration, not inline text, so
+	// it becomes the <figure> the breakout layout widens. An image sharing a
+	// paragraph with prose stays inline and keeps the text column's width.
+	bodyFigurePattern = regexp.MustCompile(`<p>(<img src="(/static/img/articles/[^"]+)" alt="([^"]*)">)</p>`)
+	// The imported articles caption an illustration by repeating its alt text in
+	// the paragraph underneath. That paragraph is the caption, so it is folded
+	// into the figure it belongs to — see foldBodyCaptions for why the match is
+	// on the text rather than on position alone.
+	bodyCaptionPattern = regexp.MustCompile(`(?s)<figure><a ([^>]*)><img src="([^"]+)" alt="([^"]*)"></a></figure>\s*<p>(.*?)</p>`)
+	htmlTagPattern     = regexp.MustCompile(`<[^>]*>`)
+	articleMarkdown    = goldmark.New(
 		goldmark.WithExtensions(extension.GFM, extension.Footnote, extension.Typographer),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
@@ -242,6 +254,16 @@ func enhanceBodyImages(body string, assets fs.FS) (string, leadImage, error) {
 	// A Markdown image whose source is MP4 is the repository's explicit, safe video
 	// syntax. Raw HTML stays disabled, so imported content cannot inject elements.
 	body = bodyVideoPattern.ReplaceAllString(body, `<video muted loop playsinline autoplay controls aria-label="$2"><source src="$1" type="video/mp4">Your browser does not support embedded video.</video>`)
+	// Wrap first, enhance second: the enhancement pass rewrites every <img> it
+	// finds, including the ones now nested in a figure's link. The link is the
+	// escape hatch for detail the figure's width cannot show — a dense diagram
+	// still rewards opening at full resolution. The alt text carries into the
+	// link's accessible name so the affordance is not sighted-only.
+	body = bodyFigurePattern.ReplaceAllString(
+		body,
+		`<figure><a href="${2}" target="_blank" rel="noopener" aria-label="${3} (opens the full-resolution image in a new tab)">${1}</a></figure>`,
+	)
+	body = foldBodyCaptions(body)
 	matches := bodyImagePattern.FindAllStringSubmatchIndex(body, -1)
 	if len(matches) == 0 {
 		return body, leadImage{}, nil
@@ -259,7 +281,7 @@ func enhanceBodyImages(body string, assets fs.FS) (string, leadImage, error) {
 		enhanced.WriteString(body[end:match[0]])
 		loading := ` loading="lazy"`
 		priority := ""
-		srcset, sizes := coverSourceSet(assets, source, config.Width)
+		srcset, sizes := bodySourceSet(assets, source, config.Width)
 		if index == 0 {
 			loading = ""
 			priority = ` fetchpriority="high"`
@@ -280,31 +302,104 @@ func enhanceBodyImages(body string, assets fs.FS) (string, leadImage, error) {
 	return enhanced.String(), lead, nil
 }
 
-// coverSizes describes the rendered cover's layout width at every breakpoint. The
-// <img> and its <head> preload must quote it identically, or the preload scanner
-// resolves the srcset against a different width than the layout does.
-const coverSizes = "(max-width: 896px) 100vw, 896px"
+// foldBodyCaptions moves an illustration's caption inside the figure it
+// describes, so it is presented as that figure's caption rather than as the
+// next paragraph of the article.
+//
+// The imported articles write a caption by repeating the image's alt text in
+// the paragraph below it, and that repetition is the only reliable signal
+// available: position alone would also swallow the opening paragraph of every
+// article that leads with a cover image. So a paragraph is a caption when it
+// says the same thing as the alt, and stays prose when it does not — 250 of the
+// archive's 288 illustrations qualify, and none of the leading paragraphs do.
+//
+// The two are compared as text, not as markup, because Markdown rendering makes
+// them differ in ways that carry no meaning: the caption may link a URL the alt
+// spells out, and the Typographer replaces the plain spaces of an alt attribute
+// with the hair and non-breaking spaces of rendered prose.
+func foldBodyCaptions(body string) string {
+	return bodyCaptionPattern.ReplaceAllStringFunc(body, func(match string) string {
+		groups := bodyCaptionPattern.FindStringSubmatch(match)
+		link, source, alt, caption := groups[1], groups[2], groups[3], groups[4]
+		if captionText(caption) != captionText(alt) || captionText(alt) == "" {
+			return match
+		}
+		// The caption now states the description on screen and the link still
+		// carries it as an accessible name, so repeating it a third time in alt
+		// would only make a screen reader announce the same sentence twice.
+		return fmt.Sprintf(
+			`<figure><a %s><img src="%s" alt=""></a><figcaption>%s</figcaption></figure>`,
+			link, source, caption,
+		)
+	})
+}
 
-// coverSourceSet returns the responsive candidates for an article cover, shared by
+// captionText reduces rendered markup and an alt attribute to the words they
+// have in common, so the two can be compared for sameness of meaning.
+func captionText(fragment string) string {
+	text := html.UnescapeString(htmlTagPattern.ReplaceAllString(fragment, ""))
+	return strings.Join(strings.FieldsFunc(text, isCaptionSpace), " ")
+}
+
+// isCaptionSpace treats the typographic spaces of rendered prose as ordinary
+// separators. unicode.IsSpace does not: it reports false for the non-breaking
+// space the Medium import left behind and for the hair space the Typographer
+// puts either side of an em dash, and either one would make a caption differ
+// from the alt text it repeats word for word.
+func isCaptionSpace(r rune) bool {
+	switch r {
+	case '\u00a0', '\u2009', '\u200a', '\u202f', '\ufeff':
+		return true
+	}
+	return unicode.IsSpace(r)
+}
+
+// figureSizes describes a rendered body figure's layout width at every
+// breakpoint, and must stay in step with the breakout rule in input.css: the
+// figure is the article's padded width (viewport minus the 1rem gutter on each
+// side) until that reaches --figure-max-width, 1280px. The <img> and its <head>
+// preload must quote this identically, or the preload scanner resolves the
+// srcset against a different width than the layout does.
+//
+// Every figure fits that width; none pans horizontally. An illustration too
+// wide to stay legible when fitted is a diagram laid out wrong at its source,
+// and it is fixed there — the D2 sources in ~/fmind/publications carry a
+// layout-engine chosen to keep them near 2:1. A viewer who still wants more
+// detail has the figure's full-resolution link.
+const figureSizes = "(max-width: 1312px) calc(100vw - 2rem), 1280px"
+
+// bodySourceSet returns the responsive candidates for a body image, shared by
 // the rendered <img> and the preload in <head>. Returning the pair rather than
 // formatted markup is what keeps the two in step: a preload that names the
-// full-size cover while the srcset paints the 800px derivative makes every phone
-// download the cover twice.
-func coverSourceSet(assets fs.FS, source string, sourceWidth int) (string, string) {
-	// Match the cover by stem, not by full filename: articleCover accepts any of
-	// .webp/.gif/.png/.jpg, and `pub export` ships the reviewed cover as PNG. Keying
-	// on "cover.webp" silently dropped the srcset for every other format, leaving the
-	// full-size original as the LCP image on phones.
+// full-size source while the srcset paints the 800px derivative makes every
+// phone download the image twice.
+//
+// The candidates are discovered from disk rather than declared, so an image
+// offers exactly the rungs `mise run build:images` had a reason to write. A
+// source narrower than every rung is already phone-sized and ships as its own
+// single candidate, with no srcset at all.
+func bodySourceSet(assets fs.FS, source string, sourceWidth int) (string, string) {
+	// Resolve derivatives by stem, not by full filename: a source may be any of
+	// .webp/.gif/.png/.jpg — `pub export` ships the reviewed cover as PNG — and
+	// a derivative is always WebP.
 	name := path.Base(source)
-	if strings.TrimSuffix(name, path.Ext(name)) != "cover" || sourceWidth <= templates.CardCoverWidth {
+	stem := strings.TrimSuffix(name, path.Ext(name))
+	candidates := make([]string, 0, len(templates.DerivativeWidths)+1)
+	for _, width := range templates.DerivativeWidths {
+		if width >= sourceWidth {
+			continue
+		}
+		derivative := path.Join(path.Dir(source), fmt.Sprintf("%s-%d.webp", stem, width))
+		if _, err := fs.Stat(assets, strings.TrimPrefix(derivative, "/")); err != nil {
+			continue
+		}
+		candidates = append(candidates, fmt.Sprintf("%s %dw", derivative, width))
+	}
+	if len(candidates) == 0 {
 		return "", ""
 	}
-	derivative := path.Join(path.Dir(source), fmt.Sprintf("cover-%d.webp", templates.CardCoverWidth))
-	if _, err := fs.Stat(assets, strings.TrimPrefix(derivative, "/")); err != nil {
-		return "", ""
-	}
-	srcset := fmt.Sprintf("%s %dw, %s %dw", derivative, templates.CardCoverWidth, source, sourceWidth)
-	return srcset, coverSizes
+	candidates = append(candidates, fmt.Sprintf("%s %dw", source, sourceWidth))
+	return strings.Join(candidates, ", "), figureSizes
 }
 
 // imageConfig reads an embedded image's header for its intrinsic dimensions.
@@ -414,13 +509,13 @@ func articleCover(assets fs.FS, slug string) (string, error) {
 }
 
 // articleCardCover resolves the downscaled cover that article cards load. It is
-// generated by `mise run build:covers` and committed alongside the original, so a
+// generated by `mise run build:images` and committed alongside the original, so a
 // missing derivative fails startup rather than silently pushing a full-width
 // image into every card.
 func articleCardCover(assets fs.FS, slug string) (string, error) {
 	name := fmt.Sprintf("static/img/articles/%s/cover-%d.webp", slug, templates.CardCoverWidth)
 	if _, err := fs.Stat(assets, name); err != nil {
-		return "", fmt.Errorf("missing card cover %q: run `mise run build:covers`", name)
+		return "", fmt.Errorf("missing card cover %q: run `mise run build:images`", name)
 	}
 	return name, nil
 }

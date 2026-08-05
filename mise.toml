@@ -38,11 +38,11 @@ sources = ["go.mod", "go.sum", "**/*.go", "static/**"]
 outputs = ["bin/{{env.APP_NAME}}"]
 run = "go build -trimpath -o bin/$APP_NAME ./cmd/$APP_NAME"
 
-[tasks."build:covers"]
-description = "Generate the downscaled article card covers (FORCE=1 rebuilds all)"
-sources = ["static/img/articles/*/cover.*", "cmd/covers/**/*.go"]
-outputs = ["static/img/articles/*/cover-800.webp"]
-run = "go run -tags nodynamic ./cmd/covers"
+[tasks."build:images"]
+description = "Generate the downscaled article image derivatives (FORCE=1 rebuilds all)"
+sources = ["static/img/articles/*/*", "cmd/images/**/*.go"]
+outputs = ["static/img/articles/*/*-800.webp"]
+run = "go run -tags nodynamic ./cmd/images"
 
 [tasks."build:image"]
 description = "Build the production OCI image"

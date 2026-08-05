@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/png"
 	"io/fs"
+	"path"
 	"regexp"
 	"strings"
 	"testing"
@@ -94,21 +95,34 @@ func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 			t.Errorf("image reference %q: %v", image, err)
 		}
 	}
-	// Card covers are generated from the originals and referenced by templates
-	// rather than by article bodies, so they are counted separately below.
+	// Derivatives are generated from the sources and referenced by templates or
+	// by a srcset rather than by an article body, so they are counted separately:
+	// what the bodies reference must be exactly the set of sources on disk, with
+	// no orphan file and no reference to a file that is not there.
 	cardCover := fmt.Sprintf("cover-%d.webp", templates.CardCoverWidth)
-	archiveFiles, cardCovers := 0, 0
-	if err := fs.WalkDir(staticFS, "static/img/articles", func(path string, entry fs.DirEntry, err error) error {
+	isDerivative := func(name string) bool {
+		for _, width := range templates.DerivativeWidths {
+			if strings.HasSuffix(name, fmt.Sprintf("-%d.webp", width)) {
+				return true
+			}
+		}
+		return false
+	}
+	sources, derivatives, cardCovers := 0, 0, 0
+	if err := fs.WalkDir(staticFS, "static/img/articles", func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if entry.IsDir() || !archiveSlugs[articleImageSlug(path)] {
+		if entry.IsDir() || !archiveSlugs[articleImageSlug(name)] {
 			return nil
 		}
-		if entry.Name() == cardCover {
+		switch {
+		case entry.Name() == cardCover:
 			cardCovers++
-		} else {
-			archiveFiles++
+		case isDerivative(entry.Name()):
+			derivatives++
+		default:
+			sources++
 		}
 		return nil
 	}); err != nil {
@@ -117,8 +131,31 @@ func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 	if cardCovers != len(archive) {
 		t.Errorf("generated card covers = %d, want one per article (%d)", cardCovers, len(archive))
 	}
-	if archiveFiles != len(archiveImages) {
-		t.Errorf("archive image files = %d, references = %d", archiveFiles, len(archiveImages))
+	if sources != len(archiveImages) {
+		t.Errorf("archive image sources = %d, references = %d", sources, len(archiveImages))
+	}
+
+	// Every ladder rung a source is wide enough to earn must exist on disk. A
+	// missing rung is silent: bodySourceSet simply omits that candidate, and the
+	// phone that needed it downloads the full-resolution diagram instead.
+	for image := range archiveImages {
+		config, err := imageConfig(staticFS, image)
+		if err != nil {
+			continue // Videos and other non-decodable references are checked above.
+		}
+		stem := strings.TrimSuffix(image, path.Ext(image))
+		for _, width := range templates.DerivativeWidths {
+			if width >= config.Width {
+				continue
+			}
+			rung := fmt.Sprintf("%s-%d.webp", stem, width)
+			if _, err := fs.Stat(staticFS, rung); err != nil {
+				t.Errorf("source %q is %dpx wide but has no %dpx rung: run `mise run build:images`", image, config.Width, width)
+			}
+		}
+	}
+	if derivatives == 0 {
+		t.Error("no body-figure derivatives were generated at all")
 	}
 }
 
@@ -151,8 +188,8 @@ func isMediumURL(canonical string) bool {
 }
 
 // articleImageSlug maps static/img/articles/<slug>/<file> back to <slug>.
-func articleImageSlug(path string) string {
-	rest, ok := strings.CutPrefix(path, "static/img/articles/")
+func articleImageSlug(name string) string {
+	rest, ok := strings.CutPrefix(name, "static/img/articles/")
 	if !ok {
 		return ""
 	}
@@ -294,7 +331,7 @@ func TestEnhanceBodyImagesPrioritizesCoverAndDefersFigures(t *testing.T) {
 	for _, want := range []string{
 		`<img fetchpriority="high" decoding="async" width="1200" height="600"`,
 		`srcset="/static/img/articles/example/cover-800.webp 800w, /static/img/articles/example/cover.webp 1200w"`,
-		`sizes="(max-width: 896px) 100vw, 896px"`,
+		`sizes="(max-width: 1312px) calc(100vw - 2rem), 1280px"`,
 		`<img loading="lazy" decoding="async" width="400" height="300"`,
 	} {
 		if !strings.Contains(got, want) {
@@ -329,21 +366,218 @@ func TestEnhanceBodyImagesServesResponsiveCoverForEveryCoverFormat(t *testing.T)
 	}
 }
 
-// A non-cover figure keeps its single source: only the cover has a generated
-// card derivative to offer as a second candidate.
-func TestEnhanceBodyImagesLeavesNonCoverFiguresUnscaled(t *testing.T) {
+// Every body image wide enough to have been downscaled offers both candidates,
+// not just the cover. Diagrams are the widest images an article ships and the
+// ones a phone most needs the small candidate for.
+func TestEnhanceBodyImagesServesResponsiveNonCoverFigures(t *testing.T) {
 	assets := fstest.MapFS{
-		"static/img/articles/example/coverage-chart.png": {Data: sizedPNG(t, 1_200, 600)},
-		"static/img/articles/example/cover-800.webp":     {Data: []byte("derivative")},
+		"static/img/articles/example/architecture.webp":     {Data: sizedPNG(t, 4_368, 550)},
+		"static/img/articles/example/architecture-800.webp": {Data: []byte("derivative")},
 	}
-	body := `<p><img src="/static/img/articles/example/coverage-chart.png" alt="chart"></p>`
+	body := `<p><img src="/static/img/articles/example/architecture.webp" alt="architecture"></p>`
+
+	got, _, err := enhanceBodyImages(body, assets)
+	if err != nil {
+		t.Fatalf("enhance images: %v", err)
+	}
+	want := `srcset="/static/img/articles/example/architecture-800.webp 800w, /static/img/articles/example/architecture.webp 4368w"`
+	if !strings.Contains(got, want) {
+		t.Errorf("enhanced body missing %q: %s", want, got)
+	}
+}
+
+// The ladder is offered in full when it exists. Without the middle rung, a
+// 390 CSS px phone at DPR 3 resolves 1170px, finds only an 800px candidate
+// below that, and correctly but expensively reaches for the 2048px source.
+func TestEnhanceBodyImagesOffersEveryLadderRung(t *testing.T) {
+	assets := fstest.MapFS{
+		"static/img/articles/example/02.webp":      {Data: sizedPNG(t, 2_074, 1_138)},
+		"static/img/articles/example/02-800.webp":  {Data: []byte("small")},
+		"static/img/articles/example/02-1280.webp": {Data: []byte("medium")},
+	}
+	body := `<p><img src="/static/img/articles/example/02.webp" alt="screenshot"></p>`
+
+	got, _, err := enhanceBodyImages(body, assets)
+	if err != nil {
+		t.Fatalf("enhance images: %v", err)
+	}
+	want := `srcset="/static/img/articles/example/02-800.webp 800w, ` +
+		`/static/img/articles/example/02-1280.webp 1280w, ` +
+		`/static/img/articles/example/02.webp 2074w"`
+	if !strings.Contains(got, want) {
+		t.Errorf("enhanced body missing %q: %s", want, got)
+	}
+}
+
+// A paragraph that repeats an illustration's alt text is that illustration's
+// caption and belongs inside its figure; anything else is the next paragraph of
+// the article and must survive untouched. The cover case is the one that matters
+// most: every article opens with a cover image followed by its first paragraph,
+// and a position-only rule would silently turn all of them into captions.
+func TestFoldBodyCaptions(t *testing.T) {
+	assets := fstest.MapFS{"static/img/articles/example/02.webp": {Data: sizedPNG(t, 1_200, 800)}}
+
+	for name, testCase := range map[string]struct {
+		alt, next   string
+		wantCaption bool
+	}{
+		"caption repeats the alt": {
+			alt:         "Relationship between Coding Agents and Agent Levers",
+			next:        "Relationship between Coding Agents and Agent Levers",
+			wantCaption: true,
+		},
+		// The Typographer spaces a rendered em dash with hair spaces the alt
+		// attribute never sees, and the Medium import left non-breaking spaces
+		// behind; neither changes what the caption says.
+		"typographic spacing differs": {
+			alt:         "Agent Lever: Multiply the force — https://example.com/levers",
+			next:        "Agent Lever: Multiply the force — https://example.com/levers",
+			wantCaption: true,
+		},
+		// The caption links a URL that the alt can only spell out.
+		"caption links what the alt spells out": {
+			alt:         "Agent Docs — https://example.com/agent-docs",
+			next:        "Agent Docs — [https://example.com/agent-docs](https://example.com/agent-docs)",
+			wantCaption: true,
+		},
+		"opening paragraph after a cover": {
+			alt:         "Source: Gemini App",
+			next:        "In 2026, AI agents have become incredibly smart, yet they are limited.",
+			wantCaption: false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			body := fmt.Sprintf("![%s](/static/img/articles/example/02.webp)\n\n%s\n", testCase.alt, testCase.next)
+			var rendered bytes.Buffer
+			if err := articleMarkdown.Convert([]byte(body), &rendered); err != nil {
+				t.Fatalf("render markdown: %v", err)
+			}
+			got, _, err := enhanceBodyImages(rendered.String(), assets)
+			if err != nil {
+				t.Fatalf("enhance images: %v", err)
+			}
+
+			if strings.Contains(got, "<figcaption>") != testCase.wantCaption {
+				t.Fatalf("figcaption present = %t, want %t: %s", !testCase.wantCaption, testCase.wantCaption, got)
+			}
+			if !testCase.wantCaption {
+				return
+			}
+			if !strings.Contains(got, `alt=""`) {
+				// The visible caption and the link's accessible name both carry the
+				// description already; a third copy in alt is announced twice.
+				t.Errorf("captioned image should drop its duplicate alt: %s", got)
+			}
+			if strings.Contains(got, "</figure>\n<p>") {
+				t.Errorf("caption left outside its figure: %s", got)
+			}
+		})
+	}
+}
+
+// Every body figure fits the article's width, whatever its aspect ratio: an
+// illustration too wide to read when fitted is fixed at its source, never
+// turned into something the reader has to pan. The regression this guards is a
+// reintroduced per-image escape hatch — a marker attribute or a `sizes` that
+// quotes anything other than the one figure layout.
+func TestEnhanceBodyImagesFitsEveryAspectRatio(t *testing.T) {
+	for name, dimensions := range map[string]struct{ width, height int }{
+		"8:1 architecture diagram": {8968, 1129},
+		"3:1 diagram":              {2400, 800},
+		"16:9 screenshot":          {2073, 1138},
+		"portrait":                 {938, 1215},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assets := fstest.MapFS{
+				"static/img/articles/example/03.webp":      {Data: sizedPNG(t, dimensions.width, dimensions.height)},
+				"static/img/articles/example/03-800.webp":  {Data: []byte("small")},
+				"static/img/articles/example/03-1280.webp": {Data: []byte("medium")},
+			}
+			body := `<p><img src="/static/img/articles/example/03.webp" alt="architecture"></p>`
+
+			got, _, err := enhanceBodyImages(body, assets)
+			if err != nil {
+				t.Fatalf("enhance images: %v", err)
+			}
+			if !strings.Contains(got, fmt.Sprintf(`sizes="%s"`, figureSizes)) {
+				t.Errorf("enhanced body does not quote the figure layout: %s", got)
+			}
+			if strings.Contains(got, "data-wide") {
+				t.Errorf("enhanced body marks an image for horizontal panning: %s", got)
+			}
+		})
+	}
+}
+
+// A rung at or above the source width would be an upscale, so the generator
+// never writes it and the renderer must not name it either — a srcset claiming
+// a 1280w candidate that is really 1000px wide makes the browser pick badly.
+func TestEnhanceBodyImagesSkipsRungsWiderThanTheSource(t *testing.T) {
+	assets := fstest.MapFS{
+		"static/img/articles/example/02.webp":     {Data: sizedPNG(t, 1_000, 600)},
+		"static/img/articles/example/02-800.webp": {Data: []byte("small")},
+	}
+	body := `<p><img src="/static/img/articles/example/02.webp" alt="screenshot"></p>`
+
+	got, _, err := enhanceBodyImages(body, assets)
+	if err != nil {
+		t.Fatalf("enhance images: %v", err)
+	}
+	if strings.Contains(got, "1280w") {
+		t.Errorf("srcset named a rung wider than the source: %s", got)
+	}
+	want := `srcset="/static/img/articles/example/02-800.webp 800w, /static/img/articles/example/02.webp 1000w"`
+	if !strings.Contains(got, want) {
+		t.Errorf("enhanced body missing %q: %s", want, got)
+	}
+}
+
+// A figure narrower than the derivative width has no second candidate on disk,
+// and must not claim one: a srcset naming a missing file makes the browser fall
+// back to `src` after a wasted request.
+func TestEnhanceBodyImagesLeavesPhoneSizedFiguresUnscaled(t *testing.T) {
+	assets := fstest.MapFS{
+		"static/img/articles/example/chart.png": {Data: sizedPNG(t, 500, 300)},
+	}
+	body := `<p><img src="/static/img/articles/example/chart.png" alt="chart"></p>`
 
 	got, _, err := enhanceBodyImages(body, assets)
 	if err != nil {
 		t.Fatalf("enhance images: %v", err)
 	}
 	if strings.Contains(got, "srcset") {
-		t.Errorf("non-cover figure should not gain a srcset: %s", got)
+		t.Errorf("phone-sized figure should not gain a srcset: %s", got)
+	}
+}
+
+// A standalone image is an illustration and becomes a breakout <figure> linked
+// to its full resolution — the only way an 8:1 architecture diagram is readable.
+// An image sharing its paragraph with prose is inline and must stay in the text
+// column, or the breakout rule would drag the sentence around it off-measure.
+func TestEnhanceBodyImagesWrapsStandaloneImagesOnly(t *testing.T) {
+	assets := fstest.MapFS{
+		"static/img/articles/example/diagram.png": {Data: sizedPNG(t, 400, 300)},
+		"static/img/articles/example/icon.png":    {Data: sizedPNG(t, 16, 16)},
+	}
+	body := `<p><img src="/static/img/articles/example/diagram.png" alt="a &amp; b"></p>` +
+		`<p>See <img src="/static/img/articles/example/icon.png" alt="icon"> inline.</p>`
+
+	got, _, err := enhanceBodyImages(body, assets)
+	if err != nil {
+		t.Fatalf("enhance images: %v", err)
+	}
+	for _, want := range []string{
+		`<figure><a href="/static/img/articles/example/diagram.png" target="_blank" rel="noopener"`,
+		`aria-label="a &amp; b (opens the full-resolution image in a new tab)"`,
+		`</a></figure>`,
+		`<p>See <img loading="lazy" decoding="async" width="16" height="16" src="/static/img/articles/example/icon.png" alt="icon"> inline.</p>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("enhanced body missing %q: %s", want, got)
+		}
+	}
+	if strings.Count(got, "<figure>") != 1 {
+		t.Errorf("only the standalone image should become a figure: %s", got)
 	}
 }
 

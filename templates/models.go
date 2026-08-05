@@ -5,9 +5,21 @@ import (
 	"time"
 )
 
-// CardCoverWidth is the canonical article-card derivative width shared by the
-// generator, parser validation, and rendered image dimensions.
+// CardCoverWidth is the derivative article cards load, by name. Cards paint it
+// at ~378-683 CSS px, and it doubles as the smallest candidate in every body
+// figure's srcset.
 const CardCoverWidth = 800
+
+// DerivativeWidths is the responsive ladder generated for every article image
+// and offered to the browser, smallest first. Two rungs rather than one,
+// because the source is now a ~2.4MP original: a 390 CSS px phone at DPR 3
+// resolves 1170px, and with only an 800px rung below it the browser correctly
+// but expensively reaches past it for the full-resolution source. 1280 covers
+// that case and is also the exact width a DPR 1 desktop figure renders at.
+//
+// Widths above a source are skipped rather than upscaled, so a small archive
+// image simply ships fewer rungs.
+var DerivativeWidths = []int{CardCoverWidth, 1280}
 
 // Data Models
 

@@ -39,7 +39,15 @@ Tags come from a **closed vocabulary** declared in `templates/tags.go` — `Agen
 
 Rendering normalizes what imported sources leave inconsistent: body headings are shifted so the shallowest becomes `<h2>` under the page title (keeping the outline sequential for assistive technology), and every body image gets intrinsic dimensions and asynchronous decoding. The first body image is preloaded and prioritized as the LCP element; later figures load lazily. Article pages close with an author card, a booking call to action, and three tag-matched suggestions.
 
-Cards and responsive article covers load a downscaled `cover-800.webp` rather than always transferring the full-width original. The committed derivative is produced by `mise run build:covers` (`FORCE=1` rebuilds all sources) through the pinned pure-Go `gen2brain/webp` WASM encoder with its deterministic `nodynamic` path; no image-processing binary is required. A new article whose derivative is missing fails startup and the test suite.
+An image alone in its paragraph is an illustration, not inline text, so it is rendered as a `<figure>` that **breaks out of the 896px text column** to the article's full padded width, up to 1280px, and links to its own full resolution. A measure tuned for reading sentences paints a wide diagram's labels a few pixels tall. The figure sizes itself against `100cqw` rather than `100vw` so the scrollbar cannot push it into a horizontal overflow, and it never upscales a small archive image past its intrinsic width.
+
+The paragraph under an illustration is its **caption** whenever it repeats the image's alt text, and is folded into the figure as a `<figcaption>` — centred, smaller and dimmer than body prose, so it reads as a label for the picture rather than as the article's next sentence. That repetition is the only reliable signal: matching on position alone would also swallow the opening paragraph of every article that leads with a cover image. The two are compared as text, not markup, because rendering makes them differ meaninglessly — a caption may link a URL the alt spells out, and the Typographer replaces plain spaces with the hair and non-breaking spaces of rendered prose. 248 of the archive's 294 figures qualify; the rest keep their following paragraph as prose. A folded caption drops the image's now-triplicated `alt`, since the visible caption and the link's accessible name both already carry it.
+
+**Every figure fits that width; none pans horizontally.** An illustration too wide to read when fitted is a diagram laid out wrong at its source, and it is fixed there rather than compensated for in the layout. Legibility is decided by _apparent_ label size — a label declared at F units inside a canvas C wide renders at `F * 1280 / C`. Raising the font size cannot fix a stretched diagram, because D2 grows every box to fit the text and the canvas grows with it; shrinking the canvas is what works. Four architecture diagrams reached this site as 3:1–8:1 strips with 5–9px labels, because their D2 sources ask ELK's layered algorithm for `direction: right`, which spends one column per dependency depth. Their sources in `~/fmind/publications` now fold that chain into rows or a `grid-columns` block; regenerated, they fill the figure at 1084–1128px tall with 9–14px labels, and cost a fifth of the bytes. A reader who wants more detail still has the figure's full-resolution link. `figureSizes` in `articles.go` and the `.article-page` rules in `static/css/input.css` describe one layout and must change together.
+
+Every body image ships the rungs of a responsive ladder it is wide enough to earn — `<stem>-800.webp` and `<stem>-1280.webp` — so a phone never transfers a full-resolution diagram; cards load the 800px rung of the cover. Two rungs rather than one because the source is a ~2.4MP original: a 390 CSS px phone at DPR 3 resolves 1170px, and with only an 800px rung beneath it the browser correctly but expensively reaches past it for the full source. 1280 covers that case and is also the exact width a DPR 1 desktop figure renders at. The committed derivatives are produced by `mise run build:images` (`FORCE=1` rebuilds all sources) through the pinned pure-Go `gen2brain/webp` WASM encoder with its deterministic `nodynamic` path; no image-processing binary is required. Candidates are discovered from disk rather than declared, so an image offers exactly the rungs there was a reason to write — a rung is never upscaled past its source. A missing rung fails the test suite, and a missing cover derivative fails startup too.
+
+Sources themselves are bounded by a **~2.4MP pixel budget** (4096px guard rail) rather than a fixed width — the rule `pub export` applies on the way in. A width cap measures the wrong thing: 1280px would be generous to a 3:2 screenshot while starving a diagram that legitimately needs width.
 
 The parsed article set is the single source for the home page, `/articles/` (including its search index and `/articles/<slug>.md` sources), `/articles/feed.xml`, `/sitemap.xml`, `/llms.txt`, `/api/profile`, and MCP `list_publications`. New private drafts are promoted here by `pub export` from `~/fmind/publications`. After the live site URL is recorded in the private package, its temporary `article.md` is removed and this repository owns the only published body; a substantial generated revision starts from the current site Markdown rather than a stale private copy.
 
@@ -47,16 +55,16 @@ The parsed article set is the single source for the home page, `/articles/` (inc
 
 All tasks are defined in `mise.toml` and reused by the git hooks and CI:
 
-| Task                    | Description                                                             |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `mise run install`      | Tidy Go modules and download dependencies                               |
-| `mise run watch`        | Live-reload dev server (Go + Tailwind)                                  |
-| `mise run format`       | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint) |
-| `mise run check`        | Lint, vulnerability/secret scans, format checks, Terraform validation   |
-| `mise run check:links`  | Check external content links are reachable (lychee; runs in CI)         |
-| `mise run test`         | Run the test suite with coverage (gotestsum)                            |
-| `mise run build`        | Generate templates, compile CSS, and build the binary                   |
-| `mise run build:covers` | Regenerate deterministic downscaled article covers (pure Go/WebP)       |
+| Task                    | Description                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `mise run install`      | Tidy Go modules and download dependencies                                    |
+| `mise run watch`        | Live-reload dev server (Go + Tailwind)                                       |
+| `mise run format`       | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint)      |
+| `mise run check`        | Lint, vulnerability/secret scans, format checks, Terraform validation        |
+| `mise run check:links`  | Check external content links are reachable (lychee; runs in CI)              |
+| `mise run test`         | Run the test suite with coverage (gotestsum)                                 |
+| `mise run build`        | Generate templates, compile CSS, and build the binary                        |
+| `mise run build:images` | Regenerate deterministic downscaled article image derivatives (pure Go/WebP) |
 
 ## Deployment (Cloud Run)
 

@@ -219,6 +219,108 @@ a.tag:hover {
   --tag: oklch(70.5% 0.213 47.604);
 }
 
+/* Article body figures break out of the text column. The prose measure is tuned
+   for reading sentences (896px), but the imported diagrams and screenshots are
+   2-3x wider than they are tall, so that measure paints their labels a few
+   pixels tall. A figure therefore widens to the article's own padded width, up
+   to --figure-max-width, while the text around it stays where it was.
+
+   Every figure fits that width — nothing pans horizontally. An illustration
+   that cannot be read when fitted is a diagram laid out wrong at its source,
+   and it is fixed there rather than compensated for here.
+
+   The article is a query container so the figure can size against 100cqw, the
+   width the article actually occupies. 100vw is the trap here: it counts the
+   scrollbar, so `min(100vw, ...)` overflows by the scrollbar's width on desktop
+   and adds the horizontal scrollbar this rule exists to avoid. The symmetric
+   negative margin re-centres the widened box on the column without moving a
+   single line of prose.
+
+   --figure-max-width must stay in step with figureSizes in articles.go: the
+   srcset is resolved against that declared width, and a `sizes` attribute that
+   disagrees with the layout picks the wrong candidate. */
+.article-page {
+  --figure-max-width: 80rem;
+
+  container-type: inline-size;
+}
+
+/* A paragraph holding nothing but a video is the same kind of illustration as a
+   figure — it just cannot be rewritten into one, because the renderer replaces
+   the <img> inside the paragraph rather than the paragraph itself. Widening it
+   here keeps a screen recording the same width as the screenshots around it. */
+.article-page figure,
+.article-page p:has(> video) {
+  margin-block: 2.5rem;
+  margin-inline: calc((100% - min(100cqw, var(--figure-max-width))) / 2);
+  width: min(100cqw, var(--figure-max-width));
+  max-width: none;
+  text-align: center;
+}
+
+/* The link is the full-resolution affordance, so it hugs the image rather than
+   the widened figure box — an inline-block keeps its focus ring and click area
+   on the picture itself. Small archive images stay at their intrinsic width
+   instead of being upscaled into a blurry 1280px band.
+
+   Zeroing the figure's line height is what puts the caption *just* below the
+   image. The link is inline-block, so it sits on a text line and inherits the
+   prose leading — around 36px of descender space the image does not use, which
+   reads as the caption having drifted away from what it describes. The
+   figcaption sets its own line height back. */
+.article-page figure {
+  line-height: 0;
+}
+
+.article-page figure > a {
+  display: inline-block;
+  cursor: zoom-in;
+  max-width: 100%;
+}
+
+/* The figure already owns the space around itself, so the image inside it must
+   not add its own. Typography's `prose img` block margins survive here because
+   its `figure > *` reset only reaches direct children, and this image sits one
+   level deeper inside the full-resolution link — which is what pushed the
+   caption 40px away from the picture it captions. */
+.article-page figure img {
+  margin-block: 0;
+  margin-inline: auto;
+  max-width: 100%;
+  height: auto;
+}
+
+/* The caption sits directly under its illustration and has to read as a label
+   for it rather than as the next sentence of the article — the figure is wider
+   than the text column, so a caption at body size and body colour would look
+   like prose that had wandered out of the measure. Smaller, dimmer and centred
+   is the distinction, and it is capped to the prose measure so a caption under
+   a 1280px figure still wraps at a comfortable reading length. */
+.article-page figcaption {
+  margin-inline: auto;
+  margin-top: 0.875rem;
+  max-width: 42rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  text-align: center;
+  text-wrap: pretty;
+  color: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+}
+
+/* A caption's link stays a link, but at the caption's own weight: the source
+   URLs these carry are provenance, not a call to action. */
+.article-page figcaption a {
+  color: inherit;
+  text-decoration-line: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+}
+
+.article-page figcaption a:hover {
+  color: var(--color-primary);
+  text-decoration-color: currentcolor;
+}
+
 #about,
 #work-experience,
 #certifications,
