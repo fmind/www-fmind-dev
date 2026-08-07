@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.0] - 2026-08-07
+
+### 🚀 Features
+
+- _(articles)_ Deliver body images at readable size and weight
+
+### 📚 Documentation
+
+- _(skill)_ Expand release workflow instructions
+- _(skill)_ Sync exact production endpoint URLs
+
+### 🧪 Testing
+
+- _(articles)_ Scope the syndication invariant to the imported archive
+
 ## [0.1.0] - 2026-08-02
 
 ### 🚀 Features
