@@ -118,7 +118,12 @@ run = "golangci-lint run ./..."
 
 [tasks."check:scan"]
 description = "Scan Dockerfile and infrastructure for misconfigurations (trivy config)"
-run = "trivy config --exit-code=1 ."
+# Severity is pinned on the command line on purpose. Left unset, trivy falls
+# back to the developer's ~/.config/trivy/trivy.yaml, which CI does not have —
+# that divergence let a LOW finding pass locally and fail the pipeline. A CLI
+# flag outranks every config file, so this reads the same everywhere.
+# Reviewed exceptions live in .trivyignore, each with its reason.
+run = "trivy config --exit-code=1 --severity LOW,MEDIUM,HIGH,CRITICAL ."
 
 [tasks."check:tofu"]
 description = "Validate and lint the OpenTofu configuration"
