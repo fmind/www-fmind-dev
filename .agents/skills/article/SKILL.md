@@ -12,11 +12,11 @@ Every published article lives in `content/articles/<slug>.md` and is validated a
 
 ## Where an Article Comes From
 
-Drafts are written in `~/fmind/publications` and enter this repository through `pub export`. Once `posts/published.md` records the live site URL, the private `article.md` is deleted and **this repository owns the only published body**. A substantial regenerated revision must therefore start from the current site Markdown, never from the retired private draft.
+Drafts are written in the private publications repository and enter this repository through `pub export`; that repository carries its own authoring instructions. Once it records the live site URL, the private draft is deleted and **this repository owns the only published body**. A substantial regenerated revision must therefore start from the current site Markdown, never from the retired private draft.
 
 ## Workflow
 
-1. **Import the draft** with `pub export` from `~/fmind/publications`. It writes the Markdown with its TOML frontmatter and applies the ~2.4MP pixel budget to body images.
+1. **Import the draft** with `pub export` from the publications repository. It writes the Markdown with its TOML frontmatter and applies the ~2.4MP pixel budget to body images.
 
 1. **Check the tags** against the closed vocabulary in `templates/tags.go`. Anything outside it fails startup. Adding a tag is three coupled edits:
    - a `Tag` entry in `templates/tags.go` (declaration order is display order everywhere),
@@ -47,7 +47,7 @@ Drafts are written in `~/fmind/publications` and enter this repository through `
 - **Code blocks**: fence with a language. Unlabeled blocks fall back to the `languageMarkers` guesser in `highlight.go`; highlighting happens once at startup from `codeTheme`, which also generates the stylesheet.
 - **Figures**: a standalone image renders as a `<figure>` that breaks out of the text column to `--figure-max-width` and links to full resolution. `figureSizes` in `articles.go` and the `.article-page` rules in `static/css/input.css` describe one layout and must change together.
 - **Captions**: the paragraph after a standalone image folds into the figure as a `<figcaption>` when its text repeats the alt (`foldBodyCaptions`), and the folded image then drops its `alt`. Compare as **text**, never as markup — rendering adds links and typographic spaces. Position alone is not a caption signal: every article opens with a cover followed by ordinary prose.
-- **Diagrams that read too small** are laid out wrong at the source, and are fixed in the D2 source under `~/fmind/publications` — never compensated for in the layout. Apparent label size is `declared size * 1280 / canvas width`; raising the font loses, because D2 grows every box to fit and the canvas grows with it. Prefer `direction: down` with a `grid-columns` on the root over `direction: right`, aim for labels ≥ ~12px and rendered height ≤ ~1300px at 1280 wide, then re-render with the site's WebP settings (q80, method 6, CatmullRom to the pixel budget).
+- **Diagrams that read too small** are laid out wrong at the source, and are fixed there — never compensated for in the layout. Re-render from the diagram source and re-import; the authoring rules for that live with the diagram sources in the publications repository. What this repository asserts is only the acceptance bar: labels ≥ ~12px apparent size and rendered height ≤ ~1300px at 1280 wide.
 - **Drafts never leak**: the validated article collection is the single source for HTML, Atom, sitemap, `llms.txt`, JSON, and MCP surfaces, and production discovery excludes drafts.
 
 ## Gotchas

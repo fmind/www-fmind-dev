@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "go tool templ generate && go build -o ./tmp/main ./cmd/www-fmind-dev"
+cmd = "mise run build:templ && go build -o ./tmp/main ./cmd/www-fmind-dev"
 bin = "./tmp/main"
 delay = 1000
 exclude_dir = ["tmp", "vendor"]

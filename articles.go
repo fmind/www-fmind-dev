@@ -363,8 +363,8 @@ func isCaptionSpace(r rune) bool {
 //
 // Every figure fits that width; none pans horizontally. An illustration too
 // wide to stay legible when fitted is a diagram laid out wrong at its source,
-// and it is fixed there — the D2 sources in ~/fmind/publications carry a
-// layout-engine chosen to keep them near 2:1. A viewer who still wants more
+// and it is fixed there — the private diagram sources carry a layout engine
+// chosen to keep them near 2:1. A viewer who still wants more
 // detail has the figure's full-resolution link.
 const figureSizes = "(max-width: 1312px) calc(100vw - 2rem), 1280px"
 

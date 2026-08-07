@@ -31,4 +31,4 @@ jobs:
       - name: Scan complete Git history
         run: gitleaks git --redact=100 --verbose
       - name: Scan full checkout
-        run: trivy fs .
+        run: trivy fs --exit-code=1 --severity HIGH,CRITICAL --scanners vuln,secret,misconfig .
