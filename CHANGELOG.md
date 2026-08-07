@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.0.2] - 2026-08-07
+
+### 🧹 Miscellaneous
+
+- Tighten documentation, harden CI gates, and cover template helpers
+
 ## [1.0.1] - 2026-08-07
 
 ### 🐛 Bug Fixes
