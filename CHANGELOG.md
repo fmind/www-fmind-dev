@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.0.1] - 2026-08-07
+
+### 🐛 Bug Fixes
+
+- _(ci)_ Pin the misconfiguration scan severity so local matches CI
+
 ## [1.0.0] - 2026-08-07
 
 ### 🚀 Features
