@@ -1,26 +1,48 @@
 version: 2
+# Minor and patch updates are grouped into one PR per ecosystem to keep the
+# review queue short; majors stay separate so they get read on their own.
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
     commit-message:
-      prefix: ci
+      prefix: "chore(deps)"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+      day: monday
     commit-message:
-      prefix: chore
+      prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns: ["*"]
+        update-types: [minor, patch]
   - package-ecosystem: gomod
     directory: /
     schedule:
       interval: weekly
+      day: monday
     commit-message:
-      prefix: chore
+      prefix: "chore(deps)"
+    groups:
+      go-modules:
+        patterns: ["*"]
+        update-types: [minor, patch]
   - package-ecosystem: terraform
     directory: /infra
     schedule:
       interval: weekly
+      day: monday
     commit-message:
-      prefix: chore
+      prefix: "chore(deps)"
+    groups:
+      opentofu:
+        patterns: ["*"]
+        update-types: [minor, patch]

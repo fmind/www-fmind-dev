@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 FROM --platform=$BUILDPLATFORM golang:1.26.5 AS css
 ARG BUILDARCH
-ADD --chmod=0755 --checksum=sha256:a6f21b9ae0970e927dd374e6a25a17936a11f5d4133cd825b0ca6492cc9b1b31 \
-  https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v2.10.8/tailwindcss-extra-linux-x64 \
+ADD --chmod=0755 --checksum=sha256:29bd5364e7796d4b43a6d429801fc2d92223bd32a5385883674872fa855c0471 \
+  https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v2.10.10/tailwindcss-extra-linux-x64 \
   /usr/local/lib/tailwindcss-extra-amd64
-ADD --chmod=0755 --checksum=sha256:1b60d91961df32b43590fbdfe63fd26f4e2db585d7a2beb56256ca27b6b18cdd \
-  https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v2.10.8/tailwindcss-extra-linux-arm64 \
+ADD --chmod=0755 --checksum=sha256:65f19e7c334783b08bb58cccbd07f809a6d6e44d63219c6952147f221a86c6f0 \
+  https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v2.10.10/tailwindcss-extra-linux-arm64 \
   /usr/local/lib/tailwindcss-extra-arm64
 WORKDIR /app
 COPY static/css/input.css static/css/input.css

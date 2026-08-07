@@ -17,7 +17,7 @@ The portfolio website of Médéric Hurier (Fmind). Built with **Go** + **[Templ]
 ## Prerequisites
 
 - **Go** 1.26.5
-- **[mise](https://mise.jdx.dev)** — manages the pinned toolchain (Go, golangci-lint, gotestsum, dprint, gitleaks, and the DaisyUI-bundled Tailwind CLI) and the task vocabulary.
+- **[mise](https://mise.jdx.dev)** — manages the pinned toolchain (Go, golangci-lint, gotestsum, dprint, gitleaks, trivy, actionlint, zizmor, OpenTofu, tflint, and the DaisyUI-bundled Tailwind CLI) and the task vocabulary.
 
 ## Local Development
 
@@ -55,25 +55,26 @@ The parsed article set is the single source for the home page, `/articles/` (inc
 
 All tasks are defined in `mise.toml` and reused by the git hooks and CI:
 
-| Task                    | Description                                                                  |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| `mise run install`      | Tidy Go modules and download dependencies                                    |
-| `mise run watch`        | Live-reload dev server (Go + Tailwind)                                       |
-| `mise run format`       | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint)      |
-| `mise run check`        | Lint, vulnerability/secret scans, format checks, Terraform validation        |
-| `mise run check:links`  | Check external content links are reachable (lychee; runs in CI)              |
-| `mise run test`         | Run the test suite with coverage (gotestsum)                                 |
-| `mise run build`        | Generate templates, compile CSS, and build the binary                        |
-| `mise run build:images` | Regenerate deterministic downscaled article image derivatives (pure Go/WebP) |
+| Task                    | Description                                                                             |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| `mise run install`      | Tidy Go modules and download dependencies                                               |
+| `mise run watch`        | Live-reload dev server (Go + Tailwind)                                                  |
+| `mise run format`       | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint)                 |
+| `mise run check`        | Lint, vulnerability/secret/misconfig scans, format checks, workflow and OpenTofu audits |
+| `mise run check:links`  | Check external content links are reachable (lychee; runs in CI)                         |
+| `mise run test`         | Run the test suite with coverage (gotestsum)                                            |
+| `mise run build`        | Generate templates, compile CSS, and build the binary                                   |
+| `mise run build:images` | Regenerate deterministic downscaled article image derivatives (pure Go/WebP)            |
 
 ## Deployment (Cloud Run)
 
-The site runs on **Google Cloud Run** (project `www-fmind-dev`, `europe-west1`) and is served at <https://www.fmind.dev/> through a Cloud Run domain mapping. All cloud resources are declared in [infra/](infra/) (Terraform): the Cloud Run service, Artifact Registry, keyless GitHub Actions CI (Workload Identity Federation), error alerting, and privacy-preserving analytics routing.
+The site runs on **Google Cloud Run** (project `www-fmind-dev`, `europe-west1`) and is served at <https://www.fmind.dev/> through a Cloud Run domain mapping. All cloud resources are declared in [infra/](infra/) (OpenTofu): the Cloud Run service, Artifact Registry, keyless GitHub Actions CI (Workload Identity Federation), error alerting, and privacy-preserving analytics routing.
 
 1. **Continuous delivery** — pull requests and pushes run [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml): `mise run all` formats, checks, tests, and builds the project, then CI verifies the generated tree is clean. A `main` push builds the hardened distroless image with provenance and an SBOM, pushes it to Artifact Registry, and deploys its immutable digest. Authentication is keyless via branch-restricted WIF — no service-account keys.
-1. **Infrastructure** — from [infra/](infra/): `terraform init && terraform apply`. Terraform owns the service shape (CPU/memory, scaling, env, probes, IAM); the image tag is rolled by CI (`lifecycle.ignore_changes`). Infrastructure changes are applied manually and do not trigger the container deployment workflow.
+1. **Infrastructure** — from [infra/](infra/): `tofu init && tofu apply`. OpenTofu owns the service shape (CPU/memory, scaling, env, probes, IAM); the image tag is rolled by CI (`lifecycle.ignore_changes`). Infrastructure changes are applied manually and do not trigger the container deployment workflow. The first `tofu init` against the existing GCS state migrates it off the Terraform lockfile — provider source addresses move to `registry.opentofu.org`, the resources themselves are unchanged.
 1. **Runtime config** — `ENVIRONMENT=production` is injected as a Cloud Run env var (see `infra/cloud_run.tf`); `PORT` is supplied by Cloud Run and tracing remains opt-in through standard `OTEL_EXPORTER_OTLP_*` variables.
 1. **Local container** — `mise run build:image` builds the production image; run it with `docker run -p 8080:8080 www-fmind-dev:local`.
+1. **Manual rollout or rollback** — `mise run deploy <image-ref>` points the service at a specific image digest. On demand only; it never runs from a hook or from `mise run all`, and it sets only the image so OpenTofu keeps owning the rest of the service shape.
 
 ### Querying the analytics
 

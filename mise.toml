@@ -1,11 +1,13 @@
 [env]
 APP_NAME = "www-fmind-dev"
+REGION = "europe-west1"
 
 [settings.task]
 run_auto_install = false
 
 [tools]
-"github:dobicinaitis/tailwind-cli-extra" = "2.10.8"
+"github:dobicinaitis/tailwind-cli-extra" = "2.10.10"
+actionlint = "1.7.12"
 dprint = "0.55.2"
 gitleaks = "8.30.1"
 go = "1.26.5"
@@ -14,8 +16,11 @@ gotestsum = "1.13.0"
 hadolint = "2.15.1"
 lefthook = "2.1.10"
 lychee = "0.24.2"
-terraform = "1.15.8"
-typos = "1.48.0"
+opentofu = "1.12.5"
+tflint = "0.64.0"
+trivy = "0.73.0"
+typos = "1.49.0"
+zizmor = "1.29.0"
 
 [tasks.all]
 alias = "a"
@@ -64,14 +69,22 @@ run = [
 alias = "c"
 description = "Run all static checks in parallel"
 depends = [
+  "check:actions",
   "check:lint",
   "check:vuln",
   "check:format",
   "check:leaks",
   "check:dockerfile",
-  "check:terraform",
+  "check:scan",
+  "check:tofu",
   "check:typos",
 ]
+
+[tasks."check:actions"]
+alias = "ca"
+description = "Lint and audit GitHub Actions workflows (actionlint + zizmor)"
+# zizmor runs offline by default, so this stays a credential-free static check.
+run = ["actionlint", "zizmor .github/workflows/"]
 
 [tasks."check:dockerfile"]
 alias = "cd"
@@ -103,12 +116,19 @@ description = "Lint Go sources (golangci-lint)"
 depends = ["build:templ"]
 run = "golangci-lint run ./..."
 
-[tasks."check:terraform"]
-description = "Validate Terraform configuration"
+[tasks."check:scan"]
+description = "Scan Dockerfile and infrastructure for misconfigurations (trivy config)"
+run = "trivy config --exit-code=1 ."
+
+[tasks."check:tofu"]
+description = "Validate and lint the OpenTofu configuration"
+# tflint uses only its bundled terraform ruleset, so this needs no plugin
+# download and no GitHub token — the whole check stays offline.
 run = [
-  "terraform -chdir=infra fmt -check -recursive",
-  "terraform -chdir=infra init -backend=false -input=false -lockfile=readonly",
-  "terraform -chdir=infra validate",
+  "tofu -chdir=infra fmt -check -recursive",
+  "tofu -chdir=infra init -backend=false -input=false -lockfile=readonly",
+  "tofu -chdir=infra validate",
+  "tflint --chdir=infra",
 ]
 
 [tasks."check:vuln"]
@@ -127,10 +147,18 @@ description = "Show test coverage in the terminal"
 depends = ["test"]
 run = "go tool cover -func=coverage.out"
 
+[tasks.deploy]
+description = "Deploy an image digest to Cloud Run — pass the image ref as the argument"
+# On demand only, never from a hook or `all`: this mutates production. CI owns
+# the routine path (push to main); this is for manual rollout and rollback, so
+# it sets only the image — OpenTofu still owns the rest of the service shape.
+# mise appends CLI args to the last command: `mise run deploy <image-ref>`.
+run = "gcloud run deploy $APP_NAME --region=$REGION --image"
+
 [tasks.format]
 alias = "f"
 description = "Format all sources and documents"
-depends = ["format:go", "format:templ", "format:dprint", "format:terraform"]
+depends = ["format:go", "format:templ", "format:dprint", "format:tofu"]
 
 [tasks."format:dprint"]
 description = "Format JSON, Markdown, TOML, YAML with dprint"
@@ -147,9 +175,9 @@ run = [
 description = "Format Templ templates"
 run = "go tool templ fmt ."
 
-[tasks."format:terraform"]
-description = "Format Terraform configuration"
-run = "terraform -chdir=infra fmt -recursive"
+[tasks."format:tofu"]
+description = "Format the OpenTofu configuration"
+run = "tofu -chdir=infra fmt -recursive"
 
 [tasks.install]
 alias = "i"

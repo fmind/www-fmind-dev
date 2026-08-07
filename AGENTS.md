@@ -10,23 +10,28 @@ The canonical vocabulary lives in `mise.toml` and is reused by the repo's leftho
 - `mise run install` — generate templates, tidy Go modules, and download dependencies.
 - `mise run watch` — live-reload dev server (air + Tailwind watch).
 - `mise run format` — goimports, gofumpt, `templ fmt`, dprint.
-- `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, and Terraform validation.
+- `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, `trivy config`, actionlint + zizmor, and OpenTofu validation + tflint.
 - `mise run check:typos` — article spelling floor, with documented verbatim and library-name exceptions.
 - `mise run check:links` — lychee reachability check for external content links (network-dependent; runs as its own CI step, not in the offline `check`/pre-commit).
 - `mise run test` — gotestsum with race + coverage.
 - `mise run build` — generate templates, compile CSS, build `bin/www-fmind-dev`.
+- `mise run deploy <image-ref>` — manual Cloud Run rollout/rollback to an image digest; never wired into a hook or `all`, since it mutates production.
 
-Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint, lychee, tailwindcss-extra) are mise-managed; code generators (`templ`, `goimports`, `gofumpt`, `govulncheck`, `air`) are `go tool` via the `go.mod` tool directive.
+Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint, lychee, trivy, actionlint, zizmor, opentofu, tflint, tailwindcss-extra) are mise-managed; code generators (`templ`, `goimports`, `gofumpt`, `govulncheck`, `air`) are `go tool` via the `go.mod` tool directive.
+
+Every `check:*` subtask is offline and credential-free — tflint uses only its bundled ruleset and zizmor runs in offline mode, so `check` never needs a token or network.
 
 ## Layout
 
+- `.agents/` — Portable agent layer: project skills (`release`, `article`, `infra`) shared by every agent CLI.
 - `.air.toml` — Live-reload configuration for the Air Go development server.
 - `.dockerignore` — Specifies file paths that should not be copied into Docker images.
 - `.env.example` — Configuration template containing placeholder environment variables.
-- `.github/` — Configuration for GitHub Actions CI/CD workflows and dependabot.
+- `.github/` — GitHub Actions CI/CD + scheduled security workflows, dependabot, and the zizmor audit policy.
 - `.gitignore` — Specifies file paths that Git should not track.
 - `.golangci.yml` — Configuration for the golangci-lint Go static analysis tool.
 - `AGENTS.md` — AI assistant instructions, tooling setup, commands, conventions, and layout.
+- `CLAUDE.md` — Claude Code entry point; imports this file so both read one source.
 - `articles.go` — Strict embedded Markdown parsing, validation, rendering, and immutable article collection.
 - `articles_test.go` — Tests for frontmatter validation, cover resolution, and responsive body-image markup.
 - `Dockerfile` — Multi-stage recipe for building a secure, distroless application container.
@@ -41,7 +46,7 @@ Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint,
 - `export_test.go` — Exports unexported internals (article counts, injected handler) to the external test package.
 - `go.mod` — Go module dependencies definition and tool directive manifest.
 - `go.sum` — Checksums file for verifying the integrity of Go module dependencies.
-- `infra/` — Terraform for Cloud Run, registries, monitoring, identity, and cookieless BigQuery analytics routing.
+- `infra/` — OpenTofu for Cloud Run, registries, monitoring, identity, and cookieless BigQuery analytics routing.
 - `lefthook.yml` — Configuration for Lefthook Git pre-commit and pre-push hooks.
 - `lychee.toml` — Configuration settings for the Lychee hyperlink checker tool.
 - `highlight.go` — Chroma code-block highlighting, language guessing, and the generated theme stylesheet.

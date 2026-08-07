@@ -1,7 +1,7 @@
 # ==============================================================================
 # www-fmind-dev Infrastructure
 # ==============================================================================
-# Terraform-managed Google Cloud resources for the portfolio site on Cloud Run.
+# OpenTofu-managed Google Cloud resources for the portfolio site on Cloud Run.
 # Split by concern:
 #
 # - apis.tf        : GCP service APIs enabling and propagation timer

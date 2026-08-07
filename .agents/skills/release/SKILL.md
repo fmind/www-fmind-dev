@@ -13,7 +13,7 @@ This skill defines the end-to-end process for validating, committing, releasing,
 ## Preconditions
 
 1. Working tree is clean or contains reviewed changes on `main`.
-2. Environment tools (`mise`, `go`, `git-cliff`, `gh`, `curl`, `terraform`) are initialized.
+2. Environment tools (`mise`, `go`, `git-cliff`, `gh`, `curl`, `tofu`) are initialized.
 3. Network access to GitHub and production domain (`fmind.dev` / `www.fmind.dev`) is available.
 
 ## Workflow
