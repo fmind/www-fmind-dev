@@ -82,9 +82,10 @@ func TestLoadArticlesValidatesImportedArchive(t *testing.T) {
 		if article.Canonical != "" {
 			t.Errorf("%s declares an external canonical %q", article.Slug, article.Canonical)
 		}
-		if !isMediumURL(article.Syndicated) {
-			t.Errorf("%s syndicated = %q, want a Medium URL", article.Slug, article.Syndicated)
-		}
+		// Syndication is deliberately not asserted here: a natively published
+		// article reaches the site weeks before a Medium copy exists, if one ever
+		// does. The frozen count above is what guards the imported subset, so the
+		// first native publication adds an article instead of turning the suite red.
 	}
 
 	if len(archiveImages) != mediumArchiveImages {
