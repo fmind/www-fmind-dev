@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.0.3] - 2026-08-08
+
+### 📚 Documentation
+
+- _(articles)_ Clarify image derivative re-encoding comment
+
 ## [1.0.2] - 2026-08-07
 
 ### 🧹 Miscellaneous
