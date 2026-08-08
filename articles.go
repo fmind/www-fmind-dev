@@ -380,8 +380,8 @@ const figureSizes = "(max-width: 1312px) calc(100vw - 2rem), 1280px"
 // single candidate, with no srcset at all.
 func bodySourceSet(assets fs.FS, source string, sourceWidth int) (string, string) {
 	// Resolve derivatives by stem, not by full filename: a source may be any of
-	// .webp/.gif/.png/.jpg — `pub export` ships the reviewed cover as PNG — and
-	// a derivative is always WebP.
+	// .webp/.gif/.png/.jpg — `pub export` re-encodes what it ships to WebP, but
+	// the archive still carries an imported GIF — and a derivative is always WebP.
 	name := path.Base(source)
 	stem := strings.TrimSuffix(name, path.Ext(name))
 	candidates := make([]string, 0, len(templates.DerivativeWidths)+1)
