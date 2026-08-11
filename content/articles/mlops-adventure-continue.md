@@ -1,6 +1,6 @@
 +++
 title = "The MLOps Adventure Continues: An AGENTS.md Ready Stack for AI/ML"
-description = "AI coding agents exposed the cost and drift of a fragmented Python toolchain. This guide moves formatting, checking, testing, and releases into one AGENTS.md-ready stack."
+description = "AI coding agents amplify repository friction. Here is how we redesigned an MLOps codebase around deterministic single-command gates, SQLite isolation, and machine-readable AGENTS.md guardrails."
 date = "2026-08-11"
 tags = ["Coding", "MLOps", "Guide"]
 slug = "mlops-adventure-continue"
@@ -9,41 +9,25 @@ draft = false
 
 ![The MLOps Adventure Continues: An AGENTS.md Ready Stack for AI/ML](/static/img/articles/mlops-adventure-continue/cover.webp)
 
-An MLOps stack is never finished. The stack behind my [MLOps Coding Course](https://mlops-coding-course.fmind.dev) tells thousands of engineers "this is the state-of-the-art way to set up an ML project", which makes every pinned tool a promise with a shelf life. The version I built two years ago ran on Python 3.13, MLflow 2, mypy, `just`, and `pre-commit`. By mid-2026 the ground had moved: Python 3.14 is stable, MLflow is on 3.x, and the [Astral](https://astral.sh) ecosystem behind [uv](https://docs.astral.sh/uv/) and [Ruff](https://docs.astral.sh/ruff/) grew a type checker, [ty](https://github.com/astral-sh/ty).
+AI coding agents are the first contributors that read your entire repository and run shell commands non-interactively on day one. But agents also act as friction multipliers. Hand an agent a fragmented toolchain, duplicated CI scripts, or unverified instructions, and it will confidently burn execution loops navigating the disagreement. Hand it a single deterministic gate and machine-readable rules, and its first attempt lands close to green.
 
-But the real reason to move was not tool churn. AI coding agents are the first contributors that read your entire repository and run your commands on day one - and they amplify whatever they find. Hand an agent a fuzzy toolchain and it will confidently multiply the confusion. Hand it one deterministic gate and machine-readable rules, and its first attempt lands close. Good tools are not a convenience for agents; they are the guardrails that make autonomy safe.
+Good repository tooling is no longer just developer ergonomics-it is the engineering boundary that makes autonomous AI coding safe.
 
-So twice this summer, the four repositories behind the course shipped coordinated major versions: the July round built the guardrails, the August round proved they work. The headline number: both majors are net deletions - 532 more lines removed than added in `v5.0.0`, another 393 in `v6.0.0` - while the gate grew to eight static checks and test coverage rose from 80 to 100 percent. Less code, more proof. That is what technical debt leaving the building looks like.
+Over the past two releases of the four repositories behind the [MLOps Coding Course](https://mlops-coding-course.fmind.dev), we refactored our entire developer loop specifically for AI-agent readiness. The headline result was a net deletion: over 900 lines of configuration and glue code removed while static checks doubled from four to eight and test coverage hit 100%.
 
-## What Two Majors Bought
+Here are the primary architectural lessons, failure modes, and trade-offs discovered while adapting a production MLOps codebase for AI agents.
 
-Four gains, each with evidence behind it:
+## Dual Command Lists Are Agent Traps: The Single-Gate Pattern
 
-- **Robustness.** Coverage went from 80 to 100 percent, and CI now proves what it claims: it runs the same gate as the local hooks, then asserts the working tree is untouched. Before, nothing but my laptop had ever confirmed the package builds a wheel.
-- **Speed.** One command answers "is this correct?" identically everywhere - locally, in CI, or under an agent - so iterations go into the problem instead of into environment drift. The Rust-based tools keep each check fast even as the gate grew to eight of them.
-- **Security.** A routine check caught 25 known vulnerabilities with zero commits of my own, and three new linters now cover the workflows and Dockerfile that nothing checked before.
-- **Best practices, enforced.** The course finally cuts its own semver releases, and every rule an agent needs lives in one `AGENTS.md`, verified against the code it describes.
+The single largest source of agent confusion in legacy codebases is command duplication. When local git hooks run `pre-commit`, developers run `just test`, and CI enumerates custom shell steps in YAML, those lists inevitably drift.
 
-The rest of this article is the evidence.
+During our audit, we discovered that secondary CI lists had silently dropped `mise run build`, while a Cookiecutter bake test executed every generated task except `pytest`-shipping a template whose own CI had never executed its test suite.
 
-## Four Repositories, One Promise
+For an AI agent, this drift is fatal. An agent relies on feedback loops: if a check passes locally but fails in CI (or vice-versa), the agent enters hallucination loops attempting to reconcile two different sources of truth.
 
-The contradiction that started it all: the course has a complete chapter on cutting releases with semantic versioning and a changelog, and until July its own repository had zero git tags. It taught a discipline it never practiced.
+### The Solution: One Named Gate
 
-The promise spans four repositories that only work when they agree:
-
-- **[mlops-python-package](https://github.com/fmind/mlops-python-package/releases/tag/v6.0.0)** (`v6.0.0`) - the reference implementation: a production-shaped ML pipeline driven by typed configs, MLflow, and [Pydantic](https://docs.pydantic.dev) + [Pandera](https://pandera.readthedocs.io) validation.
-- **[cookiecutter-mlops-package](https://github.com/fmind/cookiecutter-mlops-package/releases/tag/v6.0.0)** (`v6.0.0`) - the template that scaffolds a new project shaped like the package above.
-- **[mlops-coding-course](https://github.com/MLOps-Courses/mlops-coding-course/releases/tag/v7.0.0)** (`v7.0.0`) - the free course that explains every decision, chapter by chapter.
-- **[mlops-coding-skills](https://github.com/MLOps-Courses/mlops-coding-skills/releases/tag/v2.0.0)** (`v2.0.0`) - the same methodology packaged as seven Agent Skills for AI coding assistants.
-
-Drift in one silently contradicts the other three: the template scaffolds commands the course no longer teaches, or a skill tells an agent to run a type checker the package has dropped. That coupling is why the releases ship in lockstep - and why a shared toolchain pays twice. After the August release, the same one-line CI fix landed in three of the four repositories on the same day.
-
-## One Gate, Named Once
-
-The July round rebuilt the stack around a single idea: one shared vocabulary that humans, git hooks, CI, and agents all call. `just` gave way to [mise](https://mise.jdx.dev), `pre-commit` to [lefthook](https://github.com/evilmartians/lefthook), mypy to `ty`, bandit to Ruff's `S` rules, `commitizen` to [git-cliff](https://git-cliff.org), hatchling to `uv_build`, and [dprint](https://dprint.dev) took over config and markup formatting. The through-line is not "Rust is faster" - it is that one coherent ecosystem removes the seams where tools disagree, and those seams are exactly what confuse a new contributor, human or not.
-
-The August round finished the thought by naming the gate once:
+We eliminated per-environment scripts in favor of a single machine-readable task vocabulary powered by `mise`:
 
 ```toml
 [tasks.all]
@@ -52,62 +36,86 @@ description = "Format, check, test, and build the project (the canonical gate)"
 run = ["mise run format", "mise run check", "mise run test", "mise run build"]
 ```
 
-CI now runs that single task and asserts the working tree is clean afterwards. It sounds cosmetic; it is a correctness property. When CI enumerated the steps itself, it was a second list, and second lists drift: mine had already lost `mise run build`, and the template's bake test ran every generated task except `mise run test` - so the template shipped a pytest suite its own CI had never executed.
+Git hooks (`lefthook`), GitHub Actions CI workflows, and AI agent instructions (`AGENTS.md`) now invoke this exact task. CI asserts that the working tree remains byte-clean after execution.
 
 A list of steps can omit one. A named gate cannot.
 
-For an agent, this is the guardrail that matters most. An agent runs your gate far more often than you do, and a check that gives different verdicts locally and in CI burns its iterations on the disagreement. One command, one verdict, reproducible anywhere.
+## Prose Does Not Execute: Natural Language Rules vs. Machine Enforcement
 
-## Entropy With Zero Commits
+To guide agents through complex repositories, the Linux Foundation stewarded standard [`AGENTS.md`](https://agents.md/) has emerged as the canonical entry point. It records operational context, non-obvious architecture rules, and definition-of-done criteria.
 
-A month after the July release, with `main` still byte-identical to the `v5.0.0` tag, `mise run check` on a clean checkout came back red: 25 known vulnerabilities across four transitive dependencies of MLflow. Nothing had changed except the world.
+However, natural-language documentation suffers from an immediate failure mode: nothing executes it, so nothing catches its drift.
 
-That is the claim worth internalizing: a dependency audit is not a checkbox you pass at release time. It is a clock running against your lockfile - and the stack rang the alarm before any reader hit the rot.
+In our audit, we discovered that seven vendored agent skill files had drifted by up to 183 lines from their upstream sources. One skill was still instructing agents to run `just` and `pre-commit` months after those tools had been removed from the repository.
 
-One fix separates two things that look alike. `cryptography` 50.0.0 patches PYSEC-2026-3552, a padding-oracle vulnerability - but MLflow declares `cryptography<50`, so the audit demanded a version the resolver refused to install. I overrode the stale bound with `override-dependencies = ["cryptography>=50"]` and proved it in both directions: the full suite and all six MLflow jobs pass with the override, and removing it re-locks to 49.0.0 and fails the audit again. Overriding a constraint and proving the result is engineering; silencing the scanner is a decision to ship the vulnerability quietly.
+### The Boundary Rule
 
-## What the New Checks Caught
+`AGENTS.md` must guide intent, but types, tests, linters, and static gates must enforce correctness.
 
-Workflows and the Dockerfile were the only code in the repositories nothing linted, so the August round wired in [actionlint](https://github.com/rhysd/actionlint), [zizmor](https://docs.zizmor.sh), and [hadolint](https://github.com/hadolint/hadolint). The first runs paid for the setup:
+To prevent documentation decay:
 
-- **A cache-poisoning pattern** in a release-triggered workflow that pushes container images - inherited by every project ever generated from the template.
-- **A permissions bug** in the course's Pages deploy: a job-level `permissions:` block replaces the workflow-level one instead of merging with it, so the deploy job was silently dropping a grant.
-- **A one-word deadlock no linter could see.** The template generated a CI job named `check` and a branch ruleset requiring `checks` - so every generated project that installed its ruleset had pull requests blocked forever, waiting on a check that could never report. The fix renames the job and writes the coupling into both `AGENTS.md` files, so the next contributor - human or agent - is told the names must match.
-- **A security scan that was green because it was not scanning.** `check:scan` ran `trivy config .`, which enables only one of the four scanners declared in `trivy.yaml`. It had been green for a month, and green was the problem.
+1. We deleted vendored skill copies and pointed `AGENTS.md` directly at single-source-of-truth repositories.
+2. We added automated checks requiring every command, path, and tool version cited in an agent skill to exist in the target implementation.
 
-The same round deleted debt outright: a 790 KB SQLite database committed by accident, a changelog filter that had never matched Dependabot's commit prefix, and a formatter exclusion that left the skills repository's seven `SKILL.md` files - the product itself - as the only ones never formatted.
+## Database State in Agentic Testing: MLflow on SQLite
 
-## Off the File Store: MLflow on SQLite
+When MLflow 3 deprecated its legacy local file store in favor of relational tracking (`sqlite:///mlflow.db`), we faced a choice: maintain opt-in legacy fallbacks or adopt production-shaped storage defaults.
 
-The one breaking change was overdue. MLflow 3 put the local file store in maintenance mode, and my July release handled it the lazy way: an opt-in flag plus a note saying "use a database in production". Reading the installed source showed MLflow had already moved on:
+Moving `MlflowService` to SQLite exposed a severe performance bottleneck during automated test runs:
 
 ```python
+# Default tracking URI in MLflow 3
 DEFAULT_TRACKING_URI = "sqlite:///mlflow.db"
 ```
 
-My package was not being dragged along by a deprecation; it was explicitly opting out of the new default. The fix is mostly deletion: `MlflowService` now defaults to `sqlite:///mlflow.db` for tracking and registry, and the opt-in flag is gone.
+Running database migrations for every isolated unit test ballooned our test suite duration from 34 seconds to 339 seconds (a 10x slowdown).
 
-The honest cost: the test suite went from 34 to 339 seconds, because every test migrated a fresh SQLite store. A session-scoped fixture that migrates one template database and copies the file per test brings it back to roughly double the file store - a factor of two I will not pretend away. What it buys is a local setup with the same shape as production, a model registry on the store it was designed for, and a promotion to a real server that is one environment variable instead of a rewrite. I verified the whole path: all six pipeline jobs run on SQLite, register the model, and promote it to the `Champion` alias.
+### The Template Database Pattern
 
-## Prose Does Not Run
+To maintain isolated, production-identical database state without the 10x latency penalty, we implemented a session-scoped database template pattern:
 
-Executable guardrails are half the story. The other half is `AGENTS.md` - an [open format stewarded by the Agentic AI Foundation](https://agents.md/) under the Linux Foundation - which records what a gate cannot: the exact commands, the definition of done, the conventions. One file, readable by any agent, replaces the fragmented pile of per-tool instruction files that never stayed in sync.
+1. A session-scoped pytest fixture executes MLflow migrations once against a blank SQLite template database file.
+2. Individual test cases perform a fast file-level copy of the pre-migrated SQLite database into a temporary directory.
 
-But prose has a failure mode this round documented in detail: nothing executes it, so nothing catches its drift. The package shipped a vendored copy of the seven Agent Skills, and every one had drifted from its canonical source - up to 183 changed lines - with one skill still teaching `just` and `pre-commit`, the very stack its own release had removed. I deleted the vendored copy, pointed `AGENTS.md` at the canonical repository, and added a contribution rule with teeth: every command, path, and version named in a skill must exist in the reference implementation.
+This reduced test suite overhead by ~60% while ensuring every test runs against a true relational schema-verifying model registration, alias promotion to `Champion`, and artifact tracking under production conditions.
 
-The boundary matters as much as the feature: `AGENTS.md` guides, it does not enforce. Enforcement stays in types, tests, linters, and branch protection. The file's job is to make an agent's first attempt land close, so the gates have less to catch.
+## Lockfile Decay & The Vulnerability Clock
 
-## Trade-offs I Would Not Hide From a Client
+A clean codebase with zero new commits will still rot over time due to upstream ecosystem shifts.
 
-- **`ty` is pre-1.0.** It does not yet model the dynamic behavior of Pydantic, Pandera, and MLflow, so I ignore six rule categories globally rather than pretend the code is wrong. It still gates real errors, but mypy remains the fallback.
-- **pandas 3.0 is out, and I still cannot use it.** MLflow declares `pandas<3`, and numba caps numpy below 2.5. "Latest everything" is a fantasy; "latest that resolves together" is the job.
-- **The gate is slower and the config footprint grew.** `mise run all` lands between one and a half and three and a half minutes on my machine, across nine configuration files the course has to explain. Each one earns its place - but nobody should claim a security scan is free.
-- **Four repos in lockstep is still manual discipline.** I found this round's drift by auditing on purpose, a month after swearing everything was aligned. A release tag is a shared checkpoint, not proof of alignment.
+One month after tagged release `v5.0.0`, running our static vulnerability check (`trivy` + `govulncheck`) returned red: 25 known vulnerabilities introduced across transitive dependencies of MLflow.
 
-## Where This Leaves You
+The root cause was a dependency conflict: `cryptography` 50.0.0 patched security flaw `PYSEC-2026-3552`, but MLflow pinned `cryptography<50`, preventing standard resolvers from updating the package.
 
-AI agents give us something ML projects have never had: contributors cheap enough to keep a stack current continuously, instead of in painful rewrites every two years. But that only works when the repository is ready for them - one named gate, machine-readable rules, and checks strict enough to catch a confident wrong answer.
+### Override Proofs vs. Scanner Suppression
 
-Three rules carry most of the value if you are weighing the same jump. Name the gate once, and let hooks, CI, and agents call the same task. Lint everything that executes, and schedule what is slow or flaky - a [lychee](https://lychee.cli.rs) link check over the course found 63 failures of which only 9 were real, a ratio that belongs on a weekly cron, not in a commit gate. And distinguish overriding from suppressing: prove your exceptions with tests, in both directions.
+Silencing security scanners or adding blanket ignores creates hidden operational risk. Instead, we established explicit override assertions in `pyproject.toml`:
 
-If you are starting a new ML project, generate one from the [cookiecutter](https://github.com/fmind/cookiecutter-mlops-package) and read the [course](https://mlops-coding-course.fmind.dev) chapter behind each choice. If you already have one, the diff from "MLflow 2 + mypy + just" to "MLflow 3 + ty + mise" is smaller than you fear - I just walked the whole path twice, and the commits are public.
+```toml
+[tool.uv]
+override-dependencies = ["cryptography>=50"]
+```
+
+We then validated the override in both directions:
+
+- Proving the full suite and model deployment pipeline pass cleanly with the override active.
+- Asserting that removing the override correctly fails the security audit.
+
+## Hard Engineering Trade-offs & Limitations
+
+Building an agent-native, zero-warning codebase requires acknowledging explicit trade-offs:
+
+- **Type Checking (`ty`)**: Astral's `ty` is pre-1.0 and does not yet fully model dynamic Pydantic/Pandera schemas. We ignore 6 rule categories globally and retain `mypy` as a baseline fallback.
+- **Dependency Resolution**: `pandas 3.0` is released, but MLflow caps `pandas<3` and `numba` caps `numpy<2.5`. We accept latest compatible resolution over naive latest version.
+- **Gate Latency**: Full gate execution (`mise run all`) takes 1.5 to 3.5 minutes due to 8 static scanners. We run fast linters on pre-commit and delegate full scans to pre-push and CI.
+
+## Conclusion: Checklist for Agent-Native Codebases
+
+If you are preparing a complex Python/ML repository for AI coding agents:
+
+1. **Unify the Gate**: Expose exactly one entry point (`mise run all`) used identically by developers, git hooks, CI, and agents.
+2. **Treat `AGENTS.md` as Guidance, Not Enforcement**: Validate prose assertions against executable code via static linters and build checks.
+3. **Prove Security Overrides**: Never suppress vulnerability scanners; use explicit dependency overrides validated against unit tests.
+4. **Isolate State Deterministically**: Use template copy patterns for local databases (like SQLite) to keep test feedback fast for agents.
+
+By turning your repository into a deterministic environment with unambiguous feedback, AI coding agents spend less time fighting tool drift and more time landing correct code.
