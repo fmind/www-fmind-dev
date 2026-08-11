@@ -1,0 +1,41 @@
+# External link rot is a property of the web, not of a commit.
+#
+# lychee reads every link in the published content, so any article can turn this
+# red — including one that has been live for a year and that nobody is allowed to
+# rewrite. Running it on pull requests made an unrelated article's dead link, or
+# a host that simply blocks GitHub runner IPs, block a new publication: an
+# article's review pull request failed on nine cloud.google.com URLs that
+# answered 200 from a laptop and passed on a re-run with no changes at all.
+#
+# So it runs on a schedule, where a red result is a reading list rather than a
+# gate. That is the same rule the site's own article argues for: lint everything
+# that executes, and schedule what is slow or flaky.
+name: External content links
+on:
+  schedule:
+    # Monday morning, early enough to be triaged before the week fills up. Off
+    # the hour, since GitHub delays schedules that pile up on a round minute.
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: links
+  cancel-in-progress: true
+jobs:
+  links:
+    name: Check external links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false # the checker only reads the tree
+      - name: Set up mise tools
+        uses: jdx/mise-action@v4
+        with:
+          install: true
+          cache: true
+      - name: Check external content links
+        run: mise run check:links

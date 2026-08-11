@@ -12,7 +12,7 @@ The canonical vocabulary lives in `mise.toml` and is reused by the repo's leftho
 - `mise run format` — goimports, gofumpt, `templ fmt`, dprint.
 - `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, `trivy config`, actionlint + zizmor, and OpenTofu validation + tflint.
 - `mise run check:typos` — article spelling floor, with documented verbatim and library-name exceptions.
-- `mise run check:links` — lychee reachability check for external content links (network-dependent; runs as its own CI step, not in the offline `check`/pre-commit).
+- `mise run check:links` — lychee reachability check for external content links (network-dependent and prone to false reds, so it runs on a weekly schedule, never in the offline `check`/pre-commit or as a merge gate).
 - `mise run test` — gotestsum with race + coverage.
 - `mise run build` — generate templates, compile CSS, build `bin/www-fmind-dev`.
 - `mise run deploy <image-ref>` — manual Cloud Run rollout/rollback to an image digest; never wired into a hook or `all`, since it mutates production.
@@ -28,7 +28,7 @@ Every `check:*` subtask is offline and credential-free — tflint uses only its 
 - `.claude/` — Claude Code workspace settings (permissions and harness configuration).
 - `.dockerignore` — Specifies file paths that should not be copied into Docker images.
 - `.env.example` — Configuration template containing placeholder environment variables.
-- `.github/` — GitHub Actions CI/CD + scheduled security workflows, dependabot, and the zizmor audit policy.
+- `.github/` — GitHub Actions CI/CD + scheduled security and link-rot workflows, dependabot, and the zizmor audit policy.
 - `.gitignore` — Specifies file paths that Git should not track.
 - `.golangci.yml` — Configuration for the golangci-lint Go static analysis tool.
 - `.trivyignore` — Reviewed misconfiguration exceptions for `check:scan`, each with its reason.

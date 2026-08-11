@@ -55,7 +55,7 @@ All tasks are defined in `mise.toml` and reused by the git hooks and CI:
 | `mise run watch`        | Live-reload dev server (Go + Tailwind)                                                  |
 | `mise run format`       | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint)                 |
 | `mise run check`        | Lint, vulnerability/secret/misconfig scans, format checks, workflow and OpenTofu audits |
-| `mise run check:links`  | Check external content links are reachable (lychee; runs in CI)                         |
+| `mise run check:links`  | Check external content links are reachable (lychee; runs weekly in CI)                  |
 | `mise run test`         | Run the test suite with coverage (gotestsum)                                            |
 | `mise run build`        | Generate templates, compile CSS, and build the binary                                   |
 | `mise run build:images` | Regenerate deterministic downscaled article image derivatives (pure Go/WebP)            |
