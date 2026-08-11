@@ -1,0 +1,41 @@
+# `tofu init` downloads provider schemas, and in a working copy where someone has
+# already run a real init it also opens the state backend — so this is neither
+# offline nor credential-free, and it does not belong in the pre-commit hook that
+# every Go commit pays for. A fresh checkout has no backend to open, which is why
+# the plain upstream commands are enough here.
+name: Infrastructure
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/infra.yml"
+      - "infra/**"
+      - "mise.toml"
+  pull_request:
+    paths:
+      - ".github/workflows/infra.yml"
+      - "infra/**"
+      - "mise.toml"
+  workflow_dispatch:
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  validate:
+    name: Validate OpenTofu
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false # validation only reads the tree
+      - name: Set up mise tools
+        uses: jdx/mise-action@v4
+        with:
+          install: true
+          cache: true
+      - name: Validate and lint the OpenTofu configuration
+        run: mise run check:tofu

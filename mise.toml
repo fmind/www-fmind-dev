@@ -76,7 +76,6 @@ depends = [
   "check:leaks",
   "check:dockerfile",
   "check:scan",
-  "check:tofu",
   "check:typos",
 ]
 
@@ -127,12 +126,9 @@ run = "trivy config --exit-code=1 --severity LOW,MEDIUM,HIGH,CRITICAL ."
 
 [tasks."check:tofu"]
 description = "Validate and lint the OpenTofu configuration"
-# Own data directory (relative to -chdir, so infra/.terraform-check) to keep the
-# check offline: -backend=false does not stop init from opening the gcs backend
-# cached in infra/.terraform, which then fails without a live Google session —
-# on every commit, since the pre-commit hook runs this. tflint needs nothing
-# either: it uses only its bundled terraform ruleset, so no plugin download.
-env = { TF_DATA_DIR = ".terraform-check" }
+# `init` downloads provider schemas, so this is network-dependent and stays out
+# of the offline `check` fan-out and the pre-commit hook. CI runs it on every
+# infra change; run it by hand while working on infra.
 run = [
   "tofu -chdir=infra fmt -check -recursive",
   "tofu -chdir=infra init -backend=false -input=false -lockfile=readonly",
@@ -148,7 +144,7 @@ run = "go tool govulncheck ./..."
 [tasks.clean]
 alias = "n"
 description = "Remove build artifacts and coverage files"
-run = "rm -rf bin/ tmp/ coverage.out static/dist/styles.css infra/.terraform-check/"
+run = "rm -rf bin/ tmp/ coverage.out static/dist/styles.css"
 
 [tasks.coverage]
 alias = "v"

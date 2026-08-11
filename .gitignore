@@ -5,6 +5,5 @@
 bin/
 coverage.out
 infra/.terraform/
-infra/.terraform-check/
 static/dist/styles.css
 tmp/

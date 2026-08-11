@@ -49,16 +49,17 @@ The parsed article set is the single source for the home page, `/articles/` (inc
 
 All tasks are defined in `mise.toml` and reused by the git hooks and CI:
 
-| Task                    | Description                                                                             |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| `mise run install`      | Tidy Go modules and download dependencies                                               |
-| `mise run watch`        | Live-reload dev server (Go + Tailwind)                                                  |
-| `mise run format`       | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint)                 |
-| `mise run check`        | Lint, vulnerability/secret/misconfig scans, format checks, workflow and OpenTofu audits |
-| `mise run check:links`  | Check external content links are reachable (lychee; runs weekly in CI)                  |
-| `mise run test`         | Run the test suite with coverage (gotestsum)                                            |
-| `mise run build`        | Generate templates, compile CSS, and build the binary                                   |
-| `mise run build:images` | Regenerate deterministic downscaled article image derivatives (pure Go/WebP)            |
+| Task                    | Description                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `mise run install`      | Tidy Go modules and download dependencies                                      |
+| `mise run watch`        | Live-reload dev server (Go + Tailwind)                                         |
+| `mise run format`       | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint)        |
+| `mise run check`        | Lint, vulnerability/secret/misconfig scans, format checks, and workflow audits |
+| `mise run check:links`  | Check external content links are reachable (lychee; runs weekly in CI)         |
+| `mise run check:tofu`   | Validate and lint the OpenTofu module (runs in CI on `infra/` changes)         |
+| `mise run test`         | Run the test suite with coverage (gotestsum)                                   |
+| `mise run build`        | Generate templates, compile CSS, and build the binary                          |
+| `mise run build:images` | Regenerate deterministic downscaled article image derivatives (pure Go/WebP)   |
 
 ## Deployment (Cloud Run)
 

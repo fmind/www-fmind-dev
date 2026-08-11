@@ -10,16 +10,17 @@ The canonical vocabulary lives in `mise.toml` and is reused by the repo's leftho
 - `mise run install` — generate templates, tidy Go modules, and download dependencies.
 - `mise run watch` — live-reload dev server (air + Tailwind watch).
 - `mise run format` — goimports, gofumpt, `templ fmt`, dprint.
-- `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, `trivy config`, actionlint + zizmor, and OpenTofu validation + tflint.
+- `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, `trivy config`, and actionlint + zizmor.
 - `mise run check:typos` — article spelling floor, with documented verbatim and library-name exceptions.
 - `mise run check:links` — lychee reachability check for external content links (network-dependent and prone to false reds, so it runs on a weekly schedule, never in the offline `check`/pre-commit or as a merge gate).
+- `mise run check:tofu` — `tofu fmt -check`, backend-free `init`, `tofu validate`, and tflint (network-dependent, since `init` downloads provider schemas; CI runs it on every `infra/` change).
 - `mise run test` — gotestsum with race + coverage.
 - `mise run build` — generate templates, compile CSS, build `bin/www-fmind-dev`.
 - `mise run deploy <image-ref>` — manual Cloud Run rollout/rollback to an image digest; never wired into a hook or `all`, since it mutates production.
 
 Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint, lychee, trivy, actionlint, zizmor, opentofu, tflint, tailwindcss-extra) are mise-managed; code generators (`templ`, `goimports`, `gofumpt`, `govulncheck`, `air`) are `go tool` via the `go.mod` tool directive.
 
-Every `check:*` subtask is offline and credential-free — tflint uses only its bundled ruleset and zizmor runs in offline mode, so `check` never needs a token or network.
+Everything `check` fans out to is offline and credential-free — zizmor runs in offline mode, so a commit never needs a token or network. The two network-dependent checks stay out of it and out of the hooks, each with its own workflow: `check:links` (weekly) and `check:tofu` (on `infra/` changes).
 
 ## Layout
 
@@ -28,7 +29,7 @@ Every `check:*` subtask is offline and credential-free — tflint uses only its 
 - `.claude/` — Claude Code workspace settings (permissions and harness configuration).
 - `.dockerignore` — Specifies file paths that should not be copied into Docker images.
 - `.env.example` — Configuration template containing placeholder environment variables.
-- `.github/` — GitHub Actions CI/CD + scheduled security and link-rot workflows, dependabot, and the zizmor audit policy.
+- `.github/` — GitHub Actions CI/CD plus the infrastructure, security, and link-rot workflows, dependabot, and the zizmor audit policy.
 - `.gitignore` — Specifies file paths that Git should not track.
 - `.golangci.yml` — Configuration for the golangci-lint Go static analysis tool.
 - `.trivyignore` — Reviewed misconfiguration exceptions for `check:scan`, each with its reason.

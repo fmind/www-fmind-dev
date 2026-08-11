@@ -23,12 +23,13 @@ An infrastructure change therefore does **not** trigger a deployment, and a depl
 
 ## Workflow
 
-1. **Validate offline** — no credentials, no network, no state:
+1. **Validate, without touching state**:
    ```bash
    mise run format          # tofu fmt -recursive, among the rest
-   mise run check           # includes check:tofu and check:scan
+   mise run check           # includes check:scan
+   mise run check:tofu      # tofu fmt -check, init -backend=false, validate, tflint
    ```
-   `check:tofu` runs `tofu fmt -check`, a backend-free `init` with `-lockfile=readonly`, `tofu validate`, and `tflint`. `check:scan` runs `trivy config` over the module and the Dockerfile. Both stay offline: tflint uses only its bundled ruleset, so no plugin download and no GitHub token.
+   `check:scan` runs `trivy config` over the module and the Dockerfile; it is offline and part of every commit. `check:tofu` is not: `init` downloads provider schemas, and in a working copy where step 4 has already run a real `init`, it also opens the gcs backend and needs live credentials. That is why it is not in the pre-commit hook — its own `infra` workflow gates every `infra/` change on a fresh checkout, where neither applies.
 
 1. **Authenticate** for anything that reads real state:
    ```bash
