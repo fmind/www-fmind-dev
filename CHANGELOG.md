@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.0] - 2026-08-11
+
+### 🚀 Features
+
+- _(articles)_ Publish mlops-adventure-continue (#23)
+- _(article)_ Update MLOps adventure article content
+
+### ⚙️ Build & CI
+
+- Schedule the link check and keep check:tofu credential-free
+- Run the OpenTofu check in its own workflow
+
 ## [1.0.3] - 2026-08-08
 
 ### 📚 Documentation
