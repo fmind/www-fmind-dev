@@ -29,7 +29,7 @@ An infrastructure change therefore does **not** trigger a deployment, and a depl
    mise run check           # includes check:scan
    mise run check:tofu      # tofu fmt -check, init -backend=false, validate, tflint
    ```
-   `check:scan` runs `trivy config` over the module and the Dockerfile; it is offline and part of every commit. `check:tofu` is not: `init` downloads provider schemas, and in a working copy where step 4 has already run a real `init`, it also opens the gcs backend and needs live credentials. That is why it is not in the pre-commit hook — its own `infra` workflow gates every `infra/` change on a fresh checkout, where neither applies.
+   `check:scan` runs `trivy config` over the module and the Dockerfile; it is offline and part of every commit. `check:tofu` is not, because `init` downloads provider schemas — that alone keeps it out of the pre-commit hook, and its own `infra` workflow gates every `infra/` change instead. It does **not** need credentials: the task runs under a scratch `TF_DATA_DIR`, so a working copy where step 4 has already run a real `init` no longer makes `-backend=false` reach for the gcs backend.
 
 1. **Authenticate** for anything that reads real state:
    ```bash

@@ -13,7 +13,7 @@ The canonical vocabulary lives in `mise.toml` and is reused by the repo's leftho
 - `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, `trivy config`, and actionlint + zizmor.
 - `mise run check:typos` — article spelling floor, with documented verbatim and library-name exceptions.
 - `mise run check:links` — lychee reachability check for external content links (network-dependent and prone to false reds, so it runs on a weekly schedule, never in the offline `check`/pre-commit or as a merge gate).
-- `mise run check:tofu` — `tofu fmt -check`, backend-free `init`, `tofu validate`, and tflint (network-dependent, since `init` downloads provider schemas; CI runs it on every `infra/` change).
+- `mise run check:tofu` — `tofu fmt -check`, backend-free `init`, `tofu validate`, and tflint (network-dependent, since `init` downloads provider schemas; CI runs it on every `infra/` change). It runs under a scratch `TF_DATA_DIR` so it never reads the real `infra/.terraform/` cache — see the note in `mise.toml`.
 - `mise run test` — gotestsum with race + coverage.
 - `mise run build` — generate templates, compile CSS, build `bin/www-fmind-dev`.
 - `mise run deploy <image-ref>` — manual Cloud Run rollout/rollback to an image digest; never wired into a hook or `all`, since it mutates production.
@@ -34,6 +34,7 @@ Everything `check` fans out to is offline and credential-free — zizmor runs in
 - `.golangci.yml` — Configuration for the golangci-lint Go static analysis tool.
 - `.trivyignore` — Reviewed misconfiguration exceptions for `check:scan`, each with its reason.
 - `AGENTS.md` — AI assistant instructions, tooling setup, commands, conventions, and layout.
+- `assets/` — Authored sources compiled into `static/` (the Tailwind entry point); never embedded, never served.
 - `CHANGELOG.md` — Generated release history (git-cliff), rewritten by the release skill.
 - `CLAUDE.md` — Claude Code entry point; imports this file so both read one source.
 - `articles.go` — Strict embedded Markdown parsing, validation, rendering, and immutable article collection.
@@ -68,7 +69,7 @@ Everything `check` fans out to is offline and credential-free — zizmor runs in
 - `server.go` — HTTP router initialization, routing rules, static asset serving, and metadata files.
 - `server_internal_test.go` — Package-internal tests for asset-loading failures and buffered page rendering.
 - `server_test.go` — Integration and request handling tests for HTTP endpoints and middlewares.
-- `static/` — Embedded static assets containing web fonts, article images, and compiled styles.
+- `static/` — Build output and hand-placed binary assets (fonts, article images, compiled styles); the whole tree is embedded and publicly served.
 - `telemetry.go` — OpenTelemetry trace exporter initialization and structured logging correlation.
 - `templates/` — Portfolio/article data models, layouts, structured metadata, and Templ UI components.
 - `typos.toml` — Article typo-check configuration and reviewed exceptions.
@@ -80,12 +81,14 @@ Everything `check` fans out to is offline and credential-free — zizmor runs in
 - No hardcoded operational values — parse them into `config.Config` at the boundary; fail fast.
 - All Tailwind/DaisyUI classes live in `.templ` files (the `@source` scan and DaisyUI `include:` list depend on this — no classes in Go strings).
 - Every static asset is self-hosted; never reference a CDN at runtime. Interactive features stay server-rendered (plain links and GET forms) or use the two existing inline snippets — no widget, SDK, or third-party script.
+- Authored sources live in `assets/`, build output in `static/`. `server.go` embeds `static` wholesale and `GET /static/` serves all of it, so anything placed there ships inside the binary and is publicly downloadable — the Tailwind entry point used to sit in `static/css/` and was served verbatim in production. A new authored source belongs in `assets/`; only compiled or already-final files belong in `static/`.
+- The go-stack's esbuild bundling step is deliberately not adopted here: there is no first-party JavaScript module graph to bundle. The only scripts are the two inline nonce-authorized snippets in `layout.templ`, and the theme initializer has to stay inline because it runs before first paint to prevent a flash of the wrong theme. Adding `assets/js/` plus a bundle would trade a render-blocking request for roughly a kilobyte. Revisit this only if first-party JS grows into real modules.
 - The validated article collection is the only publication source for HTML, Atom, sitemap, llms.txt, JSON, and MCP surfaces; production discovery never includes drafts.
 - New private drafts enter `content/articles/` through `pub export` from the private publications repository, which carries its own authoring instructions. Once it records the live site URL, the private draft is removed and this repository owns the only published body; a substantial generated revision must start from the current site Markdown.
-- Article tags come from the closed vocabulary in `templates/tags.go`; each needs a matching `[data-tag='…']` color rule in `static/css/input.css`, must tag at least one article, and anything else fails startup.
+- Article tags come from the closed vocabulary in `templates/tags.go`; each needs a matching `[data-tag='…']` color rule in `assets/css/input.css`, must tag at least one article, and anything else fails startup.
 - Code blocks are highlighted at startup by Chroma (`codeTheme` in `highlight.go`) and their stylesheet is generated from that same theme; new articles should use fenced blocks with a language, since unlabeled blocks fall back to the guesser in `languageMarkers`.
 - A new article needs its image derivatives generated (`mise run build:images`) and committed; startup fails without the cover's, and the archive test fails for any other missing rung. The ladder is `templates.DerivativeWidths` — widening it means regenerating with `FORCE=1`. The pinned pure-Go WebP encoder runs with `nodynamic`, so derivatives are reproducible without an external image-processing binary.
-- Body images are bounded by a ~2.4MP pixel budget, not a width — `pub export` applies it. A standalone image renders as a `<figure>` that breaks out of the text column to `--figure-max-width` and links to its full resolution. Every figure fits that width; nothing pans horizontally. `figureSizes` in `articles.go` and the `.article-page` rules in `static/css/input.css` describe one layout and must change together.
+- Body images are bounded by a ~2.4MP pixel budget, not a width — `pub export` applies it. A standalone image renders as a `<figure>` that breaks out of the text column to `--figure-max-width` and links to its full resolution. Every figure fits that width; nothing pans horizontally. `figureSizes` in `articles.go` and the `.article-page` rules in `assets/css/input.css` describe one layout and must change together.
 - The paragraph after a standalone image is folded into the figure as a `<figcaption>` when its text repeats the image's alt (`foldBodyCaptions`); the folded image drops its `alt`, which the caption and the link's accessible name already carry. Compare as text, never as markup — rendering adds links and typographic spaces that change nothing. Position alone is not a caption signal: every article opens with a cover followed by ordinary prose.
 - An illustration too wide to read when fitted to the figure is a diagram laid out wrong at its source, and is fixed there — never compensated for in the layout. What matters is apparent label size, `declared size * 1280 / canvas width`; raising the font loses, because D2 grows every box to fit the text and the canvas grows with it. Fix it in the diagram source and re-import; the layout rules for that live with the diagram sources in the private publications repository. What this repository asserts is only the acceptance bar: labels ≥ ~12px apparent size and a rendered height ≤ ~1300px at 1280 wide.
 - The `templates` coverage percentage is structurally low (~2%) and is not a defect: generated `_templ.go` dominates the statement count, and the components are exercised by the root package's rendering tests, which Go credits to the root package. Cover the hand-written helpers (`tags.go`, `models.go`, `helpers.go`) directly instead. `-coverpkg=./...` does make the merged profile honest, but it rewrites every per-package headline into nonsense (`config` reads 0.3% instead of 90.9%), so the suite deliberately does not use it.

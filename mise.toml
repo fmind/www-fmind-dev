@@ -34,7 +34,7 @@ depends = ["build:go"]
 
 [tasks."build:css"]
 description = "Compile and minify Tailwind CSS"
-run = "tailwindcss-extra -i static/css/input.css -o static/dist/styles.css --minify"
+run = "tailwindcss-extra -i assets/css/input.css -o static/dist/styles.css --minify"
 
 [tasks."build:go"]
 description = "Compile the production Go binary"
@@ -129,6 +129,15 @@ description = "Validate and lint the OpenTofu configuration"
 # `init` downloads provider schemas, so this is network-dependent and stays out
 # of the offline `check` fan-out and the pre-commit hook. CI runs it on every
 # infra change; run it by hand while working on infra.
+#
+# TF_DATA_DIR redirects the working directory to a scratch path (relative to
+# `-chdir`, hence the `../`). Without it, `-backend=false` still reads the real
+# `infra/.terraform/` cache left by a manual `tofu init`, sees the recorded GCS
+# backend, and tries to load remote state — so the check failed with an auth
+# error on any machine that had ever applied, while passing in CI where no
+# cache exists. The scratch dir has no backend recorded, so validation stays
+# credential-free everywhere.
+env.TF_DATA_DIR = "../tmp/tofu-check"
 run = [
   "tofu -chdir=infra fmt -check -recursive",
   "tofu -chdir=infra init -backend=false -input=false -lockfile=readonly",
@@ -217,4 +226,4 @@ run = "go tool air"
 
 [tasks."watch:css"]
 hide = true
-run = "tailwindcss-extra -i static/css/input.css -o static/dist/styles.css --watch"
+run = "tailwindcss-extra -i assets/css/input.css -o static/dist/styles.css --watch"

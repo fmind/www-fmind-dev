@@ -20,7 +20,7 @@ Drafts are written in the private publications repository and enter this reposit
 
 1. **Check the tags** against the closed vocabulary in `templates/tags.go`. Anything outside it fails startup. Adding a tag is three coupled edits:
    - a `Tag` entry in `templates/tags.go` (declaration order is display order everywhere),
-   - a matching `[data-tag='…']` color rule in `static/css/input.css`,
+   - a matching `[data-tag='…']` color rule in `assets/css/input.css`,
    - at least one article actually carrying it — an unused tag also fails startup.
 
 1. **Generate the image derivatives** and commit them:
@@ -45,7 +45,7 @@ Drafts are written in the private publications repository and enter this reposit
 ## Invariants Worth Knowing Before You Edit
 
 - **Code blocks**: fence with a language. Unlabeled blocks fall back to the `languageMarkers` guesser in `highlight.go`; highlighting happens once at startup from `codeTheme`, which also generates the stylesheet.
-- **Figures**: a standalone image renders as a `<figure>` that breaks out of the text column to `--figure-max-width` and links to full resolution. `figureSizes` in `articles.go` and the `.article-page` rules in `static/css/input.css` describe one layout and must change together.
+- **Figures**: a standalone image renders as a `<figure>` that breaks out of the text column to `--figure-max-width` and links to full resolution. `figureSizes` in `articles.go` and the `.article-page` rules in `assets/css/input.css` describe one layout and must change together.
 - **Captions**: the paragraph after a standalone image folds into the figure as a `<figcaption>` when its text repeats the alt (`foldBodyCaptions`), and the folded image then drops its `alt`. Compare as **text**, never as markup — rendering adds links and typographic spaces. Position alone is not a caption signal: every article opens with a cover followed by ordinary prose.
 - **Diagrams that read too small** are laid out wrong at the source, and are fixed there — never compensated for in the layout. Re-render from the diagram source and re-import; the authoring rules for that live with the diagram sources in the publications repository. What this repository asserts is only the acceptance bar: labels ≥ ~12px apparent size and rendered height ≤ ~1300px at 1280 wide.
 - **Drafts never leak**: the validated article collection is the single source for HTML, Atom, sitemap, `llms.txt`, JSON, and MCP surfaces, and production discovery excludes drafts.

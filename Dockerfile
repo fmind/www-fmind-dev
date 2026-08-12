@@ -8,9 +8,9 @@ ADD --chmod=0755 --checksum=sha256:65f19e7c334783b08bb58cccbd07f809a6d6e44d63219
   https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v2.10.10/tailwindcss-extra-linux-arm64 \
   /usr/local/lib/tailwindcss-extra-arm64
 WORKDIR /app
-COPY static/css/input.css static/css/input.css
+COPY assets/css/input.css assets/css/input.css
 COPY templates templates
-RUN /usr/local/lib/tailwindcss-extra-${BUILDARCH} -i static/css/input.css -o static/dist/styles.css --minify
+RUN /usr/local/lib/tailwindcss-extra-${BUILDARCH} -i assets/css/input.css -o static/dist/styles.css --minify
 
 FROM --platform=$BUILDPLATFORM golang:1.26.5 AS builder
 ARG TARGETARCH
