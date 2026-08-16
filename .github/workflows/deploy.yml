@@ -55,6 +55,10 @@ jobs:
       - name: Git Checkout
         uses: actions/checkout@v7
         with:
+          # check:leaks scans the last 100 commits; the default depth-1 checkout
+          # would silently narrow that to one. The weekly security workflow still
+          # owns the full-history scan — this only keeps the gate honest.
+          fetch-depth: 100
           persist-credentials: false # the gate only reads the tree, never pushes back
       - name: Set up mise tools
         uses: jdx/mise-action@v4

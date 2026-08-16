@@ -1,7 +1,9 @@
 # OpenTofu required providers and GCS state backend settings.
 #
 terraform {
-  required_version = ">= 1.1.0"
+  # Track the OpenTofu version mise pins for this repository, so a machine with
+  # an older engine fails at init instead of at apply.
+  required_version = "~> 1.12"
   required_providers {
     google = {
       source  = "hashicorp/google"

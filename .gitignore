@@ -1,6 +1,12 @@
 *.tfstate
 *.tfstate.*
 *.tfvars
+# Scratch work orders and per-agent harness settings are local to a machine and
+# often quote the private publications repository. The release skill stages with
+# `git add .`, so this repository blocks them itself rather than relying on a
+# developer's global ignore file, which does not travel.
+.agents/prompts/
+.claude/
 .env
 bin/
 coverage.out
