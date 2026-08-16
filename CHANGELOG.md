@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.0] - 2026-08-16
+
+### 🚀 Features
+
+- _(articles)_ Publish agentgateway-vs-litellm (#24)
+
+### 🐛 Bug Fixes
+
+- _(build)_ Keep authored sources out of the embedded tree
+- _(dockerfile)_ Bump golang base image to 1.26.6
+
+### 📚 Documentation
+
+- Realign README, AGENTS.md, and skills with the repository
+
+### 🧹 Miscellaneous
+
+- Block agent scratch files and tighten CI and OpenTofu pins
+
 ## [1.1.0] - 2026-08-11
 
 ### 🚀 Features
