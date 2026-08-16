@@ -47,6 +47,21 @@ An infrastructure change therefore does **not** trigger a deployment, and a depl
    tofu -chdir=infra apply tmp/plan.tfplan
    ```
 
+## Querying the Analytics
+
+The sink in `analytics.tf` has no BI layer in front of it on purpose — this is the query surface. The first production pageview creates `www-fmind-dev.website_analytics.run_googleapis_com_stderr`, partitioned daily on `timestamp` with a 180-day expiry. Always filter on `timestamp` so the partition pruner reads one slice instead of the whole table, and exclude crawlers with `jsonPayload.bot = false`:
+
+```sql
+SELECT jsonPayload.utm_source, jsonPayload.utm_medium, jsonPayload.path, COUNT(*) AS views
+FROM `www-fmind-dev.website_analytics.run_googleapis_com_stderr`
+WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+  AND jsonPayload.bot = false
+GROUP BY 1, 2, 3
+ORDER BY views DESC
+```
+
+Swapping the grouped fields answers the other questions from the same table: `path` for top pages, `referer` for referrer hosts, `country` for the geographic split, and `TIMESTAMP_TRUNC(timestamp, DAY)` for pageviews over time. The field list is fixed by the emitter in `middleware.go` — adding a dimension there is a privacy decision, not a reporting one.
+
 ## Gotchas
 
 1. **First OpenTofu init migrates the lockfile**: the module moved from HashiCorp Terraform to OpenTofu, so provider source addresses are now `registry.opentofu.org/...`. The first `tofu init` against the existing GCS state reconciles that. The resources are unchanged — a plan right after the migration must come back empty. **If it does not, stop and read it before applying.**

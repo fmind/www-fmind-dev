@@ -20,20 +20,18 @@ This skill defines the end-to-end process for validating, committing, releasing,
 
 1. **Local Verification** Run the full suite of local quality gate tasks to guarantee zero lint warnings, formatting drift, or broken tests:
    ```bash
-   mise run format
-   mise run check
-   mise run check:typos
-   mise run test
-   mise run build
+   mise run all             # format, check (typos included), test, build
    ```
    Fix any failing assertions, formatting mismatches, or typos before proceeding to commit.
 
-1. **Stage and Commit Changes** Stage all modified, added, or deleted files, and commit using Conventional Commits grammar:
+1. **Stage and Commit Changes** Stage all modified, added, or deleted files, and commit using Conventional Commits grammar — the subject describes _this_ release's work:
    ```bash
    git add .
-   git commit -m "feat: add release agent skill and update project tooling"
+   git commit -m "<type>(<scope>): <what actually changed>"
    ```
-   Ensure pre-commit hooks (`lefthook`) pass cleanly without warnings.
+   Ensure pre-commit hooks (`lefthook`) pass cleanly without warnings. `git add .` is deliberate and safe only because `.gitignore` blocks the local-only paths (`.agents/prompts/`, `.claude/`) — check `git status` before staging if you have added new scratch files.
+
+1. **Sync the MCP server version** Set `server.json`'s `version` to the tag being cut, without the `v`, so the registry record and the git tag never disagree. Do this before the release commit, not after the tag.
 
 1. **Calculate Version and Update Changelog** Compute the next semver tag using `git-cliff` based on commit grammar since the last tag. Generate `CHANGELOG.md`:
    ```bash

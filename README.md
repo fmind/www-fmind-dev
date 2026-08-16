@@ -16,8 +16,8 @@ The portfolio website of Médéric Hurier (Fmind). Built with **Go** + **[Templ]
 
 ## Prerequisites
 
-- **Go** 1.26.5
-- **[mise](https://mise.jdx.dev)** — manages the pinned toolchain (Go, golangci-lint, gotestsum, dprint, gitleaks, trivy, actionlint, zizmor, OpenTofu, tflint, and the DaisyUI-bundled Tailwind CLI) and the task vocabulary.
+- **Go** 1.26.6
+- **[mise](https://mise.jdx.dev)** — manages the pinned toolchain (Go, golangci-lint, gotestsum, dprint, gitleaks, hadolint, lychee, typos, lefthook, trivy, actionlint, zizmor, OpenTofu, tflint, and the DaisyUI-bundled Tailwind CLI) and the task vocabulary.
 
 ## Local Development
 
@@ -51,15 +51,18 @@ All tasks are defined in `mise.toml` and reused by the git hooks and CI:
 
 | Task                    | Description                                                                    |
 | ----------------------- | ------------------------------------------------------------------------------ |
-| `mise run install`      | Tidy Go modules and download dependencies                                      |
+| `mise run install`      | Generate templates, tidy Go modules, and download dependencies                 |
 | `mise run watch`        | Live-reload dev server (Go + Tailwind)                                         |
 | `mise run format`       | Format Go, Templ, and config/markup (goimports, gofumpt, templ, dprint)        |
 | `mise run check`        | Lint, vulnerability/secret/misconfig scans, format checks, and workflow audits |
+| `mise run check:typos`  | Check article prose against the spelling floor (typos)                         |
 | `mise run check:links`  | Check external content links are reachable (lychee; runs weekly in CI)         |
 | `mise run check:tofu`   | Validate and lint the OpenTofu module (runs in CI on `infra/` changes)         |
 | `mise run test`         | Run the test suite with coverage (gotestsum)                                   |
 | `mise run build`        | Generate templates, compile CSS, and build the binary                          |
 | `mise run build:images` | Regenerate deterministic downscaled article image derivatives (pure Go/WebP)   |
+| `mise run build:image`  | Build the production OCI image locally                                         |
+| `mise run deploy <ref>` | Roll the Cloud Run service to a specific image digest (manual, mutates prod)   |
 
 ## Deployment (Cloud Run)
 
@@ -71,20 +74,9 @@ The site runs on **Google Cloud Run** (project `www-fmind-dev`, `europe-west1`) 
 1. **Local container** — `mise run build:image` builds the production image; run it with `docker run -p 8080:8080 www-fmind-dev:local`.
 1. **Manual rollout or rollback** — `mise run deploy <image-ref>` points the service at a specific image digest. On demand only; it never runs from a hook or from `mise run all`, and it sets only the image so OpenTofu keeps owning the rest of the service shape.
 
-### Querying the analytics
+### Analytics
 
-The first production pageview creates `www-fmind-dev.website_analytics.run_googleapis_com_stderr`, partitioned daily on `timestamp` with a 180-day expiry. Query it directly; no BI layer is connected on purpose. Always filter on `timestamp` so the partition pruner reads one slice instead of the table, and exclude crawlers with `jsonPayload.bot = false`:
-
-```sql
-SELECT jsonPayload.utm_source, jsonPayload.utm_medium, jsonPayload.path, COUNT(*) AS views
-FROM `www-fmind-dev.website_analytics.run_googleapis_com_stderr`
-WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
-  AND jsonPayload.bot = false
-GROUP BY 1, 2, 3
-ORDER BY views DESC
-```
-
-Swapping the grouped fields answers the other questions from the same table: `path` for top pages, `referer` for referrer hosts, `country` for the geographic split, and `TIMESTAMP_TRUNC(timestamp, DAY)` for pageviews over time.
+Every HTML response emits one aggregate structured record — path, status, referrer host, UTM dimensions, country, and a bot flag — which a Cloud Logging sink routes to a BigQuery dataset partitioned daily with a 180-day expiry (`infra/analytics.tf`). Nothing identifies a visitor: no cookie, IP address, user-agent string, full referrer, session, or trace identifier is retained. No BI layer is connected on purpose; the operator queries the table directly, and the query recipes live in the [`infra` skill](.agents/skills/infra/SKILL.md).
 
 ## Connecting an AI agent to `/mcp`
 

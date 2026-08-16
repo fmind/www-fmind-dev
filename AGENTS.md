@@ -10,23 +10,24 @@ The canonical vocabulary lives in `mise.toml` and is reused by the repo's leftho
 - `mise run install` — generate templates, tidy Go modules, and download dependencies.
 - `mise run watch` — live-reload dev server (air + Tailwind watch).
 - `mise run format` — goimports, gofumpt, `templ fmt`, dprint.
-- `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, `trivy config`, and actionlint + zizmor.
-- `mise run check:typos` — article spelling floor, with documented verbatim and library-name exceptions.
+- `mise run check` — golangci-lint, govulncheck, dprint check, gitleaks, hadolint, `trivy config`, `typos`, and actionlint + zizmor.
+- `mise run check:typos` — the article spelling floor inside `check`, with documented verbatim and library-name exceptions.
 - `mise run check:links` — lychee reachability check for external content links (network-dependent and prone to false reds, so it runs on a weekly schedule, never in the offline `check`/pre-commit or as a merge gate).
 - `mise run check:tofu` — `tofu fmt -check`, backend-free `init`, `tofu validate`, and tflint (network-dependent, since `init` downloads provider schemas; CI runs it on every `infra/` change). It runs under a scratch `TF_DATA_DIR` so it never reads the real `infra/.terraform/` cache — see the note in `mise.toml`.
 - `mise run test` — gotestsum with race + coverage.
 - `mise run build` — generate templates, compile CSS, build `bin/www-fmind-dev`.
 - `mise run deploy <image-ref>` — manual Cloud Run rollout/rollback to an image digest; never wired into a hook or `all`, since it mutates production.
 
-Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint, lychee, trivy, actionlint, zizmor, opentofu, tflint, tailwindcss-extra) are mise-managed; code generators (`templ`, `goimports`, `gofumpt`, `govulncheck`, `air`) are `go tool` via the `go.mod` tool directive.
+Tooling split: heavy CLIs (golangci-lint, gotestsum, gitleaks, dprint, hadolint, lychee, typos, lefthook, trivy, actionlint, zizmor, opentofu, tflint, tailwindcss-extra) are mise-managed; code generators (`templ`, `goimports`, `gofumpt`, `govulncheck`, `air`) are `go tool` via the `go.mod` tool directive.
 
 Everything `check` fans out to is offline and credential-free — zizmor runs in offline mode, so a commit never needs a token or network. The two network-dependent checks stay out of it and out of the hooks, each with its own workflow: `check:links` (weekly) and `check:tofu` (on `infra/` changes).
 
 ## Layout
 
+Entries are in ASCII order — dotfiles, then capitalized files, then the rest — so an agent scanning for a path can stop at the first miss.
+
 - `.agents/` — Portable agent layer: project skills (`release`, `article`, `infra`) shared by every agent CLI.
 - `.air.toml` — Live-reload configuration for the Air Go development server.
-- `.claude/` — Claude Code workspace settings (permissions and harness configuration).
 - `.dockerignore` — Specifies file paths that should not be copied into Docker images.
 - `.env.example` — Configuration template containing placeholder environment variables.
 - `.github/` — GitHub Actions CI/CD plus the infrastructure, security, and link-rot workflows, dependabot, and the zizmor audit policy.
@@ -34,14 +35,14 @@ Everything `check` fans out to is offline and credential-free — zizmor runs in
 - `.golangci.yml` — Configuration for the golangci-lint Go static analysis tool.
 - `.trivyignore` — Reviewed misconfiguration exceptions for `check:scan`, each with its reason.
 - `AGENTS.md` — AI assistant instructions, tooling setup, commands, conventions, and layout.
-- `assets/` — Authored sources compiled into `static/` (the Tailwind entry point); never embedded, never served.
 - `CHANGELOG.md` — Generated release history (git-cliff), rewritten by the release skill.
 - `CLAUDE.md` — Claude Code entry point; imports this file so both read one source.
-- `articles.go` — Strict embedded Markdown parsing, validation, rendering, and immutable article collection.
-- `articles_test.go` — Tests for frontmatter validation, cover resolution, and responsive body-image markup.
 - `Dockerfile` — Multi-stage recipe for building a secure, distroless application container.
 - `LICENSE` — Software license file governing distribution and reuse rights (MIT).
 - `README.md` — Human-readable documentation covering project setup, run instructions, and usage.
+- `articles.go` — Strict embedded Markdown parsing, validation, rendering, and immutable article collection.
+- `articles_test.go` — Tests for frontmatter validation, cover resolution, and responsive body-image markup.
+- `assets/` — Authored sources compiled into `static/` (the Tailwind entry point); never embedded, never served.
 - `bin/` — Output directory for compiled application binaries (ignored by Git).
 - `cmd/` — Main packages for the web server and deterministic article-image derivative generator.
 - `config/` — Configuration structures and environment variables parser packages.
@@ -51,11 +52,11 @@ Everything `check` fans out to is offline and credential-free — zizmor runs in
 - `export_test.go` — Exports unexported internals (article counts, injected handler) to the external test package.
 - `go.mod` — Go module dependencies definition and tool directive manifest.
 - `go.sum` — Checksums file for verifying the integrity of Go module dependencies.
+- `highlight.go` — Chroma code-block highlighting, language guessing, and the generated theme stylesheet.
+- `highlight_test.go` — Tests for language guessing and the highlighted, class-based markup.
 - `infra/` — OpenTofu for Cloud Run, registries, monitoring, identity, and cookieless BigQuery analytics routing.
 - `lefthook.yml` — Configuration for Lefthook Git pre-commit and pre-push hooks.
 - `lychee.toml` — Configuration settings for the Lychee hyperlink checker tool.
-- `highlight.go` — Chroma code-block highlighting, language guessing, and the generated theme stylesheet.
-- `highlight_test.go` — Tests for language guessing and the highlighted, class-based markup.
 - `mcp.go` — Go implementation of the Model Context Protocol (MCP) server handler.
 - `mcp_test.go` — Test suites for validating Model Context Protocol (MCP) endpoint behavior.
 - `middleware.go` — Custom HTTP middlewares covering logging, security headers, compression, and sizing.
@@ -65,15 +66,15 @@ Everything `check` fans out to is offline and credential-free — zizmor runs in
 - `publications_test.go` — Tests for the discovery surfaces and the related-article ranking.
 - `search.go` — BM25 article index shared by the `/articles/?q=` page and the MCP `search_articles` tool.
 - `search_test.go` — Tests for ranking, query normalization, and search/tag filter composition.
-- `server.json` — Publish-ready metadata for the official MCP Registry.
 - `server.go` — HTTP router initialization, routing rules, static asset serving, and metadata files.
+- `server.json` — Publish-ready metadata for the official MCP Registry; its `version` tracks the released tag.
 - `server_internal_test.go` — Package-internal tests for asset-loading failures and buffered page rendering.
 - `server_test.go` — Integration and request handling tests for HTTP endpoints and middlewares.
 - `static/` — Build output and hand-placed binary assets (fonts, article images, compiled styles); the whole tree is embedded and publicly served.
 - `telemetry.go` — OpenTelemetry trace exporter initialization and structured logging correlation.
 - `templates/` — Portfolio/article data models, layouts, structured metadata, and Templ UI components.
-- `typos.toml` — Article typo-check configuration and reviewed exceptions.
 - `tmp/` — Temporary workspace directory for test logs and compiler outputs.
+- `typos.toml` — Article typo-check configuration and reviewed exceptions.
 
 ## Conventions
 
